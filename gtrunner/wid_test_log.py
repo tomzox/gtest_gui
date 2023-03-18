@@ -51,6 +51,7 @@ class Test_log_widget(object):
         self.test_ctrl_visible = True
         self.opt_sort_modes = []
         self.opt_filter_exe_ts = 0
+        self.opt_filter_tc_names = None
         self.log_idx_map = []
 
         self.wid_pane = tk.PanedWindow(parent, orient=tk.VERTICAL)
@@ -128,11 +129,14 @@ class Test_log_widget(object):
 
         self.var_opt_filter_pass = tk.BooleanVar(self.tk, False)
         self.var_opt_filter_exe = tk.BooleanVar(self.tk, False)
+        self.var_opt_filter_tc_name = tk.BooleanVar(self.tk, False)
 
         wid_men.add_checkbutton(label="Show only failed results",
                                 command=self.populate_log, variable=self.var_opt_filter_pass)
         wid_men.add_checkbutton(label="Show only current results",
                                 command=self.toggle_exe_filter, variable=self.var_opt_filter_exe)
+        wid_men.add_checkbutton(label="Show only selected test cases",
+                                command=self.toggle_tc_name_filter, variable=self.var_opt_filter_tc_name)
         wid_men.add_separator()
 
         wid_men.add_checkbutton(
@@ -347,13 +351,21 @@ class Test_log_widget(object):
             self.wid_log.insert("end", *txt)
 
 
-    def refill_log(self, restore_view=False):
-        if restore_view:
+    def refill_log(self, restore_view=False, restore_selection=False):
+        if restore_view or restore_selection:
             prev_log = self.log_idx_map
             prev_sel = self.sel_obj.text_sel_get_selection()
+            prev_log_idx = self.log_idx_map[prev_sel[0]] if prev_sel else None
             prev_yview = self.wid_log.yview()[0]
+            new_sel = None
 
         self.populate_log()
+
+        if restore_selection and prev_log_idx is not None:
+            try:
+                new_sel = self.log_idx_map.index(prev_log_idx)
+            except ValueError:
+                pass
 
         if restore_view:
             self.wid_log.yview_moveto(prev_yview)
@@ -362,6 +374,9 @@ class Test_log_widget(object):
 
         if restore_view and (self.log_idx_map == prev_log):
             self.sel_obj.text_sel_set_selection(prev_sel)
+        elif restore_selection and new_sel is not None:
+            self.wid_log.see("%d.0" % (new_sel + 1))
+            self.sel_obj.text_sel_set_selection([new_sel])
         else:
             self.sel_obj.text_sel_set_selection([])
             self.clear_trace_preview()
@@ -419,7 +434,8 @@ class Test_log_widget(object):
 
     def matches_filter(self, log):
         return ( ((not self.var_opt_filter_pass.get()) or (log[3] >= 2)) and
-                 ((not self.var_opt_filter_exe.get()) or (log[2] >= self.opt_filter_exe_ts)) )
+                 ((not self.var_opt_filter_exe.get()) or (log[2] >= self.opt_filter_exe_ts)) and
+                 ((not self.var_opt_filter_tc_name.get()) or (log[0] in self.opt_filter_tc_names)) )
 
 
     def toggle_exe_filter(self, exe_ts = None):
@@ -427,7 +443,24 @@ class Test_log_widget(object):
             exe_ts = test_db.test_exe_ts
 
         self.opt_filter_exe_ts = exe_ts
-        self.populate_log()
+        self.refill_log(restore_selection=True)
+
+
+    def toggle_tc_name_filter(self, tc_names = None):
+        if self.var_opt_filter_tc_name.get():
+            if tc_names is None:
+                tc_names = [test_db.test_results[log_idx][0]
+                                for log_idx in self.get_mapped_selection()]
+            if not tc_names:
+                tk_messagebox.showerror(parent=self.tk, message="No results selected")
+                self.var_opt_filter_tc_name.set(False)
+                return
+
+            self.opt_filter_tc_names = set(tc_names)
+        else:
+            self.opt_filter_tc_names = None
+
+        self.refill_log(restore_selection=True)
 
 
     def toggle_sort_mode(self, enable, mode):
@@ -435,7 +468,7 @@ class Test_log_widget(object):
         if enable:
             self.opt_sort_modes.append(mode)
 
-        self.populate_log()
+        self.refill_log(restore_selection=True)
 
 
     def delete_multiple_results(self, log_idx_list):

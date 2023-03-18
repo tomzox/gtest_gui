@@ -34,7 +34,6 @@ wid_test_ctrl:
 - option to make tc filter-string case-independent? (problem: gtest compatibility)
 
 wid_test_log:
-- add filter option: Show only results for selected test cases
 - configure menu: configure font for trace preview text widget separately
 
 dlg_browser:
