@@ -1,0 +1,74 @@
+Bugs:
+- results log: trace preview unavailable for most recent results
+  (caused by buffering of trace data within memory)
+
+General:
+- documentation
+- code comments
+- test suite at least for filter_expr & gtest parser
+- python package
+
+gtest:
+- test failures when GUI is blocking gtest stream processing
+  - separate threads for reading pipes
+  - or write straight to file, at least in non-clean mode
+  - or use separate process for filtering
+- hard link for exe as "exe.exe_ts" to allow recompilation during run
+  keep link as long as there are core files referencing it
+- handle I/O error in trace writing
+- during import: for CRASHED logs, import core files names core.trace.*
+- after crash: check if core dump is enabled, add warning to trace file
+- unit-test on many CPUs: GUI is overloaded => throttle updates of result log
+- optimize TC allocation per CPU: consider actual duration
+- restart test job after crash of a test case
+- Repeat with the actual SEED value (not supported by gtest)
+
+main:
+- import trace upon start: use separate thread
+- add menu cmd for trace import from file
+- support gtest input via socket
+- hide test_ctrl: switch status_line to wid_test_log
+
+wid_test_ctrl:
+- progress: show percentage or pass+fail/expected (as tool-tip or overlay)
+- enhance popup_test_list for case that there's single test suite
+- option to make tc filter-string case-independent? (problem: gtest compatibility)
+
+wid_test_log:
+- add filter option: Show only results for selected test cases
+- configure menu: configure font for trace preview text widget separately
+
+dlg_browser:
+-! command line config: use shell only if contains space or special chars; check if escape needed
+- clean up browser & gdb temporary input files
+- use matching exe for opening core
+- export trace files in other archive formats, or uncompressed to directory
+
+dlg_config:
+- Option: Clean pass trace files or all trace files when exiting GUI
+- Option: Automatically import traces in specified directory upon start
+- Option: directory used for storing trace files
+          create sub-directory for each new exe?
+- Option: command line parameter for passing seed value
+- Option: Save test control settings when quitting?
+- Option: Browser supports reading from STDIN
+- Option: Reg.exp. for extracting failure line
+  requires to parse all traces after changing expression
+- add button next to path entry widgets for opening file browser
+- upon window close: ask for saving pending changes
+
+filter_expr:
+- use wildcard at front or middle to minimize name length
+- check_pattern: offer automatic correction (e.g. case)
+- replace use of Tcl "string match" for gtest filter globs
+
+dlg_tc_list:
+- update column widths after font change - same for dlg_job_list
+- add footer containing sums: #test cases, total pass/fail, exec time, #enabled
+- folding: show test suite names only (possibly controllable individually?)
+- add column showing skip count
+- enable sort via click in column head / via ctx menu
+- entry field for filtering by name
+
+dlg_job_list:
+- use ttk TreeView
