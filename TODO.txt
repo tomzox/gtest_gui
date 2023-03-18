@@ -30,7 +30,6 @@ main:
 - hide test_ctrl: switch status_line to wid_test_log
 
 wid_test_ctrl:
-- progress: show percentage or pass+fail/expected (as tool-tip or overlay)
 - enhance popup_test_list for case that there's single test suite
 - option to make tc filter-string case-independent? (problem: gtest compatibility)
 
@@ -49,9 +48,7 @@ dlg_config:
 - Option: Automatically import traces in specified directory upon start
 - Option: directory used for storing trace files
           create sub-directory for each new exe?
-- Option: command line parameter for passing seed value
 - Option: Save test control settings when quitting?
-- Option: Browser supports reading from STDIN
 - Option: Reg.exp. for extracting failure line
   requires to parse all traces after changing expression
 - add button next to path entry widgets for opening file browser
@@ -64,6 +61,7 @@ filter_expr:
 
 dlg_tc_list:
 - update column widths after font change - same for dlg_job_list
+- use same font for header as for content
 - add footer containing sums: #test cases, total pass/fail, exec time, #enabled
 - folding: show test suite names only (possibly controllable individually?)
 - add column showing skip count

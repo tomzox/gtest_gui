@@ -311,7 +311,18 @@ class Test_control_widget(object):
         self.wid_progress_bar = tk.Frame(self.wid_progress_frm, width=20,
                 background="#6868FF", borderwidth=1, relief=tk.RAISED)
         self.wid_progress_frm.pack(side=tk.TOP, fill=tk.Y, expand=1)
+        wid_tool_tip.tool_tip_add(self.wid_progress_frm, self.get_progress_tool_tip)
         wid_frm.grid(row=grid_row, column=grid_col, sticky="ns")
+
+
+    def get_progress_tool_tip(self):
+        totals = test_db.campaign_stats
+        if totals[4]:
+            max_h = self.wid_progress_frm.winfo_height()
+            bar_h = min(max_h, max_h * totals[5] // totals[4])
+            return "%d of %d" % (totals[5], totals[4])
+        else:
+            return ""
 
 
     def update_campaign_status(self):

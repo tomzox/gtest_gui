@@ -29,7 +29,10 @@ def enable_tips(enable):
 
 
 def tool_tip_add(wid, key):
-    msg = re.sub(r"\n", " ", tool_tip_db.tips[key].strip())
+    if callable(key):
+        msg = key
+    else:
+        msg = re.sub(r"\n", " ", tool_tip_db.tips[key].strip())
 
     wid.bind("<Leave>", lambda e: handle_leave(e.widget))
     wid.bind("<Motion>", lambda e: handle_motion(e.widget, e.x, e.y, msg))
@@ -69,6 +72,11 @@ def handle_motion(wid, wid_x, wid_y, msg):
 def handle_timer(wid, wid_x, wid_y, msg):
     Tool_tip_widget.timer_id = None
     Tool_tip_widget.wid_anchor = wid
+
+    if callable(msg):
+        msg = msg()
+        if not msg:
+            return
 
     destroy_window()
     create_window(msg)
