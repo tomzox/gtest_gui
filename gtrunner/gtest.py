@@ -17,23 +17,23 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # ------------------------------------------------------------------------ #
 
-import errno
 from io import StringIO
 import os
+import queue
 import re
 import signal
 import subprocess
 import sys
+import selectors
 import threading
 import time
-
-if (os.name == "posix"): import fcntl
 
 from tkinter import messagebox as tk_messagebox
 
 import gtrunner.config_db as config_db
 import gtrunner.test_db as test_db
 import gtrunner.tk_utils as tk_utils
+import gtrunner.fcntl
 
 
 gtest_ctrl = None
@@ -46,6 +46,10 @@ def initialize():
 class Gtest_control(object):
     def __init__(self):
         self.__jobs = []
+        self.__result_queue = queue.Queue()
+        self.__thr_lock = threading.Lock()
+        self.__thr_inst = None
+        self.__tid = None
 
 
     def start(self, job_cnt, job_runall_cnt, rep_cnt, filter_str, tc_list, is_resume,
@@ -74,9 +78,11 @@ class Gtest_control(object):
                                              filter_str, run_disabled, shuffle, valgrind_cmd,
                                              clean_trace, clean_core, break_on_fail, break_on_except,
                                              shard_reps[part_idx], shard_parts[part_idx], shard_idx,
-                                             idx >= job_cnt - job_runall_cnt))
+                                             idx >= job_cnt - job_runall_cnt,
+                                             self.__result_queue))
             except OSError as e:
-                notify_error("Failed to start jobs: " + str(e))
+                tk_messagebox.showerror(parent=tk_utils.tk_top,
+                                        message="Failed to start jobs: " + str(e))
                 break
 
             trace_idx += 1
@@ -85,62 +91,148 @@ class Gtest_control(object):
                 shard_idx = 0
                 part_idx += 1
 
+        self.__tid = tk_utils.tk_top.after(250, self.__poll_queue)
+
+        if self.__thr_inst:
+            self.__thr_inst.join(timeout=0)
+
+        self.__thr_inst = threading.Thread(target=self.__thread_main, daemon=True)
+        self.__thr_inst.start()
+
         test_db.reset_run_stats(len(tc_list) * rep_cnt, is_resume)
         test_db.set_job_status(len(self.__jobs))
 
 
+    def __thread_main(self):
+        if os.name == "posix":
+            self.__thread_main_select()
+        else:
+            self.__thread_main_polling()
+
+
+    def __thread_main_select(self):
+        selector = selectors.DefaultSelector()
+        with self.__thr_lock:
+            for job in self.__jobs:
+                selector.register(job.get_pipe(), selectors.EVENT_READ, job)
+
+        next_poll = time.time() + 0.150
+        while True:
+            with self.__thr_lock:
+                if not self.__jobs:
+                    return
+
+            for event in selector.select():
+                fd = event[0].data.get_pipe()
+                if not event[0].data.communicate():
+                    selector.unregister(fd)
+
+            # Add minimum delay between reading pipes for reducing parser overhead
+            sleep = next_poll - time.time()
+            next_poll += 0.150
+
+            if sleep > 0:
+                time.sleep(sleep)
+
+
+    def __thread_main_polling(self):
+        next_poll = time.time() + 0.150
+        while True:
+            with self.__thr_lock:
+                if not self.__jobs:
+                    return
+
+                for job in self.__jobs:
+                    job.communicate()
+
+            sleep = next_poll - time.time()
+            next_poll += 0.150
+
+            if sleep > 0:
+                time.sleep(sleep)
+
+
+    def __poll_queue(self):
+        try:
+            while True:
+                result = self.__result_queue.get(block=False)
+                if result[0]:
+                    log = result[0]
+                    if log[3] >= 2:
+                        self.__report_fail()
+                    test_db.add_result(result[0], result[1])
+                else:
+                    self.__report_exit(result[1])
+        except queue.Empty:
+            pass
+
+        if self.__jobs:
+            self.__tid = tk_utils.tk_top.after(250, self.__poll_queue)
+        else:
+            self.__tid = None
+
+
     def stop(self):
-        for job in self.__jobs:
-            job.terminate()
-        self.__jobs = []
-        test_db.set_job_status(len(self.__jobs))
-
-
-    def update_options(self, clean_trace, clean_core):
-        for job in self.__jobs:
-            job.update_options(clean_trace, clean_core)
+        with self.__thr_lock:
+            for job in self.__jobs:
+                job.terminate()
 
 
     def is_active(self):
         return bool(self.__jobs)
 
 
+    def update_options(self, clean_trace, clean_core):
+        with self.__thr_lock:
+            for job in self.__jobs:
+                job.update_options(clean_trace, clean_core)
+
+
     def get_job_stats(self):
-        stats = []
-        for job in self.__jobs:
-            stats.append(job.get_stats())
+        with self.__thr_lock:
+            stats = []
+            for job in self.__jobs:
+                stats.append(job.get_stats())
         return stats
 
 
     def abort_job(self, pid):
-        for job in self.__jobs:
-            if job.get_stats()[0] == pid:
-                job.abort()
+        with self.__thr_lock:
+            for job in self.__jobs:
+                if job.get_stats()[0] == pid:
+                    job.abort()
 
 
     def get_out_file_names(self):
         used_files = set()
-        for job in self.__jobs:
-            used_files.add(job.get_out_file_name())
+        with self.__thr_lock:
+            for job in self.__jobs:
+                used_files.add(job.get_out_file_name())
         return used_files
 
 
-    def report_fail(self):
+    def __report_fail(self):
         if self.__max_fail:
             self.__max_fail -= 1
             if self.__max_fail <= 0:
                 tk_utils.tk_top.after_idle(self.stop)
 
 
-    def report_exit(self, job):
+    def __report_exit(self, job):
         for idx in range(len(self.__jobs)):
             if self.__jobs[idx] == job:
                 del self.__jobs[idx]
                 break
         test_db.set_job_status(len(self.__jobs))
 
-        if not any([not job.is_bg_job() for job in self.__jobs]):
+        with self.__thr_lock:
+            have_non_bg = any([not job.is_bg_job() for job in self.__jobs])
+
+        if not have_non_bg:
             tk_utils.tk_top.after_idle(self.stop)
+
+
+# ----------------------------------------------------------------------------
 
 
 def calc_parts_sub(pre_part, cpu_cnt, tc_cnt, rep_cnt, max_cpu_cnt):
@@ -174,6 +266,7 @@ def calc_parts_sub(pre_part, cpu_cnt, tc_cnt, rep_cnt, max_cpu_cnt):
         partitions.append(pre_part + [cpu_cnt])
 
     return partitions
+
 
 def calc_partitions(tc_cnt, job_cnt, rep_cnt):
     partitions = calc_parts_sub([], job_cnt, tc_cnt, rep_cnt, job_cnt)
@@ -243,17 +336,13 @@ def gtest_control_get_trace_file_name(exe_ts, idx):
     return "trace.%d.%d" % (exe_ts, idx)
 
 
-def notify_error(msg):
-    tk_messagebox.showerror(parent=tk_utils.tk_top, message=msg)
-
-
 # ----------------------------------------------------------------------------
 
 class Gtest_job(object):
     def __init__(self, parent, exe_name, exe_ts, out_file_name,
                  filter_str, run_disabled, shuffle, valgrind_cmd,
                  clean_trace, clean_core, break_on_fail, break_on_except,
-                 rep_cnt, shard_cnt, shard_idx, is_bg_job):
+                 rep_cnt, shard_cnt, shard_idx, is_bg_job, result_queue):
         self.__parent = parent
         self.__exe_ts = exe_ts
         self.__out_file_name = out_file_name
@@ -262,7 +351,7 @@ class Gtest_job(object):
         self.__is_valgrind = bool(valgrind_cmd)
         self.__is_bg_job = is_bg_job
         self.__valgrind_exit = 0
-        self.__tid = None
+        self.__result_queue = result_queue
         self.__buf_data = b""
         self.__snippet_name = b""
         self.__snippet_data = b""
@@ -270,6 +359,7 @@ class Gtest_job(object):
         self.__clean_trace_file = clean_trace
         self.__sum_input_trace = 0
         self.__result_cnt = 0
+        self.__terminated = False
         self.log = ""
 
         cmd = []
@@ -321,36 +411,23 @@ class Gtest_job(object):
         self.__proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                        stdin=subprocess.DEVNULL, env=env)
         if self.__proc:
-            flags = fcntl.fcntl(self.__proc.stdout, fcntl.F_GETFL)
-            fcntl.fcntl(self.__proc.stdout, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+            flags = gtrunner.fcntl.set_nonblocking(self.__proc.stdout)
 
-            self.__out_file = open(out_file_name, "wb", buffering=64*1024)
-
-            self.__tid = tk_utils.tk_top.after(100, self.__communicate)
+            self.__out_file = open(out_file_name, "wb", buffering=0)
 
 
     def terminate(self):
-        self.__proc.terminate()
-
-        if self.__tid:
-            tk_utils.tk_top.after_cancel(self.__tid)
-            self.__tid = None
-
-        try:
-            os.remove(self.__out_file_name + ".running")
-        except OSError:
-            pass
-
-        self.__out_file.close()
-        if self.__clean_trace_file:
-            try:
-                os.remove(self.__out_file_name)
-            except OSError as e:
-                pass
+        if self.__proc:
+            self.__terminated = True
+            self.__proc.terminate()
 
 
     def abort(self):
-        self.__proc.send_signal(signal.SIGABRT)
+        if self.__proc:
+            if os.name == "posix":
+                self.__proc.send_signal(signal.SIGABRT)
+            else:
+                self.__proc.terminate()
 
 
     def update_options(self, clean_trace, clean_core):
@@ -363,8 +440,10 @@ class Gtest_job(object):
 
 
     def get_stats(self):
-        return [self.__proc.pid, self.__out_file_name,
-                self.__sum_input_trace, self.__result_cnt,
+        return [self.__proc.pid if self.__proc else 0,
+                self.__out_file_name,
+                self.__sum_input_trace,
+                self.__result_cnt,
                 self.__snippet_name.decode(errors="backslashreplace")]
 
 
@@ -372,8 +451,16 @@ class Gtest_job(object):
         return self.__is_bg_job
 
 
-    def __communicate(self):
-        data = self.__proc.stdout.read(256*1024)
+    def get_pipe(self):
+        return self.__proc.stdout if self.__proc else None
+
+
+    def communicate(self):
+        if not self.__proc:
+            return False
+
+        data = gtrunner.fcntl.read_nonblocking(self.__proc.stdout, 256*1024)
+
         if data:
             self.__sum_input_trace += len(data)
             self.__buf_data += data
@@ -417,18 +504,27 @@ class Gtest_job(object):
             else:
                 self.__trace_to_file(self.__buf_data[done_off : last_line_off])
             self.__buf_data = self.__buf_data[last_line_off:]
-            self.__tid = tk_utils.tk_top.after(100, lambda: self.__communicate())
+            return True
 
         else:
             retval = self.__proc.poll()
-            if retval is None:
-                self.__tid = tk_utils.tk_top.after(100, lambda: self.__communicate())
-            else:
+            if retval is not None:
                 self.__process_exit(retval)
+                self.__proc = None
+                return False
+
+            return True
 
 
     def __process_exit(self, retval):
-        if retval != 0:
+        # Detect TEST_PREMATURE_EXIT_FILE
+        try:
+            os.remove(self.__out_file_name + ".running")
+            aborted = True
+        except OSError as e:
+            aborted = False
+
+        if (retval != 0 or aborted) and not self.__terminated:
             # Detect core dump (POSIX only)
             try:
                 if self.__clean_core:
@@ -450,12 +546,6 @@ class Gtest_job(object):
                         os.rename("vgcore.%d" % self.__proc.pid, core_file)
                 except OSError as e:
                     core_file = None
-            # Detect TEST_PREMATURE_EXIT_FILE
-            try:
-                os.remove(self.__out_file_name + ".running")
-                aborted = True
-            except OSError as e:
-                aborted = False
             # Detect error reported by valgrind
             valgrind_error = self.__is_valgrind and (retval == self.__valgrind_exit)
 
@@ -480,7 +570,10 @@ class Gtest_job(object):
         self.__out_file.close()
         if self.__clean_trace_file:
             os.remove(self.__out_file_name)
-        self.__parent.report_exit(self)
+        self.__out_file = None
+
+        # report exit to parent
+        self.__result_queue.put((None, self))
 
 
     def __process_trace(self, tc_name, is_failed, duration, core_file):
@@ -517,14 +610,12 @@ class Gtest_job(object):
             self.__trace_to_file(self.__snippet_data)
         self.__result_cnt += 1
 
-        test_db.add_result((tc_name, seed, self.__exe_ts, is_failed,
-                            self.__out_file_name if store_trace else None,
-                            trace_start_off, trace_length, core_file,
-                            fail_file, fail_line, duration, int(time.time()),
-                            self.__is_valgrind, False), self.__is_bg_job)
-
-        if is_failed >= 2:
-            self.__parent.report_fail()
+        self.__result_queue.put( ((tc_name, seed, self.__exe_ts, is_failed,
+                                   self.__out_file_name if store_trace else None,
+                                   trace_start_off, trace_length, core_file,
+                                   fail_file, fail_line, duration, int(time.time()),
+                                   self.__is_valgrind, False),
+                                  self.__is_bg_job) )
 
 
     def __trace_to_file(self, data):

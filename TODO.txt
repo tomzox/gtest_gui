@@ -1,7 +1,3 @@
-Bugs:
-- results log: trace preview unavailable for most recent results
-  (caused by buffering of trace data within memory)
-
 General:
 - documentation
 - code comments
@@ -9,10 +5,6 @@ General:
 - python package
 
 gtest:
-- test failures when GUI is blocking gtest stream processing
-  - separate threads for reading pipes
-  - or write straight to file, at least in non-clean mode
-  - or use separate process for filtering
 - hard link for exe as "exe.exe_ts" to allow recompilation during run
   keep link as long as there are core files referencing it
 - handle I/O error in trace writing
