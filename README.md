@@ -47,8 +47,6 @@ high-repetition test campaigns, also using valgrind or sanitizer builds.
 
 ## Prerequisites
 
-GtRunner currently only supports Linux.
-
 Python3 and the Python "tkinter" module are required. (The latter usually is
 part of default Python installation.)
 
@@ -69,3 +67,6 @@ In summary, most common usage is as follows:
 ```console
     gtrunner/gtrunner.py my_test_application
 ```
+
+On the MS-Windows platform, start GtRunner via pythonw.exe to avoid the console
+window.

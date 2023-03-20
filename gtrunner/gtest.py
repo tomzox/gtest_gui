@@ -409,7 +409,8 @@ class Gtest_job(object):
 
         # exceptions to be caught by caller
         self.__proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                       stdin=subprocess.DEVNULL, env=env)
+                                       stdin=subprocess.DEVNULL, env=env,
+                                       creationflags=gtrunner.fcntl.subprocess_creationflags())
         if self.__proc:
             flags = gtrunner.fcntl.set_nonblocking(self.__proc.stdout)
 
@@ -633,7 +634,8 @@ def gtest_list_tests(pattern="", exe_file=None):
         cmd.append("--gtest_filter=" + pattern)
     try:
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                universal_newlines=True)
+                                universal_newlines=True,
+                                creationflags=gtrunner.fcntl.subprocess_creationflags())
         result = proc.communicate(timeout=10)
         if proc.returncode == 0:
             tc_names = gtest_parse_test_list(result[0].rstrip())

@@ -273,7 +273,7 @@ class Test_control_widget(object):
                     command=self.resume_campaign)
         self.wid_cmd_repeat = tk.Button(
                     wid_frm, image="img_repeat", text="Repeat", compound=tk.LEFT, width=width,
-                    command=self.start_test_repetitions)
+                    command=self.start_repetition)
         self.wid_cmd_run.pack(side=tk.LEFT, padx=5)
         self.wid_cmd_stop.pack(side=tk.LEFT, padx=5)
         self.wid_cmd_resume.pack(side=tk.LEFT, padx=5)
@@ -348,6 +348,7 @@ class Test_control_widget(object):
                 self.wid_stats_pass_cnt.configure(foreground="#18FF18", font=tk_utils.font_bold)
                 self.wid_stats_fail_cnt.configure(foreground="#FF1818", font=tk_utils.font_bold)
 
+                self.wid_cmd_run.configure(cursor="top_left_arrow")
                 self.wid_cmd_stop.configure(state=tk.NORMAL)
                 cmd_state = state=tk.DISABLED
 
@@ -355,7 +356,7 @@ class Test_control_widget(object):
                 self.wid_stats_pass_cnt.configure(foreground="#FFFFFF", font=tk_utils.font_normal)
                 self.wid_stats_fail_cnt.configure(foreground="#FFFFFF", font=tk_utils.font_normal)
 
-                self.wid_cmd_stop.configure(state=tk.DISABLED)
+                self.wid_cmd_stop.configure(state=tk.DISABLED, cursor="top_left_arrow")
                 cmd_state = state=tk.NORMAL
 
             for wid in (self.wid_cmd_run,
@@ -538,10 +539,11 @@ class Test_control_widget(object):
         if not self.check_test_options():
             return
 
-        self.start_test_sub(self.var_opt_filter.get())
+        self.start_campaign_sub(self.var_opt_filter.get())
 
 
     def stop_campaign(self):
+        self.wid_cmd_stop.configure(cursor="watch")
         gtest.gtest_ctrl.stop()
 
 
@@ -560,13 +562,13 @@ class Test_control_widget(object):
 
         remaining_rep_cnt = self.calc_remaining_repetitions()
         if remaining_rep_cnt:
-            self.start_test_sub(self.var_opt_filter.get(),
-                                remaining_rep_cnt=remaining_rep_cnt)
+            self.start_campaign_sub(self.var_opt_filter.get(),
+                                    remaining_rep_cnt=remaining_rep_cnt)
         else:
             wid_status_line.show_message("warn", "Tests have been completed already.")
 
 
-    def start_test_repetitions(self):
+    def start_repetition(self):
         if gtest.gtest_ctrl.is_active(): # block call via key binding
             return
 
@@ -602,8 +604,7 @@ class Test_control_widget(object):
             return
 
         # create fake pattern that selects the test cases
-        # TODO ignore "runall" option
-        self.start_test_sub(":".join(tc_names), is_repeat=True)
+        self.start_campaign_sub(":".join(tc_names), is_repeat=True)
 
 
     def check_executable_update(self, is_resume):
@@ -709,7 +710,7 @@ class Test_control_widget(object):
         return True
 
 
-    def start_test_sub(self, filter_str, remaining_rep_cnt=0, is_repeat=False):
+    def start_campaign_sub(self, filter_str, remaining_rep_cnt=0, is_repeat=False):
         expr = filter_expr.Filter_expr(filter_str, self.var_opt_run_disabled.get())
         tc_list = expr.get_selected_tests()
 
@@ -728,6 +729,8 @@ class Test_control_widget(object):
         rep_cnt = remaining_rep_cnt
         if not rep_cnt:
             rep_cnt = 1 if is_repeat else self.var_opt_repetitions.get()
+
+        self.wid_cmd_run.configure(cursor="watch")
 
         gtest.gtest_ctrl.start(
             self.var_opt_job_count.get(),

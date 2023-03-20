@@ -69,7 +69,7 @@ class Main_window(object):
         tk_top.bind("<Control-Key-r>", lambda e: wid_test_ctrl_.start_campaign())
         tk_top.bind("<Control-Key-s>", lambda e: wid_test_ctrl_.stop_campaign())
         tk_top.bind("<Control-Key-q>", lambda e: wid_test_ctrl_.resume_campaign())
-        tk_top.bind("<Control-Key-t>", lambda e: wid_test_ctrl_.start_test_repetitions())
+        tk_top.bind("<Control-Key-t>", lambda e: wid_test_ctrl_.start_repetition())
 
         tk_top.protocol(name="WM_DELETE_WINDOW", func=self.quit)
 
@@ -91,7 +91,7 @@ class Main_window(object):
         wid_men_ctrl.add_command(label="Resume tests",
                                  command=wid_test_ctrl_.resume_campaign, accelerator="Ctrl-q")
         wid_men_ctrl.add_command(label="Repeat tests",
-                                 command=wid_test_ctrl_.start_test_repetitions, accelerator="Ctrl-t")
+                                 command=wid_test_ctrl_.start_repetition, accelerator="Ctrl-t")
         wid_men_ctrl.add_separator()
         wid_men_ctrl.add_command(label="Open test case list...",
                                  command=lambda: dlg_tc_list.create_dialog(self.tk, wid_test_ctrl_))

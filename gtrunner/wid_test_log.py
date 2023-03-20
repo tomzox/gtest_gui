@@ -19,6 +19,7 @@
 
 from datetime import datetime
 from enum import Enum
+import bisect
 import os
 import re
 import time
@@ -26,7 +27,7 @@ import time
 import tkinter as tk
 from tkinter import messagebox as tk_messagebox
 
-import gtrunner.bisect as bisect
+import gtrunner.bisect
 import gtrunner.config_db as config_db
 import gtrunner.dlg_browser as dlg_browser
 import gtrunner.filter_expr as filter_expr
@@ -132,7 +133,7 @@ class Test_log_widget(object):
         self.var_opt_filter_tc_name = tk.BooleanVar(self.tk, False)
 
         wid_men.add_checkbutton(label="Show only failed results",
-                                command=self.populate_log, variable=self.var_opt_filter_pass)
+                                command=self.toggle_verdict_filter, variable=self.var_opt_filter_pass)
         wid_men.add_checkbutton(label="Show only current results",
                                 command=self.toggle_exe_filter, variable=self.var_opt_filter_exe)
         wid_men.add_checkbutton(label="Show only selected test cases",
@@ -216,7 +217,8 @@ class Test_log_widget(object):
 
         if self.matches_filter(log):
             if self.opt_sort_modes:
-                list_idx = bisect.bisect_left(self.log_idx_map, log_idx, self.get_sort_key_fn())
+                list_idx = gtrunner.bisect.bisect_left(self.log_idx_map, log_idx,
+                                                       self.get_sort_key_fn())
                 self.log_idx_map.insert(list_idx, log_idx)
             else:
                 self.log_idx_map.append(log_idx)
@@ -438,6 +440,10 @@ class Test_log_widget(object):
                  ((not self.var_opt_filter_tc_name.get()) or (log[0] in self.opt_filter_tc_names)) )
 
 
+    def toggle_verdict_filter(self):
+        self.refill_log(restore_selection=True)
+
+
     def toggle_exe_filter(self, exe_ts = None):
         if not exe_ts:
             exe_ts = test_db.test_exe_ts
@@ -471,15 +477,15 @@ class Test_log_widget(object):
         self.refill_log(restore_selection=True)
 
 
-    def delete_multiple_results(self, log_idx_list):
-        log_idx_list = sorted(log_idx_list)
+    def delete_multiple_results(self, idx_list):
+        idx_list = sorted(idx_list)
         # Copy items to a new list, except for those at selected indices. As the result list
         # can be rather large, this is significantly faster than deleting items in place.
         new_list = []
         rm_idx = 0
         for idx in range(len(test_db.test_results)):
-            if idx == log_idx_list[rm_idx]:
-                if rm_idx + 1 < len(log_idx_list):
+            if idx == idx_list[rm_idx]:
+                if rm_idx + 1 < len(idx_list):
                     rm_idx += 1
             else:
                 new_list.append(test_db.test_results[idx])
@@ -488,7 +494,11 @@ class Test_log_widget(object):
         self.refill_log()
 
 
-    def delete_single_result(self, log_idx):
+    def delete_single_result(self, idx):
+        log_idx = bisect.bisect_left(self.log_idx_map, idx)
+        if (log_idx >= len(self.log_idx_map)) or (self.log_idx_map[log_idx] != idx):
+            raise ValueError
+
         line_1 = "%d.0" % (log_idx + 1)
         line_2 = "%d.0" % (log_idx + 2)
         self.wid_log.delete(line_1, line_2)

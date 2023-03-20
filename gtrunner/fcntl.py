@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
-import sys
 import os
+import subprocess
+import sys
 
 if sys.platform == "win32":
     # Posted to stackoverflow.com by anatoly techtonik, Dec/29/2015
@@ -14,6 +15,10 @@ if sys.platform == "win32":
     LPDWORD = POINTER(DWORD)
     PIPE_NOWAIT = wintypes.DWORD(0x00000001)
     ERROR_NO_DATA = 232
+
+
+    def subprocess_creationflags():
+        return subprocess.CREATE_NO_WINDOW
 
 
     def set_nonblocking(pipe):
@@ -39,6 +44,10 @@ if sys.platform == "win32":
 
 else:
     import fcntl
+
+
+    def subprocess_creationflags():
+        return 0
 
 
     def set_nonblocking(pipe):

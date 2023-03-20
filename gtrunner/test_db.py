@@ -17,7 +17,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # ------------------------------------------------------------------------ #
 
-# Plain list of test case names, in order returned by test exe.
+# Plain list of test case names, in order returned by test executable
 test_case_names = []
 
 # [ 0] test case name
@@ -26,7 +26,7 @@ test_case_names = []
 # [ 3] verdict (0: pass, 1: skipped, 2: fail, 3: crash, 4: valgrind summary error)
 # [ 4] trace file name (or None)
 # [ 5] trace file offset to start of line "[ RUN ]"
-# [ 6] trace length from start offset to end of line "[ OK ]"
+# [ 6] trace length from start offset to end of line "[ OK|FAILED ]"
 # [ 7] core file name (or None)
 # [ 8] source code file of exception ("" if none)
 # [ 9] source code line of exception (0 if none)
