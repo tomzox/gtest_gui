@@ -20,8 +20,8 @@
 import re
 import tkinter as tk
 
-import gtrunner.tk_utils as tk_utils
-import gtrunner.tool_tip_db as tool_tip_db
+import gtest_gui.tk_utils as tk_utils
+import gtest_gui.tool_tip_db as tool_tip_db
 
 
 def enable_tips(enable):

@@ -26,14 +26,14 @@ import time
 import tkinter as tk
 from tkinter import messagebox as tk_messagebox
 
-import gtrunner.config_db as config_db
-import gtrunner.dlg_config as dlg_config
-import gtrunner.filter_expr as filter_expr
-import gtrunner.gtest as gtest
-import gtrunner.test_db as test_db
-import gtrunner.tk_utils as tk_utils
-import gtrunner.wid_status_line as wid_status_line
-import gtrunner.wid_tool_tip as wid_tool_tip
+import gtest_gui.config_db as config_db
+import gtest_gui.dlg_config as dlg_config
+import gtest_gui.filter_expr as filter_expr
+import gtest_gui.gtest as gtest
+import gtest_gui.test_db as test_db
+import gtest_gui.tk_utils as tk_utils
+import gtest_gui.wid_status_line as wid_status_line
+import gtest_gui.wid_tool_tip as wid_tool_tip
 
 
 class Test_control_widget(object):

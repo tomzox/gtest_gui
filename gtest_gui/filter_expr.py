@@ -24,8 +24,8 @@
 import re
 import sys
 
-import gtrunner.test_db as test_db
-import gtrunner.tk_utils as tk_utils
+import gtest_gui.test_db as test_db
+import gtest_gui.tk_utils as tk_utils
 
 
 class Filter_expr(object):

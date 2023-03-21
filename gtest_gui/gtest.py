@@ -30,10 +30,10 @@ import time
 
 from tkinter import messagebox as tk_messagebox
 
-import gtrunner.config_db as config_db
-import gtrunner.test_db as test_db
-import gtrunner.tk_utils as tk_utils
-import gtrunner.fcntl
+import gtest_gui.config_db as config_db
+import gtest_gui.test_db as test_db
+import gtest_gui.tk_utils as tk_utils
+import gtest_gui.fcntl
 
 
 gtest_ctrl = None
@@ -410,9 +410,9 @@ class Gtest_job(object):
         # exceptions to be caught by caller
         self.__proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                        stdin=subprocess.DEVNULL, env=env,
-                                       creationflags=gtrunner.fcntl.subprocess_creationflags())
+                                       creationflags=gtest_gui.fcntl.subprocess_creationflags())
         if self.__proc:
-            flags = gtrunner.fcntl.set_nonblocking(self.__proc.stdout)
+            flags = gtest_gui.fcntl.set_nonblocking(self.__proc.stdout)
 
             self.__out_file = open(out_file_name, "wb", buffering=0)
 
@@ -460,7 +460,7 @@ class Gtest_job(object):
         if not self.__proc:
             return False
 
-        data = gtrunner.fcntl.read_nonblocking(self.__proc.stdout, 256*1024)
+        data = gtest_gui.fcntl.read_nonblocking(self.__proc.stdout, 256*1024)
 
         if data:
             self.__sum_input_trace += len(data)
@@ -635,7 +635,7 @@ def gtest_list_tests(pattern="", exe_file=None):
     try:
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                 universal_newlines=True,
-                                creationflags=gtrunner.fcntl.subprocess_creationflags())
+                                creationflags=gtest_gui.fcntl.subprocess_creationflags())
         result = proc.communicate(timeout=10)
         if proc.returncode == 0:
             tc_names = gtest_parse_test_list(result[0].rstrip())

@@ -27,14 +27,14 @@ import tkinter as tk
 from tkinter import messagebox as tk_messagebox
 from tkinter import filedialog as tk_filedialog
 
-import gtrunner.bisect as bisect
-import gtrunner.config_db as config_db
-import gtrunner.filter_expr as filter_expr
-import gtrunner.gtest as gtest
-import gtrunner.test_db as test_db
-import gtrunner.tk_utils as tk_utils
-import gtrunner.wid_test_ctrl as wid_test_ctrl
-import gtrunner.wid_text_sel as wid_text_sel
+import gtest_gui.bisect as bisect
+import gtest_gui.config_db as config_db
+import gtest_gui.filter_expr as filter_expr
+import gtest_gui.gtest as gtest
+import gtest_gui.test_db as test_db
+import gtest_gui.tk_utils as tk_utils
+import gtest_gui.wid_test_ctrl as wid_test_ctrl
+import gtest_gui.wid_text_sel as wid_text_sel
 
 
 prev_dialog_wid = None
@@ -97,7 +97,7 @@ class Tc_list_dialog(object):
 
     def create_dialog(self):
         self.wid_top = tk.Toplevel(self.tk)
-        self.wid_top.wm_title("Test case list & statistics")
+        self.wid_top.wm_title("GtestGui: Test case list")
         self.wid_top.wm_group(self.tk)
 
         self.var_filter_run = tk.BooleanVar(self.tk, False)

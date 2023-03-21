@@ -28,4 +28,4 @@ if os_path:
 else:
     os.environ["PATH"] = trowser_path
 
-import gtrunner.__main__
+import gtest_gui.__main__

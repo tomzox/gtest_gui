@@ -22,7 +22,7 @@
 import tkinter as tk
 import tkinter.font as tkf
 
-import gtrunner.tk_utils as tk_utils
+import gtest_gui.tk_utils as tk_utils
 
 prev_dialog_wid = {}
 
@@ -43,7 +43,7 @@ class Font_selection_dialog(object):
         self.callback = callback
 
         self.wid_top = tk.Toplevel(self.tk)
-        self.wid_top.wm_title("Font selection")
+        self.wid_top.wm_title("GtestGui: Font selection")
         self.wid_top.wm_group(self.tk)
 
         self.font_bold = tk.BooleanVar(self.tk, False)

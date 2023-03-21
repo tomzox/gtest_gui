@@ -25,9 +25,9 @@ import re
 import tkinter as tk
 from tkinter import messagebox as tk_messagebox
 
-import gtrunner.config_db as config_db
-import gtrunner.tk_utils as tk_utils
-import gtrunner.wid_tool_tip as wid_tool_tip
+import gtest_gui.config_db as config_db
+import gtest_gui.tk_utils as tk_utils
+import gtest_gui.wid_tool_tip as wid_tool_tip
 
 prev_dialog_wid = None
 
@@ -52,7 +52,7 @@ class Config_dialog(object):
 
         self.wid_top = tk.Toplevel(tk_top)
         self.wid_top.wm_group(tk_top)
-        self.wid_top.wm_title("Configure gtrunner")
+        self.wid_top.wm_title("GtestGui: Configuration options")
 
         self.wid_top.columnconfigure(1, weight=1)
 

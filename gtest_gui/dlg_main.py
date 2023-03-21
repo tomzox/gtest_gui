@@ -23,19 +23,19 @@ import tkinter as tk
 from tkinter import messagebox as tk_messagebox
 from tkinter import filedialog as tk_filedialog
 
-import gtrunner.config_db as config_db
-import gtrunner.dlg_config as dlg_config
-import gtrunner.dlg_debug as dlg_debug
-import gtrunner.dlg_font_sel as dlg_font_sel
-import gtrunner.dlg_job_list as dlg_job_list
-import gtrunner.dlg_tc_list as dlg_tc_list
-import gtrunner.gtest as gtest
-import gtrunner.test_db as test_db
-import gtrunner.tk_utils as tk_utils
-import gtrunner.wid_status_line as wid_status_line
-import gtrunner.wid_test_ctrl as wid_test_ctrl
-import gtrunner.wid_test_log as wid_test_log
-import gtrunner.wid_tool_tip as wid_tool_tip
+import gtest_gui.config_db as config_db
+import gtest_gui.dlg_config as dlg_config
+import gtest_gui.dlg_debug as dlg_debug
+import gtest_gui.dlg_font_sel as dlg_font_sel
+import gtest_gui.dlg_job_list as dlg_job_list
+import gtest_gui.dlg_tc_list as dlg_tc_list
+import gtest_gui.gtest as gtest
+import gtest_gui.test_db as test_db
+import gtest_gui.tk_utils as tk_utils
+import gtest_gui.wid_status_line as wid_status_line
+import gtest_gui.wid_test_ctrl as wid_test_ctrl
+import gtest_gui.wid_test_log as wid_test_log
+import gtest_gui.wid_tool_tip as wid_tool_tip
 
 
 wid_test_ctrl_ = None
@@ -228,7 +228,7 @@ class Main_window(object):
         if tc_names is None:
             return
 
-        self.tk.wm_title("gtrunner: " + os.path.basename(filename))
+        self.tk.wm_title("GtestGui: " + os.path.basename(filename))
         test_db.update_executable(filename, exe_ts, tc_names)
 
         config_db.update_prev_exe_file_list(filename)
@@ -240,9 +240,9 @@ class Main_window(object):
         wid_about.wm_transient(self.tk)
         wid_about.wm_resizable(1, 1)
         wid_about.wm_group(self.tk)
-        wid_about.wm_title("About gtrunner")
+        wid_about.wm_title("About Gtest GUI")
 
-        wid_lab1 = tk.Label(wid_about, text="Gtest runner")
+        wid_lab1 = tk.Label(wid_about, text="Yet another GUI for GoogleTest")
         wid_lab1.pack(side=tk.TOP, pady=8)
 
         wid_lab2 = tk.Label(wid_about, text="Copyright (C) 2023 Th. Zoerner",
@@ -250,7 +250,7 @@ class Main_window(object):
         wid_lab2.pack(side=tk.TOP)
 
         msg ="""
-Homepage: https://github.com/tomzox/gtrunner
+Homepage: https://github.com/tomzox/gtest_gui
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 

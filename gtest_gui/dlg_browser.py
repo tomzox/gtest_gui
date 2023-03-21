@@ -28,11 +28,11 @@ import tkinter as tk
 from tkinter import messagebox as tk_messagebox
 from tkinter import filedialog as tk_filedialog
 
-import gtrunner.config_db as config_db
-import gtrunner.gtest as gtest
-import gtrunner.test_db as test_db
-import gtrunner.tk_utils as tk_utils
-import gtrunner.wid_status_line as wid_status_line
+import gtest_gui.config_db as config_db
+import gtest_gui.gtest as gtest
+import gtest_gui.test_db as test_db
+import gtest_gui.tk_utils as tk_utils
+import gtest_gui.wid_status_line as wid_status_line
 
 prev_trace_export_path = ""
 
@@ -106,7 +106,7 @@ def show_stack_trace(tk_top, tc_name, core_name):
         tk_messagebox.showerror(parent=tk_top, message="Failed to run gdb: " + str(e))
         return
 
-    title = "Stack trace - %s (%s)" % (tc_name, core_name)
+    title = "GtestGui: Stack trace - %s (%s)" % (tc_name, core_name)
     Log_browser(tk_top, title, proc)
 
     # TODO

@@ -22,11 +22,11 @@ import sys
 from tkinter import messagebox as tk_messagebox
 import tkinter as tk
 
-import gtrunner.config_db as config_db
-import gtrunner.dlg_main as dlg_main
-import gtrunner.gtest as gtest
-import gtrunner.test_db as test_db
-import gtrunner.tk_utils as tk_utils
+import gtest_gui.config_db as config_db
+import gtest_gui.dlg_main as dlg_main
+import gtest_gui.gtest as gtest
+import gtest_gui.test_db as test_db
+import gtest_gui.tk_utils as tk_utils
 
 
 def parse_argv_error(tk_top, msg, with_usage=True):
@@ -80,8 +80,9 @@ def parse_argv(tk_top):
 
 def main():
     try:
-        tk_top = tk.Tk(className="gtrunner")
+        tk_top = tk.Tk(className="gtest_gui")
         tk_top.wm_withdraw()
+        tk_top.wm_title("GtestGui")
     except Exception as e:
         print("Tk initialization failed: " + str(e), file=sys.stderr)
         sys.exit(1)

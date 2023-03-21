@@ -24,14 +24,14 @@
 import tkinter as tk
 from tkinter import messagebox as tk_messagebox
 
-import gtrunner.config_db as config_db
-import gtrunner.dlg_browser as dlg_browser
-import gtrunner.filter_expr as filter_expr
-import gtrunner.gtest as gtest
-import gtrunner.test_db as test_db
-import gtrunner.tk_utils as tk_utils
-import gtrunner.wid_test_ctrl as wid_test_ctrl
-import gtrunner.wid_text_sel as wid_text_sel
+import gtest_gui.config_db as config_db
+import gtest_gui.dlg_browser as dlg_browser
+import gtest_gui.filter_expr as filter_expr
+import gtest_gui.gtest as gtest
+import gtest_gui.test_db as test_db
+import gtest_gui.tk_utils as tk_utils
+import gtest_gui.wid_test_ctrl as wid_test_ctrl
+import gtest_gui.wid_text_sel as wid_text_sel
 
 
 prev_dialog_wid = None
@@ -74,7 +74,7 @@ class Job_list_dialog(object):
 
     def create_dialog(self):
         self.wid_top = tk.Toplevel(self.tk)
-        self.wid_top.wm_title("Test job list")
+        self.wid_top.wm_title("GtestGui: Test job list")
         self.wid_top.wm_group(self.tk)
 
         self.create_table_widget()

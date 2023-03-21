@@ -20,7 +20,7 @@
 import re
 import tkinter as tk
 
-import gtrunner.tk_utils as tk_utils
+import gtest_gui.tk_utils as tk_utils
 
 prev_dialog_wid = None
 
@@ -41,7 +41,7 @@ class Debug_dialog(object):
         self.globals = main_globals
         self.wid_top = tk.Toplevel(self.tk)
         self.wid_top.wm_group(self.tk)
-        self.wid_top.wm_title("Debug console")
+        self.wid_top.wm_title("GtestGui: Debug console")
 
         char_h = self.tk.call("font", "metrics", "TkFixedFont", "-linespace")
         height = 15 * char_h

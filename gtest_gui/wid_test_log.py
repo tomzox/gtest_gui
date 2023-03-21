@@ -27,16 +27,16 @@ import time
 import tkinter as tk
 from tkinter import messagebox as tk_messagebox
 
-import gtrunner.bisect
-import gtrunner.config_db as config_db
-import gtrunner.dlg_browser as dlg_browser
-import gtrunner.filter_expr as filter_expr
-import gtrunner.gtest as gtest
-import gtrunner.test_db as test_db
-import gtrunner.tk_utils as tk_utils
-import gtrunner.wid_status_line as wid_status_line
-import gtrunner.wid_test_ctrl as wid_test_ctrl
-import gtrunner.wid_text_sel as wid_text_sel
+import gtest_gui.bisect
+import gtest_gui.config_db as config_db
+import gtest_gui.dlg_browser as dlg_browser
+import gtest_gui.filter_expr as filter_expr
+import gtest_gui.gtest as gtest
+import gtest_gui.test_db as test_db
+import gtest_gui.tk_utils as tk_utils
+import gtest_gui.wid_status_line as wid_status_line
+import gtest_gui.wid_test_ctrl as wid_test_ctrl
+import gtest_gui.wid_text_sel as wid_text_sel
 
 
 class Sort_mode(Enum):
@@ -217,7 +217,7 @@ class Test_log_widget(object):
 
         if self.matches_filter(log):
             if self.opt_sort_modes:
-                list_idx = gtrunner.bisect.bisect_left(self.log_idx_map, log_idx,
+                list_idx = gtest_gui.bisect.bisect_left(self.log_idx_map, log_idx,
                                                        self.get_sort_key_fn())
                 self.log_idx_map.insert(list_idx, log_idx)
             else:

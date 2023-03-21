@@ -20,7 +20,7 @@
 import re
 import tkinter as tk
 
-import gtrunner.tk_utils as tk_utils
+import gtest_gui.tk_utils as tk_utils
 
 stline = None
 

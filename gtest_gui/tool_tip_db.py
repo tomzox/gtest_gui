@@ -37,7 +37,7 @@ This entry field supports undo/redo via Control-Z and Control-Y.
 '''
 Number of processes to spawn which will execute tests concurrently.
 Gtest\'s "sharding" feature is used for partitioning the set of test cases into
-sub-sets. For small number of tests, gtrunner may additionally partition by
+sub-sets. For small number of tests, gtest_gui may additionally partition by
 repetiton count for achieving better load distribution.  Due to static
 partitioning, some processes may finish early if test case execution times are
 non-uniform.
@@ -133,7 +133,7 @@ files. The file name will be appended to the given command line.
 '''
 Enable this if the selected trace browser supports reading text from "standard
 input" via a pipeline. In this case filename "-" is passed on the command line.
-The default browser "trowser" supports this. When not enabled, gtrunner has to
+The default browser "trowser" supports this. When not enabled, gtest_gui has to
 create temporary files for passing trace snippets to the browser application.
 ''',
 
