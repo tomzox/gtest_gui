@@ -58,10 +58,10 @@ class Main_window(object):
         wid_test_log_.set_wid_test_ctrl(wid_test_ctrl_)
         wid_test_ctrl_.set_wid_test_log(wid_test_log_)
 
-        self.create_menubar()
+        self.__create_menubar()
 
         if test_db.test_exe_name:
-            self.update_executable(test_db.test_exe_name)
+            self.__update_executable(test_db.test_exe_name)
 
         wid_test_log_.populate_log()
 
@@ -74,7 +74,7 @@ class Main_window(object):
         tk_top.protocol(name="WM_DELETE_WINDOW", func=self.quit)
 
 
-    def create_menubar(self):
+    def __create_menubar(self):
         wid_men = tk.Menu(self.tk, name="menubar", tearoff=0)
         self.var_opt_test_ctrl = tk.BooleanVar(self.tk, False)
         self.var_opt_tool_tips = tk.BooleanVar(self.tk, config_db.options["enable_tool_tips"])
@@ -99,7 +99,7 @@ class Main_window(object):
                                  command=lambda: dlg_job_list.create_dialog(self.tk))
         wid_men_ctrl.add_separator()
         wid_men_ctrl.add_command(label="Refresh test case list", command=self.reload_exe)
-        wid_men_set_exe = tk.Menu(wid_men_ctrl, tearoff=0, postcommand=self.fill_prev_exe_menu)
+        wid_men_set_exe = tk.Menu(wid_men_ctrl, tearoff=0, postcommand=self.__fill_prev_exe_menu)
         wid_men_ctrl.add_cascade(menu=wid_men_set_exe, label="Select test executable")
         wid_men_set_exe.add_command(label="Select executable file...", command=self.select_exe)
         wid_men_ctrl.add_separator()
@@ -146,7 +146,7 @@ class Main_window(object):
         return True
 
 
-    def check_tests_active(self):
+    def __check_tests_active(self):
         if gtest.gtest_ctrl.is_active():
             msg = "This operation requires stopping ongoing tests."
             if not tk_messagebox.askokcancel(parent=self.tk, message=msg):
@@ -155,7 +155,7 @@ class Main_window(object):
         return False
 
 
-    def fill_prev_exe_menu(self):
+    def __fill_prev_exe_menu(self):
         end_idx = self.wid_men_set_exe.index("end")
         if int(end_idx) > 0:
             self.wid_men_set_exe.delete(1, "end")
@@ -168,11 +168,11 @@ class Main_window(object):
                     need_sep = False
                 self.wid_men_set_exe.add_command(
                     label=os.path.basename(exe_name),
-                    command=lambda path=exe_name: self.select_prev_exe(path))
+                    command=lambda path=exe_name: self.__select_prev_exe(path))
 
 
     def select_exe(self):
-        if self.check_tests_active():
+        if self.__check_tests_active():
             return
 
         def_name = test_db.test_exe_name
@@ -190,16 +190,16 @@ class Main_window(object):
                         initialfile=os.path.basename(def_name),
                         initialdir=os.path.dirname(def_name))
         if len(filename) != 0:
-            self.update_executable(filename)
+            self.__update_executable(filename)
 
 
     def reload_exe(self):
         if test_db.test_exe_name:
-            if self.check_tests_active():
+            if self.__check_tests_active():
                 return
 
             prev_names = test_db.test_case_names
-            self.update_executable(test_db.test_exe_name)
+            self.__update_executable(test_db.test_exe_name)
 
             if test_db.test_case_names:
                 if prev_names == test_db.test_case_names:
@@ -210,13 +210,13 @@ class Main_window(object):
             self.select_exe()
 
 
-    def select_prev_exe(self, filename):
-        if self.check_tests_active():
+    def __select_prev_exe(self, filename):
+        if self.__check_tests_active():
             return
-        self.update_executable(filename)
+        self.__update_executable(filename)
 
 
-    def update_executable(self, filename):
+    def __update_executable(self, filename):
         try:
             exe_ts = int(os.stat(filename).st_mtime)  # cast away sub-second fraction
         except OSError as e:

@@ -52,7 +52,7 @@ def show_trace_snippet(tk_top, file_name, file_off, length):
 
         try:
             proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, text=True, shell=True)
-            threading.Thread(target=lambda:thread_browser(proc, txt), daemon=True).start()
+            threading.Thread(target=lambda:__thread_browser(proc, txt), daemon=True).start()
         except Exception as e:
             tk_messagebox.showerror(parent=tk_top, message="Failed to start external trace browser: " + str(e))
     elif txt is None:
@@ -65,14 +65,14 @@ def show_trace(tk_top, file_name):
     browser_exe = config_db.options["browser"]
     try:
         proc = subprocess.Popen([browser_exe, file_name])
-        threading.Thread(target=lambda:thread_browser(proc, None),
+        threading.Thread(target=lambda:__thread_browser(proc, None),
                          daemon=True).start()
     except Exception as e:
         tk_messagebox.showerror(parent=tk_top,
                                 message="Failed to start external trace browser: " + str(e))
 
 
-def thread_browser(proc, txt):
+def __thread_browser(proc, txt):
     if txt:
         proc.communicate(input=txt)
     else:
@@ -182,8 +182,8 @@ class Log_browser(object):
         wid_txt.configure(yscrollcommand=wid_sb.set)
 
         wid_txt.bindtags([wid_txt, "TextReadOnly", wid_top, "all"])
-        wid_txt.bind("<Alt-Key-w>", lambda e: self.do_toggle_line_wrap())
-        wid_txt.bind("<Destroy>", lambda e: self.destroy_window())
+        wid_txt.bind("<Alt-Key-w>", lambda e: self.__do_toggle_line_wrap())
+        wid_txt.bind("<Destroy>", lambda e: self.__destroy_window())
 
         wid_txt.focus_set()
         self.wid_txt = wid_txt
@@ -196,11 +196,11 @@ class Log_browser(object):
             wid_txt.insert("1.0", "\nApplication running, please stand by...\n")
 
             self.proc = proc
-            self.timer_id = tk_utils.tk_top.after(500, self.handle_communicate)
+            self.timer_id = tk_utils.tk_top.after(500, self.__handle_communicate)
             self.is_empty = True
 
 
-    def handle_communicate(self):
+    def __handle_communicate(self):
         txt = self.proc.stdout.read(32*1024)
         if txt:
             if self.is_empty:
@@ -208,10 +208,10 @@ class Log_browser(object):
                 self.wid_txt.delete("1.0", "end")
 
             self.wid_txt.insert("end", txt)
-            self.timer_id = tk_utils.tk_top.after(100, self.handle_communicate)
+            self.timer_id = tk_utils.tk_top.after(100, self.__handle_communicate)
 
         elif self.proc.poll() is None:
-            self.timer_id = tk_utils.tk_top.after(250, self.handle_communicate)
+            self.timer_id = tk_utils.tk_top.after(250, self.__handle_communicate)
 
         else:
             # leave the process as zombie - Python will clean up eventually
@@ -219,7 +219,7 @@ class Log_browser(object):
             self.proc = None
 
 
-    def do_toggle_line_wrap(self):
+    def __do_toggle_line_wrap(self):
         cur = self.wid_txt.cget("wrap")
         if cur == "none":
             self.wid_txt.configure(wrap=tk.CHAR)
@@ -227,7 +227,7 @@ class Log_browser(object):
             self.wid_txt.configure(wrap=tk.NONE)
 
 
-    def destroy_window(self):
+    def __destroy_window(self):
         if self.timer_id:
             tk_utils.tk_top.after_cancel(self.timer_id)
             self.timer_id = None

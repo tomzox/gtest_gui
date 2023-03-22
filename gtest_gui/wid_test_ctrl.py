@@ -50,9 +50,9 @@ class Test_control_widget(object):
         self.filter_undo_lock = False
         self.filter_expr_error = []
 
-        self.create_widgets(parent)
+        self.__create_widgets(parent)
 
-        test_db.Test_db_slots.campaign_stats_update = self.update_campaign_status
+        test_db.Test_db_slots.campaign_stats_update = self.__update_campaign_status
         self.slot_filter_change = None
 
 
@@ -64,7 +64,7 @@ class Test_control_widget(object):
         self.wid_test_log = test_log
 
 
-    def create_widgets(self, parent):
+    def __create_widgets(self, parent):
         # dark theme
         app_name = self.tk.cget("class")
         self.tk.eval("option add %s.test_ctrl.*background {#000000}" % app_name)
@@ -107,31 +107,31 @@ class Test_control_widget(object):
         wid_frm_opt.columnconfigure(3, weight=0)
         wid_frm_opt.columnconfigure(4, weight=1)
 
-        self.create_filter_entry_widget(wid_frm_opt, 1, 1, 1 + 4 + 2) # spans spinbox & option columns
-        self.create_spinbox_widgets(wid_frm_opt, 2, 1) # occupies 4 columns
-        self.create_option_widgets(wid_frm_opt, 2, 1 + 4) # occupies 2 columns
+        self.__create_filter_entry_widget(wid_frm_opt, 1, 1, 1 + 4 + 2) # spans spinbox & option columns
+        self.__create_spinbox_widgets(wid_frm_opt, 2, 1) # occupies 4 columns
+        self.__create_option_widgets(wid_frm_opt, 2, 1 + 4) # occupies 2 columns
         wid_frm_opt.pack(side=tk.TOP, fill=tk.X, expand=1)
 
         wid_frm_cmd = tk.Frame(self.wid_top)
-        self.create_status_widget(wid_frm_cmd, 1, 1)
-        self.create_progress_widget(wid_frm_cmd, 1, 2)
-        self.create_control_buttons(wid_frm_cmd, 1, 4)
+        self.__create_status_widget(wid_frm_cmd, 1, 1)
+        self.__create_progress_widget(wid_frm_cmd, 1, 2)
+        self.__create_control_buttons(wid_frm_cmd, 1, 4)
         wid_frm_cmd.columnconfigure(3, weight=1)
         wid_frm_cmd.columnconfigure(5, weight=2)
         wid_frm_cmd.pack(side=tk.TOP, fill=tk.X, expand=1)
 
-        self.update_campaign_status()
+        self.__update_campaign_status()
 
         self.wid_tc_filter.focus_set()
         self.wid_top.pack(side=tk.TOP, fill=tk.X)
 
 
-    def create_filter_entry_widget(self, parent, grid_row, grid_col, grid_col_span):
+    def __create_filter_entry_widget(self, parent, grid_row, grid_col, grid_col_span):
         wid_lab = tk.Label(parent, text="Test filter:")
         wid_lab.grid(row=grid_row, column=grid_col, sticky="e", padx=10)
         wid_tool_tip.tool_tip_add(wid_lab, 'test_ctrl.tc_filter')
 
-        validate_filter_cmd = self.tk.register(self.validate_tc_filter)
+        validate_filter_cmd = self.tk.register(self.__validate_tc_filter)
         wid_frm = tk.Frame(parent, relief=tk.SUNKEN, borderwidth=2)
         wid_ent = tk.Entry(wid_frm, width=40, relief=tk.FLAT, borderwidth=0,
                            textvariable=self.var_opt_filter,
@@ -140,23 +140,23 @@ class Test_control_widget(object):
 
         wid_but = tk.Button(wid_frm, image="img_drop_down", takefocus=0, borderwidth=1,
                             relief=tk.RAISED, highlightthickness=1,
-                            command=self.popup_test_case_menu)
+                            command=self.__popup_test_case_menu)
         wid_but.pack(side=tk.LEFT, fill=tk.Y)
         wid_frm.grid(row=grid_row, column=grid_col+1, columnspan=grid_col_span,
                      sticky="we", padx=10, pady=10)
 
-        wid_ent.bind("<Control-Key-z>", lambda e: tk_utils.bind_call_and_break(self.undo_tc_filter_edit))
-        wid_ent.bind("<Control-Key-y>", lambda e: tk_utils.bind_call_and_break(self.redo_tc_filter_edit))
-        wid_ent.bind("<Control-Shift-Key-z>", lambda e: tk_utils.bind_call_and_break(self.redo_tc_filter_edit))
+        wid_ent.bind("<Control-Key-z>", lambda e: tk_utils.bind_call_and_break(self.__undo_tc_filter_edit))
+        wid_ent.bind("<Control-Key-y>", lambda e: tk_utils.bind_call_and_break(self.__redo_tc_filter_edit))
+        wid_ent.bind("<Control-Shift-Key-z>", lambda e: tk_utils.bind_call_and_break(self.__redo_tc_filter_edit))
         wid_ent.bind("<Return>", lambda e: self.check_filter_expression())
-        wid_ent.bind("<Key-Down>", lambda e: self.popup_test_case_menu())
+        wid_ent.bind("<Key-Down>", lambda e: self.__popup_test_case_menu())
 
         self.wid_tc_filter = wid_ent
         self.wid_filter_men_but = wid_but
 
 
-    def create_spinbox_widgets(self, parent, grid_row, grid_col):
-        validate_int_cmd = self.tk.register(self.validate_int)
+    def __create_spinbox_widgets(self, parent, grid_row, grid_col):
+        validate_int_cmd = self.tk.register(self.__validate_int)
 
         wid_lab = tk.Label(parent, text="Repetitions:")
         wid_lab.grid(row=grid_row, column=grid_col+0, sticky="e", padx=10)
@@ -196,20 +196,20 @@ class Test_control_widget(object):
         self.wid_job_runall.grid(row=grid_row, column=grid_col+3, sticky="w", padx=10)
 
 
-    def create_option_widgets(self, parent, grid_row, grid_col):
+    def __create_option_widgets(self, parent, grid_row, grid_col):
         wid_lab = tk.Label(parent, text="Options:")
         wid_lab.grid(row=grid_row, column=grid_col, sticky="e", padx=10)
 
         wid_frm = tk.Frame(parent)
         self.wid_opt_clean_trace = tk.Checkbutton(
                     wid_frm, text="Clean traces of passed tests",
-                    variable=self.var_opt_clean_trace, command=self.handle_option_change)
+                    variable=self.var_opt_clean_trace, command=self.__handle_option_change)
         self.wid_opt_clean_trace.pack(side=tk.LEFT)
         wid_tool_tip.tool_tip_add(self.wid_opt_clean_trace, 'test_ctrl.clean_trace')
 
         self.wid_opt_clean_core = tk.Checkbutton(
                     wid_frm, text="Clean core files", variable=self.var_opt_clean_core,
-                    command=lambda: self.handle_option_change())
+                    command=lambda: self.__handle_option_change())
         self.wid_opt_clean_core.pack(side=tk.LEFT)
         wid_frm.grid(row=grid_row, column=grid_col+1, sticky="w", padx=10)
         wid_tool_tip.tool_tip_add(self.wid_opt_clean_core, 'test_ctrl.clean_core')
@@ -223,7 +223,7 @@ class Test_control_widget(object):
 
         self.wid_opt_run_disabled = tk.Checkbutton(
                     wid_frm, text="Run disabled tests", variable=self.var_opt_run_disabled,
-                    command=self.handle_run_disabled_change)
+                    command=self.__handle_run_disabled_change)
         self.wid_opt_run_disabled.pack(side=tk.LEFT, padx=10)
         wid_frm.grid(row=grid_row, column=grid_col+1, sticky="w", padx=10)
         wid_tool_tip.tool_tip_add(self.wid_opt_run_disabled, 'test_ctrl.run_disabled')
@@ -258,7 +258,7 @@ class Test_control_widget(object):
         grid_row += 1
 
 
-    def create_control_buttons(self, parent, grid_row, grid_col):
+    def __create_control_buttons(self, parent, grid_row, grid_col):
         width = max([tk_utils.font_normal.measure(x)
                             for x in ("Run", "Stop", "Resume", "Repeat")]) + 20
         wid_frm = tk.Frame(parent)
@@ -281,7 +281,7 @@ class Test_control_widget(object):
         wid_frm.grid(row=grid_row, column=grid_col)
 
 
-    def create_status_widget(self, parent, grid_row, grid_col):
+    def __create_status_widget(self, parent, grid_row, grid_col):
         wid_frm = tk.LabelFrame(parent, text="Status", borderwidth=2, relief=tk.GROOVE)
 
         wid_lab = tk.Label(wid_frm, text="Running:")
@@ -301,21 +301,21 @@ class Test_control_widget(object):
 
         wid_noshrink = tk.Frame(wid_frm)
         wid_noshrink.grid(row=4, column=1, sticky="we")
-        wid_noshrink.bind("<Configure>", lambda e: self.status_widget_resized(e.widget, e.width))
+        wid_noshrink.bind("<Configure>", lambda e: self.__status_widget_resized(e.widget, e.width))
         wid_frm.grid(row=grid_row, column=grid_col, sticky="ns", padx=5)
 
 
-    def create_progress_widget(self, parent, grid_row, grid_col):
+    def __create_progress_widget(self, parent, grid_row, grid_col):
         wid_frm = tk.LabelFrame(parent, text="Progress", borderwidth=2, relief=tk.GROOVE)
         self.wid_progress_frm = tk.Frame(wid_frm)
         self.wid_progress_bar = tk.Frame(self.wid_progress_frm, width=20,
                 background="#6868FF", borderwidth=1, relief=tk.RAISED)
         self.wid_progress_frm.pack(side=tk.TOP, fill=tk.Y, expand=1)
-        wid_tool_tip.tool_tip_add(self.wid_progress_frm, self.get_progress_tool_tip)
+        wid_tool_tip.tool_tip_add(self.wid_progress_frm, self.__get_progress_tool_tip)
         wid_frm.grid(row=grid_row, column=grid_col, sticky="ns")
 
 
-    def get_progress_tool_tip(self):
+    def __get_progress_tool_tip(self):
         totals = test_db.campaign_stats
         if totals[4]:
             max_h = self.wid_progress_frm.winfo_height()
@@ -325,7 +325,7 @@ class Test_control_widget(object):
             return ""
 
 
-    def update_campaign_status(self):
+    def __update_campaign_status(self):
         # Update counters in status frame
         totals = test_db.campaign_stats
         self.wid_stats_pass_cnt.configure(text="%d" % totals[0])
@@ -377,7 +377,7 @@ class Test_control_widget(object):
 
             cmd_state = state=tk.DISABLED
             if not tests_active:
-                remaining_rep = self.calc_remaining_repetitions()
+                remaining_rep = self.__calc_remaining_repetitions()
                 if remaining_rep:
                     cmd_state = state=tk.NORMAL
             self.wid_cmd_resume.configure(state=cmd_state)
@@ -385,17 +385,17 @@ class Test_control_widget(object):
         self.prev_exec_status = tests_active
 
 
-    def status_widget_resized(self, wid, new_width):
+    def __status_widget_resized(self, wid, new_width):
         cur_width = wid.cget("width")
         if new_width > cur_width:
             wid.configure(width=new_width)
 
 
-    def validate_int(self, val):
+    def __validate_int(self, val):
         return bool(re.match(r"^\d*$", val))
 
 
-    def validate_tc_filter(self, kind, old_val, new_val):
+    def __validate_tc_filter(self, kind, old_val, new_val):
         self.filter_expr_error.clear()
         if (new_val != old_val) and not self.filter_undo_lock:
             kind = int(kind)
@@ -409,7 +409,7 @@ class Test_control_widget(object):
         return True
 
 
-    def undo_tc_filter_edit(self):
+    def __undo_tc_filter_edit(self):
         if self.filter_undo_history:
             elem = self.filter_undo_history.pop()
             self.filter_redo_history.append((self.var_opt_filter.get(), 0))
@@ -419,7 +419,7 @@ class Test_control_widget(object):
             self.filter_undo_lock = False
 
 
-    def redo_tc_filter_edit(self):
+    def __redo_tc_filter_edit(self):
         if self.filter_redo_history:
             elem = self.filter_redo_history.pop()
             self.filter_undo_history.append((self.var_opt_filter.get(), -1))
@@ -429,7 +429,7 @@ class Test_control_widget(object):
             self.filter_undo_lock = False
 
 
-    def popup_test_case_menu(self):
+    def __popup_test_case_menu(self):
         if not self.check_filter_expression():
             return
 
@@ -480,7 +480,7 @@ class Test_control_widget(object):
                         self.var_men_chkb[tc_name] = tk.BooleanVar(self.tk, False)
                     self.wid_men_cascades[idx].add_checkbutton(
                             label=tc_name[len(tc_suite):],
-                            command=lambda x=tc_name: self.toggle_tc(x), # pass copy to lambda
+                            command=lambda x=tc_name: self.__toggle_tc(x), # pass copy to lambda
                             variable=self.var_men_chkb[tc_name], onvalue=1, offvalue=0)
                     self.var_men_chkb[tc_name].set(tc_name in matches)
                 idx += 1
@@ -495,7 +495,7 @@ class Test_control_widget(object):
                      wid.winfo_rootx(), wid.winfo_rooty() + wid.winfo_height(), 0)
 
 
-    def toggle_tc(self, tc_name):
+    def __toggle_tc(self, tc_name):
         expr = filter_expr.Filter_expr(self.var_opt_filter.get(), self.var_opt_run_disabled.get())
         expr.select_test_cases([tc_name], self.var_men_chkb[tc_name].get())
         self.var_opt_filter.set(expr.get_expr())
@@ -516,7 +516,7 @@ class Test_control_widget(object):
         return filter_expr.Filter_expr(filter_str, self.var_opt_run_disabled.get())
 
 
-    def handle_run_disabled_change(self):
+    def __handle_run_disabled_change(self):
         expr = filter_expr.Filter_expr(self.var_opt_filter.get(), self.var_opt_run_disabled.get())
         if self.slot_filter_change:
             self.slot_filter_change(expr)
@@ -530,16 +530,16 @@ class Test_control_widget(object):
         if gtest.gtest_ctrl.is_active(): # block call via key binding
             return
 
-        if not self.check_executable_update(False):
+        if not self.__check_executable_update(False):
             return
 
         # check if given test case exists - needs to be done after exe update & reading new TC list
         if not self.check_filter_expression():
             return
-        if not self.check_test_options():
+        if not self.__check_test_options():
             return
 
-        self.start_campaign_sub(self.var_opt_filter.get())
+        self.__start_campaign_sub(self.var_opt_filter.get())
 
 
     def stop_campaign(self):
@@ -551,18 +551,18 @@ class Test_control_widget(object):
         if gtest.gtest_ctrl.is_active(): # block call via key binding
             return
 
-        if not self.check_executable_update(True):
+        if not self.__check_executable_update(True):
             return
 
         # TODO remember previously used options
         if not self.check_filter_expression():
             return
-        if not self.check_test_options():
+        if not self.__check_test_options():
             return
 
-        remaining_rep_cnt = self.calc_remaining_repetitions()
+        remaining_rep_cnt = self.__calc_remaining_repetitions()
         if remaining_rep_cnt:
-            self.start_campaign_sub(self.var_opt_filter.get(),
+            self.__start_campaign_sub(self.var_opt_filter.get(),
                                     remaining_rep_cnt=remaining_rep_cnt)
         else:
             wid_status_line.show_message("warn", "Tests have been completed already.")
@@ -584,7 +584,7 @@ class Test_control_widget(object):
                           "No results selected and no repetitions requested previously.")
             return
 
-        if not self.check_executable_update(False):
+        if not self.__check_executable_update(False):
             return
 
         current_exe_cnt = sum([test_db.repeat_requests[x] == test_db.test_exe_ts
@@ -600,14 +600,14 @@ class Test_control_widget(object):
                     test_db.repeat_requests[tc_name] -= 1
                     self.wid_test_log.update_repetition_status(tc_name)
 
-        if not self.check_test_options():
+        if not self.__check_test_options():
             return
 
         # create fake pattern that selects the test cases
-        self.start_campaign_sub(":".join(tc_names), is_repeat=True)
+        self.__start_campaign_sub(":".join(tc_names), is_repeat=True)
 
 
-    def check_executable_update(self, is_resume):
+    def __check_executable_update(self, is_resume):
         if not test_db.test_exe_name:
             tk_messagebox.showerror(parent=self.tk,
                                     message="Please select an executable via the Control menu")
@@ -666,7 +666,7 @@ class Test_control_widget(object):
         return ok
 
 
-    def calc_remaining_repetitions(self):
+    def __calc_remaining_repetitions(self):
         filter_str = self.var_opt_filter.get()
         expr = filter_expr.Filter_expr(filter_str, self.var_opt_run_disabled.get())
         tc_list = expr.get_selected_tests()
@@ -684,7 +684,7 @@ class Test_control_widget(object):
         return 0
 
 
-    def check_test_options(self):
+    def __check_test_options(self):
         msg = ""
         try:
             msg = 'Value for "CPUs" is not a number.';
@@ -710,7 +710,7 @@ class Test_control_widget(object):
         return True
 
 
-    def start_campaign_sub(self, filter_str, remaining_rep_cnt=0, is_repeat=False):
+    def __start_campaign_sub(self, filter_str, remaining_rep_cnt=0, is_repeat=False):
         expr = filter_expr.Filter_expr(filter_str, self.var_opt_run_disabled.get())
         tc_list = expr.get_selected_tests()
 
@@ -749,6 +749,6 @@ class Test_control_widget(object):
             self.var_opt_break_on_except.get())
 
 
-    def handle_option_change(self):
+    def __handle_option_change(self):
         gtest.gtest_ctrl.update_options(self.var_opt_clean_trace.get(),
                                         self.var_opt_clean_core.get())

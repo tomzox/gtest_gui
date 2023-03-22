@@ -61,17 +61,17 @@ class Font_selection_dialog(object):
         self.wid_font_list.configure(yscrollcommand=wid_sb.set)
         wid_frm.pack(side=tk.TOP, fill=tk.BOTH, expand=1, padx=5, pady=5)
         self.wid_font_list.bind("<<ListboxSelect>>",
-                    lambda e: tk_utils.bind_call_and_break(self.handle_selection_change))
+                    lambda e: tk_utils.bind_call_and_break(self.__handle_selection_change))
 
         # frame #2: size and weight controls
         wid_frm2 = tk.Frame(self.wid_top)
         wid_lab = tk.Label(wid_frm2, text="Font size:")
         wid_lab.pack(side=tk.LEFT)
         wid_spin = tk.Spinbox(wid_frm2, from_=1, to=99, width=3,
-                              textvariable=self.font_size, command=self.handle_selection_change)
+                              textvariable=self.font_size, command=self.__handle_selection_change)
         wid_spin.pack(side=tk.LEFT)
         wid_chk = tk.Checkbutton(wid_frm2, text="bold",
-                                 variable=self.font_bold, command=self.handle_selection_change)
+                                 variable=self.font_bold, command=self.__handle_selection_change)
         wid_chk.pack(side=tk.LEFT, padx=15)
         wid_frm2.pack(side=tk.TOP, fill=tk.X, padx=5, pady=5)
 
@@ -88,21 +88,22 @@ class Font_selection_dialog(object):
 
         # frame #4: ok/abort buttons
         wid_frm3 = tk.Frame(self.wid_top)
-        wid_but_cancel = tk.Button(wid_frm3, text="Abort", command=self.quit)
-        wid_but_apply = tk.Button(wid_frm3, text="Apply", command=self.apply_config)
-        wid_but_ok = tk.Button(wid_frm3, text="Ok", default=tk.ACTIVE, command=self.save_and_close)
+        wid_but_cancel = tk.Button(wid_frm3, text="Abort", command=self.__quit)
+        wid_but_apply = tk.Button(wid_frm3, text="Apply", command=self.__apply_config)
+        wid_but_ok = tk.Button(wid_frm3, text="Ok", default=tk.ACTIVE,
+                               command=self.__save_and_close)
         wid_but_cancel.pack(side=tk.LEFT, padx=10, pady=5)
         wid_but_apply.pack(side=tk.LEFT, padx=10, pady=5)
         wid_but_ok.pack(side=tk.LEFT, padx=10, pady=5)
         wid_frm3.pack(side=tk.TOP)
 
-        wid_frm.bind("<Destroy>", lambda e: self.quit())
+        wid_frm.bind("<Destroy>", lambda e: self.__quit())
         wid_but_ok.bind("<Return>", lambda e: wid_but_ok.event_generate("<space>"))
         self.wid_top.bind("<Escape>", lambda e: wid_but_cancel.event_generate("<space>"))
         self.wid_font_list.focus_set()
 
         # fill font list and select current font
-        self.fill_font_list()
+        self.__fill_font_list()
         self.font_bold.set(self.font.cget("weight") != "normal")
         self.font_size.set(self.font.cget("size"))
         cur_fam = self.font.cget("family")
@@ -115,7 +116,7 @@ class Font_selection_dialog(object):
             pass
 
         # finally update demo box with the currently selected font
-        self.handle_selection_change()
+        self.__handle_selection_change()
 
 
     def raise_window(self):
@@ -124,7 +125,7 @@ class Font_selection_dialog(object):
         self.wid_font_list.focus_set()
 
 
-    def fill_font_list(self):
+    def __fill_font_list(self):
         # remove duplicates, then sort alphabetically
         self.font_families = sorted(set(tkf.families(displayof=self.tk)))
 
@@ -132,7 +133,7 @@ class Font_selection_dialog(object):
             self.wid_font_list.insert("end", f)
 
 
-    def handle_selection_change(self):
+    def __handle_selection_change(self):
         sel = self.wid_font_list.curselection()
         if (len(sel) == 1) and (sel[0] < len(self.font_families)):
           name = "{%s} %d" % (self.font_families[sel[0]], self.font_size.get())
@@ -143,12 +144,12 @@ class Font_selection_dialog(object):
           self.wid_demo.configure(font=name)
 
 
-    def quit(self):
+    def __quit(self):
         tk_utils.safe_destroy(self.wid_top)
         prev_dialog_wid.pop(self.ftype, None)
 
 
-    def apply_config(self):
+    def __apply_config(self):
         sel = self.wid_font_list.curselection()
         if (len(sel) == 1) and (sel[0] < len(self.font_families)):
             self.font.configure(family=self.font_families[sel[0]],
@@ -168,6 +169,6 @@ class Font_selection_dialog(object):
         return False
 
 
-    def save_and_close(self):
-        if self.apply_config():
-            self.quit()
+    def __save_and_close(self):
+        if self.__apply_config():
+            self.__quit()

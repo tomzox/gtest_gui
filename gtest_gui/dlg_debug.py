@@ -46,17 +46,17 @@ class Debug_dialog(object):
         char_h = self.tk.call("font", "metrics", "TkFixedFont", "-linespace")
         height = 15 * char_h
 
-        self.create_var_name_entry_frame(self.wid_top)
+        self.__create_var_name_entry_frame(self.wid_top)
 
         wid_pane = tk.PanedWindow(self.wid_top, orient=tk.VERTICAL,
                                     sashrelief=tk.RAISED, showhandle=1, sashpad=4)
         wid_pane.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
-        self.create_output_frame(wid_pane)
-        self.create_input_frame(wid_pane, height)
+        self.__create_output_frame(wid_pane)
+        self.__create_input_frame(wid_pane, height)
         self.wid_input.focus_set()
 
-        self.create_command_frame(self.wid_top)
+        self.__create_command_frame(self.wid_top)
 
 
     def raise_window(self):
@@ -68,27 +68,27 @@ class Debug_dialog(object):
         return self.wid_top
 
 
-    def create_var_name_entry_frame(self, wid_parent):
+    def __create_var_name_entry_frame(self, wid_parent):
         wid_frm = tk.Frame(wid_parent, padx=1, pady=2)
         wid_lab = tk.Label(wid_frm, text="Name:")
         wid_lab.pack(side=tk.LEFT, pady=2)
         wid_ent = tk.Entry(wid_frm)
         wid_ent.pack(side=tk.LEFT, fill=tk.X, expand=1)
         wid_but = tk.Button(wid_frm, text="Lookup", padx=5, pady=1,
-                            command=lambda: self.show_variable_value(True))
+                            command=lambda: self.__show_variable_value(True))
         wid_but.pack(side=tk.LEFT)
         wid_frm.pack(side=tk.TOP, fill=tk.X)
         self.wid_var_name = wid_ent
 
 
-    def create_output_frame(self, wid_pane):
+    def __create_output_frame(self, wid_pane):
         wid_frm = tk.LabelFrame(wid_pane, text="Output")
         wid_txt = tk.Text(wid_frm, width=80, height=5, wrap=tk.CHAR, relief=tk.FLAT, borderwidth=0,
                           exportselection=1, font="TkFixedFont", cursor="top_left_arrow")
         wid_txt.bindtags([wid_txt, "TextReadOnly", self.wid_top, "all"])
         wid_txt.tag_configure("var_name", foreground="blue")
         wid_txt.tag_bind("var_name", "<ButtonRelease-1>",
-                         lambda e: self.show_tagged_variable(e.x, e.y))
+                         lambda e: self.__show_tagged_variable(e.x, e.y))
         wid_txt.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
         wid_sb = tk.Scrollbar(wid_frm, orient=tk.VERTICAL, command=wid_txt.yview, takefocus=0)
         wid_sb.pack(side=tk.LEFT, fill=tk.BOTH)
@@ -98,7 +98,7 @@ class Debug_dialog(object):
         self.wid_output = wid_txt
 
 
-    def create_input_frame(self, wid_pane, height):
+    def __create_input_frame(self, wid_pane, height):
         wid_frm = tk.LabelFrame(wid_pane, text="Input")
         wid_txt = tk.Text(wid_frm, width=80, height=10, undo=1, maxundo=500, wrap=tk.CHAR,
                           autoseparators=1, font="TkFixedFont", exportselection=1, relief=tk.FLAT,
@@ -109,21 +109,21 @@ class Debug_dialog(object):
         wid_txt.configure(yscrollcommand=wid_sb.set)
 
         wid_txt.bind("<Control-Key-e>", lambda e: tk_utils.bind_call_and_break(
-                                                    lambda: self.eval_input(False)))
+                                                    lambda: self.__eval_input(False)))
         wid_txt.bind("<Control-Key-x>", lambda e: tk_utils.bind_call_and_break(
-                                                    lambda: self.eval_input(True)))
+                                                    lambda: self.__eval_input(True)))
         wid_txt.bind("<Key-Tab>", wid_txt.bind("Text", "<Control-Key-Tab>"))
 
         wid_pane.add(wid_frm, sticky="news", height=height)
         self.wid_input = wid_txt
 
 
-    def create_command_frame(self, wid_parent):
+    def __create_command_frame(self, wid_parent):
         wid_frm = tk.Frame(wid_parent)
         wid_but_eval = tk.Button(wid_frm, text="Eval", width=5, underline=0,
-                                 pady=1, command=lambda: self.eval_input(False))
+                                 pady=1, command=lambda: self.__eval_input(False))
         wid_but_exec = tk.Button(wid_frm, text="Exec", width=5, underline=1,
-                                 pady=1, command=lambda: self.eval_input(True))
+                                 pady=1, command=lambda: self.__eval_input(True))
         wid_but_clear = tk.Button(wid_frm, text="Clear", width=5, pady=1,
                                   command=lambda: self.wid_output.delete("1.0", "end"))
         wid_but_new = tk.Button(wid_frm, text="New window", pady=1,
@@ -135,7 +135,7 @@ class Debug_dialog(object):
         wid_frm.pack(side=tk.TOP, fill=tk.X, padx=10, pady=5)
 
 
-    def eval_input(self, use_exec):
+    def __eval_input(self, use_exec):
         cmd = self.wid_input.get("1.0", "end")
         try:
             if use_exec:
@@ -148,17 +148,17 @@ class Debug_dialog(object):
         self.wid_output.replace("1.0", "end", output)
 
 
-    def show_tagged_variable(self, xcoo, ycoo):
+    def __show_tagged_variable(self, xcoo, ycoo):
         txt = self.wid_output.get("@%d,%d linestart" % (xcoo, ycoo),
                                   "@%d,%d lineend" % (xcoo, ycoo))
         if txt:
             self.wid_var_name.delete(0, "end")
             self.wid_var_name.insert("end", txt)
 
-            self.show_variable_value(False)
+            self.__show_variable_value(False)
 
 
-    def show_variable_value(self, auto_complete):
+    def __show_variable_value(self, auto_complete):
         var_ref = self.wid_var_name.get()
 
         if auto_complete:

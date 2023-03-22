@@ -56,12 +56,12 @@ class Job_list_dialog(object):
         self.tk = tk_top
         self.table_header_txt = ("PID", "Traced", "#Results", "Current test case")
 
-        self.create_dialog()
-        self.populate_table()
-        self.timer_id = self.tk.after(500, self.update_by_timer)
+        self.__create_dialog_window()
+        self.__populate_table()
+        self.timer_id = self.tk.after(500, self.__update_by_timer)
 
 
-    def destroy_window(self):
+    def __destroy_window(self):
         tk_utils.safe_destroy(self.wid_top)
         self.tk.after_cancel(self.timer_id)
         prev_dialog_wid = None
@@ -72,16 +72,17 @@ class Job_list_dialog(object):
         self.wid_top.lift()
 
 
-    def create_dialog(self):
+    def __create_dialog_window(self):
         self.wid_top = tk.Toplevel(self.tk)
         self.wid_top.wm_title("GtestGui: Test job list")
         self.wid_top.wm_group(self.tk)
 
-        self.create_table_widget()
+        self.__create_table_widget()
 
-        self.wid_top.bind("<ButtonRelease-3>", lambda e: self.post_context_menu(e.widget, e.x, e.y))
-        self.wid_top.bind("<Configure>", lambda e: self.handle_window_resize(e.widget))
-        self.wid_top.bind("<Destroy>", lambda e: self.destroy_window())
+        self.wid_top.bind("<ButtonRelease-3>", lambda e: self.__post_context_menu(e.widget,
+                                                                                  e.x, e.y))
+        self.wid_top.bind("<Configure>", lambda e: self.__handle_window_resize(e.widget))
+        self.wid_top.bind("<Destroy>", lambda e: self.__destroy_window())
 
         self.wid_header.tag_configure("head", font=tk_utils.font_bold,
                                       spacing1=2, spacing3=5, lmargin1=5)
@@ -89,10 +90,10 @@ class Job_list_dialog(object):
         self.wid_table.tag_configure("bold", font=tk_utils.font_bold)
 
         self.wid_header.insert("0.0", "\t".join(self.table_header_txt), "head", "\n", [])
-        self.update_column_widths()
+        self.__update_column_widths()
 
         self.sel_obj = wid_text_sel.Text_sel_wid(self.wid_table,
-                                                 self.handle_selection_change, self.get_len)
+                                                 self.__handle_selection_change, self.__get_len)
 
         if config_db.job_list_geometry:
             self.wid_top.wm_geometry(config_db.job_list_geometry)
@@ -100,7 +101,7 @@ class Job_list_dialog(object):
         self.wid_table.focus_set()
 
 
-    def create_table_widget(self):
+    def __create_table_widget(self):
         initial_height = 10
 
         wid_frm1 = tk.Frame(self.wid_top)
@@ -127,7 +128,7 @@ class Job_list_dialog(object):
         self.wid_header = wid_header
 
 
-    def update_column_widths(self):
+    def __update_column_widths(self):
         char_w = tk_utils.font_content.measure("0")
         if char_w == 0: char_w = 15
 
@@ -163,35 +164,35 @@ class Job_list_dialog(object):
         self.wid_table.configure(width=nof_chars)
 
 
-    def handle_window_resize(self, wid):
+    def __handle_window_resize(self, wid):
         if wid == self.wid_top:
             new_size = self.wid_top.wm_geometry()
             if new_size != config_db.job_list_geometry:
                 config_db.job_list_geometry = new_size
 
 
-    def format_table_row(self, stats):
+    def __format_table_row(self, stats):
         msg = "%d\t%d\t%d\t%s\n" % (stats[0], stats[2], stats[3], stats[4])
         return [msg, "body"]
 
 
-    def populate_table(self):
+    def __populate_table(self):
         self.sel_obj.text_sel_set_selection([])
         self.wid_table.delete("1.0", "end")
 
         self.job_stats = gtest.gtest_ctrl.get_job_stats()
         if self.job_stats:
             for idx in range(len(self.job_stats)):
-                msg = self.format_table_row(self.job_stats[idx])
+                msg = self.__format_table_row(self.job_stats[idx])
                 self.wid_table.insert("end", *msg)
         else:
             self.wid_table.insert("end", "\nCurrently, no jobs are running\n")
 
 
-    def update_by_timer(self):
+    def __update_by_timer(self):
         sel_pids = [self.job_stats[x][0] for x in self.sel_obj.text_sel_get_selection()]
 
-        self.populate_table()
+        self.__populate_table()
 
         new_pids = [x[0] for x in self.job_stats]
         new_sel = []
@@ -202,18 +203,18 @@ class Job_list_dialog(object):
                 pass
         self.sel_obj.text_sel_set_selection(new_sel)
 
-        self.timer_id = self.tk.after(500, self.update_by_timer)
+        self.timer_id = self.tk.after(500, self.__update_by_timer)
 
 
-    def handle_selection_change(self, sel):
+    def __handle_selection_change(self, sel):
         self.sel_obj.text_sel_copy_clipboard(False)
 
 
-    def get_len(self):
+    def __get_len(self):
         return len(self.job_stats)
 
 
-    def post_context_menu(self, parent, xcoo, ycoo):
+    def __post_context_menu(self, parent, xcoo, ycoo):
         wid_men = tk_utils.get_context_menu_widget()
 
         if (parent == self.wid_table) and gtest.gtest_ctrl.is_active():
@@ -223,20 +224,20 @@ class Job_list_dialog(object):
                 if len(sel) == 1:
                     wid_men.add_command(label="Open trace output file",
                                         command=lambda file_name=self.job_stats[sel[0]][1]:
-                                            self.do_open_trace(file_name))
+                                            self.__do_open_trace(file_name))
                     wid_men.add_separator()
 
                 wid_men.add_command(label="Send ABORT signal to selected processes",
                                     command=lambda pids=[self.job_stats[x][0] for x in sel]:
-                                            self.do_abort_jobs(pids))
+                                            self.__do_abort_jobs(pids))
 
                 tk_utils.post_context_menu(parent, xcoo, ycoo)
 
 
-    def do_abort_jobs(self, pids):
+    def __do_abort_jobs(self, pids):
         for pid in pids:
           gtest.gtest_ctrl.abort_job(pid)
 
 
-    def do_open_trace(self, trace_file_name):
+    def __do_open_trace(self, trace_file_name):
         dlg_browser.show_trace(self.tk, trace_file_name)

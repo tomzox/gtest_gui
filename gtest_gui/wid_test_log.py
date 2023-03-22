@@ -56,12 +56,12 @@ class Test_log_widget(object):
         self.log_idx_map = []
 
         self.wid_pane = tk.PanedWindow(parent, orient=tk.VERTICAL)
-        self.create_log_widget(self.wid_pane)
-        self.create_trace_widget(self.wid_pane)
+        self.__create_log_widget(self.wid_pane)
+        self.__create_trace_widget(self.wid_pane)
 
-        test_db.Test_db_slots.result_appended = self.append_new_result
+        test_db.Test_db_slots.result_appended = self.__append_new_result
         test_db.Test_db_slots.repeat_req_update = self.update_repetition_status
-        test_db.Test_db_slots.executable_update = self.refill_log
+        test_db.Test_db_slots.executable_update = self.__refill_log
 
 
     def get_widget(self):
@@ -72,7 +72,7 @@ class Test_log_widget(object):
         self.test_ctrl = test_ctrl
 
 
-    def create_log_widget(self, wid_pane):
+    def __create_log_widget(self, wid_pane):
         wid_frm = tk.Frame(wid_pane)
         wid_txt = tk.Text(wid_frm, width=1, height=20, font=tk_utils.font_content, wrap=tk.NONE,
                           exportselection=0, insertofftime=0, cursor="top_left_arrow")
@@ -84,25 +84,25 @@ class Test_log_widget(object):
         wid_txt.tag_configure("highlight", font=tk_utils.font_bold, foreground="#2020A0")
 
         wid_txt.bindtags([wid_txt, self.tk, "TextSel", "all"])
-        wid_txt.bind("<ButtonRelease-3>", lambda e: self.post_context_menu(e.widget, e.x, e.y))
+        wid_txt.bind("<ButtonRelease-3>", lambda e: self.__post_context_menu(e.widget, e.x, e.y))
         wid_txt.bind("<Double-Button-1>", lambda e: tk_utils.bind_call_and_break(self.do_open_trace_browser))
         wid_txt.bind("<Key-Return>", lambda e: self.do_open_trace_browser())
         wid_txt.bind("<Key-Delete>", lambda e: self.do_remove_selected_results())
 
         self.sel_obj = wid_text_sel.Text_sel_wid(wid_txt,
-                                                 self.handle_selection_change, self.get_len)
+                                                 self.__handle_selection_change, self.__get_len)
 
         if config_db.log_pane_height:
             wid_pane.add(wid_frm, sticky="news", height=config_db.log_pane_height)
         else:
             wid_pane.add(wid_frm, sticky="news")
 
-        wid_frm.bind("<Configure>", lambda e: self.window_resized(True, e.height))
+        wid_frm.bind("<Configure>", lambda e: self.__window_resized(True, e.height))
         self.wid_log = wid_txt
         self.wid_frm1 = wid_frm
 
 
-    def create_trace_widget(self, wid_pane):
+    def __create_trace_widget(self, wid_pane):
         wid_frm = tk.Frame(wid_pane)
         wid_txt = tk.Text(wid_frm, width=40, height=1, wrap=tk.NONE,
                           insertofftime=0, font=tk_utils.font_content)
@@ -117,7 +117,7 @@ class Test_log_widget(object):
             config_db.trace_pane_height = 9 * tk_utils.font_content.metrics("linespace")
         wid_pane.add(wid_frm, sticky="news", height=config_db.trace_pane_height)
 
-        wid_frm.bind("<Configure>", lambda e: self.window_resized(False, e.height))
+        wid_frm.bind("<Configure>", lambda e: self.__window_resized(False, e.height))
         self.wid_trace = wid_txt
         self.wid_frm2 = wid_frm
 
@@ -133,28 +133,28 @@ class Test_log_widget(object):
         self.var_opt_filter_tc_name = tk.BooleanVar(self.tk, False)
 
         wid_men.add_checkbutton(label="Show only failed results",
-                                command=self.toggle_verdict_filter, variable=self.var_opt_filter_pass)
+                                command=self.__toggle_verdict_filter, variable=self.var_opt_filter_pass)
         wid_men.add_checkbutton(label="Show only current results",
-                                command=self.toggle_exe_filter, variable=self.var_opt_filter_exe)
+                                command=self.__toggle_exe_filter, variable=self.var_opt_filter_exe)
         wid_men.add_checkbutton(label="Show only selected test cases",
-                                command=self.toggle_tc_name_filter, variable=self.var_opt_filter_tc_name)
+                                command=self.__toggle_tc_name_filter, variable=self.var_opt_filter_tc_name)
         wid_men.add_separator()
 
         wid_men.add_checkbutton(
                 label="Sort by test case name",
-                command=lambda: self.toggle_sort_mode(self.var_opt_sort_tc_name.get(), Sort_mode.by_name),
+                command=lambda: self.__toggle_sort_mode(self.var_opt_sort_tc_name.get(), Sort_mode.by_name),
                 variable=self.var_opt_sort_tc_name)
         wid_men.add_checkbutton(
                 label="Sort by seed",
-                command=lambda: self.toggle_sort_mode(self.var_opt_sort_seed.get(), Sort_mode.by_seed),
+                command=lambda: self.__toggle_sort_mode(self.var_opt_sort_seed.get(), Sort_mode.by_seed),
                 variable=self.var_opt_sort_seed)
         wid_men.add_checkbutton(
                 label="Sort by duration",
-                command=lambda: self.toggle_sort_mode(self.var_opt_sort_duration.get(), Sort_mode.by_duration),
+                command=lambda: self.__toggle_sort_mode(self.var_opt_sort_duration.get(), Sort_mode.by_duration),
                 variable=self.var_opt_sort_duration)
         wid_men.add_checkbutton(
                 label="Sort by failure type",
-                command=lambda: self.toggle_sort_mode(self.var_opt_sort_exception.get(), Sort_mode.by_failure),
+                command=lambda: self.__toggle_sort_mode(self.var_opt_sort_exception.get(), Sort_mode.by_failure),
                 variable=self.var_opt_sort_exception)
 
 
@@ -164,7 +164,7 @@ class Test_log_widget(object):
         config_db.rc_file_update()
 
 
-    def window_resized(self, is_log, height):
+    def __window_resized(self, is_log, height):
         if is_log:
             if self.test_ctrl_visible:
                 config_db.log_pane_height = height
@@ -194,11 +194,11 @@ class Test_log_widget(object):
                 self.wid_pane.paneconfigure(self.wid_frm2, height=config_db.trace_pane_solo_height)
 
 
-    def get_len(self):
+    def __get_len(self):
         return len(self.log_idx_map)
 
 
-    def handle_selection_change(self, sel):
+    def __handle_selection_change(self, sel):
         if len(sel) == 1:
             log_idx = self.log_idx_map[sel[0]]
             self.show_trace_preview(log_idx)
@@ -206,25 +206,25 @@ class Test_log_widget(object):
             self.clear_trace_preview()
 
 
-    def get_mapped_selection(self):
+    def __get_mapped_selection(self):
         sel = self.sel_obj.text_sel_get_selection()
         return [self.log_idx_map[idx] for idx in sel]
 
 
-    def append_new_result(self):
+    def __append_new_result(self):
         log_idx = len(test_db.test_results) - 1
         log = test_db.test_results[log_idx]
 
-        if self.matches_filter(log):
+        if self.__matches_filter(log):
             if self.opt_sort_modes:
                 list_idx = gtest_gui.bisect.bisect_left(self.log_idx_map, log_idx,
-                                                       self.get_sort_key_fn())
+                                                       self.__get_sort_key_fn())
                 self.log_idx_map.insert(list_idx, log_idx)
             else:
                 self.log_idx_map.append(log_idx)
                 list_idx = len(test_db.test_results) - 1
 
-            txt = self.format_log_line(log_idx)
+            txt = self.__format_log_line(log_idx)
 
             line = "%d.0" % (list_idx + 1)
             self.wid_log.insert(line, *txt)
@@ -240,14 +240,14 @@ class Test_log_widget(object):
             log_idx = self.log_idx_map[idx]
             log = test_db.test_results[log_idx]
             if log[0] == tc_name:
-                if self.matches_filter(log):
-                    self.update_log_line(idx, log_idx)
+                if self.__matches_filter(log):
+                    self.__update_log_line(idx, log_idx)
                 else:
-                    self.remove_log_line(idx)
+                    self.__remove_log_line(idx)
                     idx -= 1
 
 
-    def remove_log_line(self, list_idx):
+    def __remove_log_line(self, list_idx):
         line_1 = "%d.0" % (idx + 1)
         line_2 = "%d.0" % (idx + 2)
         self.wid_log.delete(line_1, line_2)
@@ -259,8 +259,8 @@ class Test_log_widget(object):
             self.clear_trace_preview()
 
 
-    def update_log_line(self, list_idx, log_idx):
-        txt = self.format_log_line(log_idx)
+    def __update_log_line(self, list_idx, log_idx):
+        txt = self.__format_log_line(log_idx)
         line_1 = "%d.0" % (list_idx + 1)
         line_2 = "%d.0" % (list_idx + 2)
 
@@ -268,7 +268,7 @@ class Test_log_widget(object):
         self.sel_obj.text_sel_show_selection()
 
 
-    def format_log_line(self, log_idx):
+    def __format_log_line(self, log_idx):
         log = test_db.test_results[log_idx]
         now = time.time()
 
@@ -344,16 +344,16 @@ class Test_log_widget(object):
         self.wid_log.delete("1.0", "end")
 
         logs = [idx for idx in range(len(test_db.test_results))
-                    if self.matches_filter(test_db.test_results[idx])]
+                    if self.__matches_filter(test_db.test_results[idx])]
 
-        self.log_idx_map = self.sort_idx_map(logs)
+        self.log_idx_map = self.__sort_idx_map(logs)
 
         for log_idx in self.log_idx_map:
-            txt = self.format_log_line(log_idx)
+            txt = self.__format_log_line(log_idx)
             self.wid_log.insert("end", *txt)
 
 
-    def refill_log(self, restore_view=False, restore_selection=False):
+    def __refill_log(self, restore_view=False, restore_selection=False):
         if restore_view or restore_selection:
             prev_log = self.log_idx_map
             prev_sel = self.sel_obj.text_sel_get_selection()
@@ -384,7 +384,7 @@ class Test_log_widget(object):
             self.clear_trace_preview()
 
 
-    def sort_idx_map(self, logs):
+    def __sort_idx_map(self, logs):
         for mode in reversed(self.opt_sort_modes):
             if mode == Sort_mode.by_name:
                 logs = sorted(logs, key=lambda x: test_db.test_results[x][0])
@@ -398,7 +398,7 @@ class Test_log_widget(object):
         return logs
 
 
-    def get_sort_key_fn(self):
+    def __get_sort_key_fn(self):
         if len(self.opt_sort_modes) == 1:
             mode = self.opt_sort_modes[0]
             if mode == Sort_mode.by_name:
@@ -434,29 +434,29 @@ class Test_log_widget(object):
         return lambda x: x
 
 
-    def matches_filter(self, log):
+    def __matches_filter(self, log):
         return ( ((not self.var_opt_filter_pass.get()) or (log[3] >= 2)) and
                  ((not self.var_opt_filter_exe.get()) or (log[2] >= self.opt_filter_exe_ts)) and
                  ((not self.var_opt_filter_tc_name.get()) or (log[0] in self.opt_filter_tc_names)) )
 
 
-    def toggle_verdict_filter(self):
-        self.refill_log(restore_selection=True)
+    def __toggle_verdict_filter(self):
+        self.__refill_log(restore_selection=True)
 
 
-    def toggle_exe_filter(self, exe_ts = None):
+    def __toggle_exe_filter(self, exe_ts = None):
         if not exe_ts:
             exe_ts = test_db.test_exe_ts
 
         self.opt_filter_exe_ts = exe_ts
-        self.refill_log(restore_selection=True)
+        self.__refill_log(restore_selection=True)
 
 
-    def toggle_tc_name_filter(self, tc_names = None):
+    def __toggle_tc_name_filter(self, tc_names = None):
         if self.var_opt_filter_tc_name.get():
             if tc_names is None:
                 tc_names = [test_db.test_results[log_idx][0]
-                                for log_idx in self.get_mapped_selection()]
+                                for log_idx in self.__get_mapped_selection()]
             if not tc_names:
                 tk_messagebox.showerror(parent=self.tk, message="No results selected")
                 self.var_opt_filter_tc_name.set(False)
@@ -466,18 +466,18 @@ class Test_log_widget(object):
         else:
             self.opt_filter_tc_names = None
 
-        self.refill_log(restore_selection=True)
+        self.__refill_log(restore_selection=True)
 
 
-    def toggle_sort_mode(self, enable, mode):
+    def __toggle_sort_mode(self, enable, mode):
         self.opt_sort_modes = [x for x in self.opt_sort_modes if x != mode]
         if enable:
             self.opt_sort_modes.append(mode)
 
-        self.refill_log(restore_selection=True)
+        self.__refill_log(restore_selection=True)
 
 
-    def delete_multiple_results(self, idx_list):
+    def __delete_multiple_results(self, idx_list):
         idx_list = sorted(idx_list)
         # Copy items to a new list, except for those at selected indices. As the result list
         # can be rather large, this is significantly faster than deleting items in place.
@@ -491,10 +491,10 @@ class Test_log_widget(object):
                 new_list.append(test_db.test_results[idx])
 
         test_db.test_results = new_list
-        self.refill_log()
+        self.__refill_log()
 
 
-    def delete_single_result(self, idx):
+    def __delete_single_result(self, idx):
         log_idx = bisect.bisect_left(self.log_idx_map, idx)
         if (log_idx >= len(self.log_idx_map)) or (self.log_idx_map[log_idx] != idx):
             raise ValueError
@@ -515,13 +515,13 @@ class Test_log_widget(object):
         self.log_idx_map = new_list
 
 
-    def post_context_menu(self, parent, xcoo, ycoo):
+    def __post_context_menu(self, parent, xcoo, ycoo):
         wid_men = tk_utils.get_context_menu_widget()
         post_menu = False
 
         self.sel_obj.text_sel_context_selection(xcoo, ycoo)
 
-        sel = self.get_mapped_selection()
+        sel = self.__get_mapped_selection()
         if sel:
             plural_s = "" if len(sel) == 1 else "s"
             sel_tc_names = []
@@ -620,9 +620,9 @@ class Test_log_widget(object):
 
 
     def do_remove_selected_results(self):
-        sel = self.get_mapped_selection()
+        sel = self.__get_mapped_selection()
         if sel:
-            self.remove_trace_files(sel)
+            self.__remove_trace_files(sel)
         else:
             wid_status_line.show_message("warning", "Selection is empty - nothing to remove.")
 
@@ -635,7 +635,7 @@ class Test_log_widget(object):
                 idx_list.append(idx)
 
         if idx_list:
-            self.remove_trace_files(idx_list)
+            self.__remove_trace_files(idx_list)
         else:
             msg = "There are no results of passed tests from old executables."
             tk_messagebox.showerror(parent=self.tk, message=msg)
@@ -645,16 +645,16 @@ class Test_log_widget(object):
         idx_list = []
         for idx in range(len(test_db.test_results)):
             log = test_db.test_results[idx]
-            if not self.matches_filter(log):
+            if not self.__matches_filter(log):
                 idx_list.append(idx)
 
         if idx_list:
-            self.remove_trace_files(idx_list)
+            self.__remove_trace_files(idx_list)
         else:
             tk_messagebox.showerror(parent=self.tk, message="There are no filtered log entries.")
 
 
-    def remove_trace_files(self, idx_list):
+    def __remove_trace_files(self, idx_list):
         idx_list = sorted(idx_list)
         rm_files = set()
         rm_idx = 0
@@ -698,13 +698,13 @@ class Test_log_widget(object):
                 pass
 
             if len(idx_list) == 1:
-                self.delete_single_result(idx_list[0])
+                self.__delete_single_result(idx_list[0])
             else:
-                self.delete_multiple_results(idx_list)
+                self.__delete_multiple_results(idx_list)
 
 
     def do_request_repetition(self, enable_rep):
-        sel = self.get_mapped_selection()
+        sel = self.__get_mapped_selection()
 
         if not sel:
             if test_db.repeat_requests:
@@ -725,16 +725,16 @@ class Test_log_widget(object):
 
 
     def do_filter_exe_ts(self):
-        sel = self.get_mapped_selection()
+        sel = self.__get_mapped_selection()
         if len(sel) == 1:
             log = test_db.test_results[sel[0]]
 
             self.var_opt_filter_exe.set(True)
-            self.toggle_exe_filter(log[2] + 1)
+            self.__toggle_exe_filter(log[2] + 1)
 
 
     def do_export_trace(self):
-        sel = self.get_mapped_selection()
+        sel = self.__get_mapped_selection()
         if sel:
             dlg_browser.export_traces(self.tk, sel)
 
@@ -744,7 +744,7 @@ class Test_log_widget(object):
 
 
     def do_open_trace_browser(self, complete_trace=False):
-        sel = self.get_mapped_selection()
+        sel = self.__get_mapped_selection()
         if len(sel) == 1:
             log = test_db.test_results[sel[0]]
             if log[4]:

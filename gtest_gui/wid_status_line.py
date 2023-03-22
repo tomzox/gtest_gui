@@ -50,7 +50,7 @@ class Status_line_widget(object):
     def show_message(self, msg_type, msg_txt):
         self.msg_type = msg_type
         self.fade_val = 0.0
-        color = self.get_color()
+        color = self.__get_color()
 
         if not tk_utils.wid_exists(self.wid_message):
             self.wid_message = tk.Label(self.wid_parent, text=msg_txt, foreground=color,
@@ -60,17 +60,17 @@ class Status_line_widget(object):
                                    x=(self.wid_parent.winfo_width() - 1),
                                    y=(self.wid_parent.winfo_height() - 1))
 
-            self.wid_message.bind("<Motion>", lambda e: self.handle_motion())
+            self.wid_message.bind("<Motion>", lambda e: self.__handle_motion())
 
         else:
             self.wid_message.configure(text=msg_txt, foreground=color)
 
         if self.timer_id:
             self.tk.after_cancel(self.timer_id)
-        self.timer_id = self.tk.after(5000, self.handle_timer)
+        self.timer_id = self.tk.after(5000, self.__handle_timer)
 
 
-    def get_color(self):
+    def __get_color(self):
         if self.msg_type == "error":
             color = (0xff, 0, 0)
         elif self.msg_type == "warning":
@@ -84,21 +84,21 @@ class Status_line_widget(object):
         return "#%02X%02X%02X" % (color[0], color[1], color[2])
 
 
-    def handle_motion(self):
+    def __handle_motion(self):
         self.msg_type = "motion"
         self.fade_val = 0
-        self.wid_message.configure(foreground=self.get_color())
+        self.wid_message.configure(foreground=self.__get_color())
 
         if self.timer_id:
             self.tk.after_cancel(self.timer_id)
-        self.timer_id = self.tk.after(5000, self.handle_timer)
+        self.timer_id = self.tk.after(5000, self.__handle_timer)
 
 
-    def handle_timer(self):
+    def __handle_timer(self):
         self.fade_val += 0.03
         if self.fade_val < 1:
-            self.wid_message.config(foreground=self.get_color())
-            self.timer_id = self.tk.after(50, self.handle_timer)
+            self.wid_message.config(foreground=self.__get_color())
+            self.timer_id = self.tk.after(50, self.__handle_timer)
 
         else:
             self.timer_id = None

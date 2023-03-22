@@ -51,29 +51,29 @@ class Text_sel_wid(object):
         self.anchor_idx = -1
         self.sel = []
 
-        self.wid.bind("<Control-ButtonPress-1>", lambda e, self=self: tk_utils.bind_call_and_break(lambda: self.text_sel_pick(e.x, e.y)))
-        self.wid.bind("<Shift-ButtonPress-1>", lambda e, self=self: tk_utils.bind_call_and_break(lambda: self.text_sel_resize(e.x, e.y)))
-        self.wid.bind("<ButtonPress-1>",   lambda e, self=self: tk_utils.bind_call_and_break(lambda: self.text_sel_button(e.x, e.y)))
-        self.wid.bind("<ButtonRelease-1>", lambda e, self=self: tk_utils.bind_call_and_break(lambda: self.text_sel_motion_end()))
+        self.wid.bind("<Control-ButtonPress-1>", lambda e, self=self: tk_utils.bind_call_and_break(lambda: self.__text_sel_pick(e.x, e.y)))
+        self.wid.bind("<Shift-ButtonPress-1>", lambda e, self=self: tk_utils.bind_call_and_break(lambda: self.__text_sel_resize(e.x, e.y)))
+        self.wid.bind("<ButtonPress-1>",   lambda e, self=self: tk_utils.bind_call_and_break(lambda: self.__text_sel_button(e.x, e.y)))
+        self.wid.bind("<ButtonRelease-1>", lambda e, self=self: tk_utils.bind_call_and_break(lambda: self.__text_sel_motion_end()))
         if mode == "browse":
-            self.wid.bind("<B1-Motion>",    lambda e, self=self: tk_utils.bind_call_and_break(lambda: self.text_sel_button(e.x, e.y)))
+            self.wid.bind("<B1-Motion>",    lambda e, self=self: tk_utils.bind_call_and_break(lambda: self.__text_sel_button(e.x, e.y)))
         else:
-            self.wid.bind("<B1-Motion>",    lambda e, self=self: tk_utils.bind_call_and_break(lambda: self.text_sel_motion(e.x, e.y)))
+            self.wid.bind("<B1-Motion>",    lambda e, self=self: tk_utils.bind_call_and_break(lambda: self.__text_sel_motion(e.x, e.y)))
 
-        self.wid.bind("<Shift-Key-Up>",   lambda e, self=self: tk_utils.bind_call_and_break(lambda: self.text_sel_key_resize(-1)))
-        self.wid.bind("<Shift-Key-Down>", lambda e, self=self: tk_utils.bind_call_and_break(lambda: self.text_sel_key_resize(1)))
-        self.wid.bind("<Key-Up>",         lambda e, self=self: tk_utils.bind_call_and_break(lambda: self.text_sel_key_up_down(-1)))
-        self.wid.bind("<Key-Down>",       lambda e, self=self: tk_utils.bind_call_and_break(lambda: self.text_sel_key_up_down(1)))
-        self.wid.bind("<Shift-Key-Home>", lambda e, self=self: tk_utils.bind_call_and_break(lambda: self.text_sel_key_home_end(False, True)))
-        self.wid.bind("<Shift-Key-End>",  lambda e, self=self: tk_utils.bind_call_and_break(lambda: self.text_sel_key_home_end(True, True)))
-        self.wid.bind("<Key-Home>",       lambda e, self=self: tk_utils.bind_call_and_break(lambda: self.text_sel_key_home_end(False, False)))
-        self.wid.bind("<Key-End>",        lambda e, self=self: tk_utils.bind_call_and_break(lambda: self.text_sel_key_home_end(True, False)))
+        self.wid.bind("<Shift-Key-Up>",   lambda e, self=self: tk_utils.bind_call_and_break(lambda: self.__text_sel_key_resize(-1)))
+        self.wid.bind("<Shift-Key-Down>", lambda e, self=self: tk_utils.bind_call_and_break(lambda: self.__text_sel_key_resize(1)))
+        self.wid.bind("<Key-Up>",         lambda e, self=self: tk_utils.bind_call_and_break(lambda: self.__text_sel_key_up_down(-1)))
+        self.wid.bind("<Key-Down>",       lambda e, self=self: tk_utils.bind_call_and_break(lambda: self.__text_sel_key_up_down(1)))
+        self.wid.bind("<Shift-Key-Home>", lambda e, self=self: tk_utils.bind_call_and_break(lambda: self.__text_sel_key_home_end(False, True)))
+        self.wid.bind("<Shift-Key-End>",  lambda e, self=self: tk_utils.bind_call_and_break(lambda: self.__text_sel_key_home_end(True, True)))
+        self.wid.bind("<Key-Home>",       lambda e, self=self: tk_utils.bind_call_and_break(lambda: self.__text_sel_key_home_end(False, False)))
+        self.wid.bind("<Key-End>",        lambda e, self=self: tk_utils.bind_call_and_break(lambda: self.__text_sel_key_home_end(True, False)))
 
-        self.wid.bind("<Control-Key-a>", lambda e, self=self: tk_utils.bind_call_and_break(lambda: self.text_sel_select_all()))
+        self.wid.bind("<Control-Key-a>", lambda e, self=self: tk_utils.bind_call_and_break(lambda: self.__text_sel_select_all()))
         self.wid.bind("<Control-Key-c>", lambda e, self=self: tk_utils.bind_call_and_break(lambda: self.text_sel_copy_clipboard(True)))
 
-        self.wid.bind("<Key-Prior>", lambda e, self=self: tk_utils.bind_call_and_break(lambda: self.text_sel_key_page_up_down(-1)))
-        self.wid.bind("<Key-Next>",  lambda e, self=self: tk_utils.bind_call_and_break(lambda: self.text_sel_key_page_up_down(1)))
+        self.wid.bind("<Key-Prior>", lambda e, self=self: tk_utils.bind_call_and_break(lambda: self.__text_sel_key_page_up_down(-1)))
+        self.wid.bind("<Key-Next>",  lambda e, self=self: tk_utils.bind_call_and_break(lambda: self.__text_sel_key_page_up_down(1)))
 
 
     #
@@ -105,7 +105,7 @@ class Text_sel_wid(object):
     # If not, the selection is set to consist only of the pointed item.
     #
     def text_sel_context_selection(self, xcoo, ycoo):
-        line = self.text_sel_coo2_line(xcoo, ycoo)
+        line = self.__text_sel_coo2_line(xcoo, ycoo)
         if line != -1:
             if len(self.sel) != 0:
                 if not line in self.sel:
@@ -123,8 +123,8 @@ class Text_sel_wid(object):
     # neither Control nor Shift keys are pressed.  A previous selection is
     # is cleared and the entry below the mouse (if any) is selected.
     #
-    def text_sel_button(self, xcoo, ycoo):
-        line = self.text_sel_coo2_line(xcoo, ycoo)
+    def __text_sel_button(self, xcoo, ycoo):
+        line = self.__text_sel_coo2_line(xcoo, ycoo)
         old_sel = self.sel
         if (line >= 0) and (line < self.len_proc()):
             # select the entry under the mouse pointer
@@ -155,7 +155,7 @@ class Text_sel_wid(object):
     # selected.  If the pointer is moved above or below the widget borders,
     # the text is scrolled.
     #
-    def text_sel_motion(self, xcoo, ycoo):
+    def __text_sel_motion(self, xcoo, ycoo):
         # the anchor element is the one above which the mouse button was pressed
         # (the check here is for fail-safety only, should always be fulfilled)
         if self.anchor_idx >= 0:
@@ -163,10 +163,10 @@ class Text_sel_wid(object):
             # check if the mouse is still inside of the widget area
             if (ycoo >= 0) and (ycoo < wh):
                 # identify the item under the mouse pointer
-                line = self.text_sel_coo2_line(xcoo, ycoo)
+                line = self.__text_sel_coo2_line(xcoo, ycoo)
                 if line != -1:
                     # build list of all consecutive indices between the anchor and the mouse position
-                    sel = Text_sel_wid.idx_range(self.anchor_idx, line)
+                    sel = Text_sel_wid.__idx_range(self.anchor_idx, line)
                     # update display and invoke notification callback if the selection changed
                     if sel != self.sel:
                         self.sel = sel
@@ -193,7 +193,7 @@ class Text_sel_wid(object):
                 if self.scroll_tid is None:
                     # start timer and remember it's ID to be able to cancel it later
                     delta = -1 if (ycoo < 0) else 1
-                    self.scroll_tid = tk_utils.tk_top.after(delay, lambda: self.text_sel_motion_scroll(delta))
+                    self.scroll_tid = tk_utils.tk_top.after(delay, lambda: self.__text_sel_motion_scroll(delta))
                     self.scroll_delay = delay
                 else:
                     # timer already active - just update the delay
@@ -207,25 +207,25 @@ class Text_sel_wid(object):
     # moved back inside the widget area.  The function invariably scrolls the
     # text by one line. Scrolling speed is varied by means of the delay time.
     #
-    def text_sel_motion_scroll(self, delta):
+    def __text_sel_motion_scroll(self, delta):
         # scroll up or down by one line
         self.wid.yview_scroll(delta, "units")
 
         # extend the selection to the end of the viewable area
         if delta < 0:
-            self.text_sel_motion(0, 0)
+            self.__text_sel_motion(0, 0)
         else:
-            self.text_sel_motion(0, self.wid.winfo_height() - 1)
+            self.__text_sel_motion(0, self.wid.winfo_height() - 1)
 
         # install the timer again (possibly with a changed delay if the mouse was moved)
-        self.scroll_tid = tk_utils.tk_top.after(self.scroll_speed, lambda: self.text_sel_motion_scroll(delta))
+        self.scroll_tid = tk_utils.tk_top.after(self.scroll_speed, lambda: self.__text_sel_motion_scroll(delta))
 
 
     #
     # This function is boud to mouse button release events and stops a
     # possible on-going scrolling timer.
     #
-    def text_sel_motion_end(self):
+    def __text_sel_motion_end(self):
         if self.scroll_tid is not None:
             tk_utils.tk_top.after_cancel(self.scroll_tid)
             self.scroll_tid = None
@@ -238,8 +238,8 @@ class Text_sel_wid(object):
     # clears the "anchor" element, i.e. the selection cannot be modified
     # using "Shift-Click" afterwards.
     #
-    def text_sel_pick(self, xcoo, ycoo):
-        line = self.text_sel_coo2_line(xcoo, ycoo)
+    def __text_sel_pick(self, xcoo, ycoo):
+        line = self.__text_sel_coo2_line(xcoo, ycoo)
         if line != -1:
             # check if the item is already selected
             try:
@@ -264,30 +264,30 @@ class Text_sel_wid(object):
     # defined, the selection is reset and only the item under the mouse is
     # selected.
     #
-    def text_sel_resize(self, xcoo, ycoo):
-        line = self.text_sel_coo2_line(xcoo, ycoo)
+    def __text_sel_resize(self, xcoo, ycoo):
+        line = self.__text_sel_coo2_line(xcoo, ycoo)
         if line != -1:
             if self.anchor_idx != -1:
-                self.sel = Text_sel_wid.idx_range(self.anchor_idx, line)
+                self.sel = Text_sel_wid.__idx_range(self.anchor_idx, line)
                 self.text_sel_show_selection()
                 self.cb_proc(self.sel)
             else:
-                self.text_sel_button(xcoo, ycoo)
+                self.__text_sel_button(xcoo, ycoo)
 
 
     #
     # This function is bound to the page up/down cursor keys.
     #
-    def text_sel_key_page_up_down(self, delta):
+    def __text_sel_key_page_up_down(self, delta):
         content_len = self.len_proc()
         if content_len == 0:
             return
 
         if (delta < 0) and (self.wid.bbox("1.0") is not None):
-            self.text_sel_select_line(0)
+            self.__text_sel_select_line(0)
 
         elif (delta > 0) and (self.wid.bbox("%d.0" % content_len) is not None):
-            self.text_sel_select_line(content_len - 1)
+            self.__text_sel_select_line(content_len - 1)
 
         else:
             if self.sel:
@@ -297,7 +297,7 @@ class Text_sel_wid(object):
 
             self.wid.yview("scroll", delta, "pages")
 
-            line = self.text_sel_coo2_line(1, self.wid.winfo_height() / 2)
+            line = self.__text_sel_coo2_line(1, self.wid.winfo_height() / 2)
             if line != -1:
                 if delta < 0 and line > prev_line and prev_line != -1:
                     line = prev_line
@@ -305,7 +305,7 @@ class Text_sel_wid(object):
                     line = prev_line
 
                 # set selection on the new line
-                self.text_sel_select_line(line)
+                self.__text_sel_select_line(line)
 
 
     #
@@ -314,7 +314,7 @@ class Text_sel_wid(object):
     # If a selection exists, it's cleared and the item next to the
     # previous selection in cursor direction is selected.
     #
-    def text_sel_key_up_down(self, delta):
+    def __text_sel_key_up_down(self, delta):
         content_len = self.len_proc()
         if content_len > 0:
             sel = sorted(self.sel)
@@ -330,7 +330,7 @@ class Text_sel_wid(object):
 
                 if (line >= 0) and (line < content_len):
                     # set selection on the new line
-                    self.text_sel_select_line(line)
+                    self.__text_sel_select_line(line)
 
                 elif len(sel) > 1:
                     # selection already includes last line - restrict selection to this single line
@@ -339,7 +339,7 @@ class Text_sel_wid(object):
                     else:
                         line = content_len - 1
 
-                    self.text_sel_select_line(line)
+                    self.__text_sel_select_line(line)
 
             else:
                 # no selection exists yet -> use last anchor, or top/bottom visible line
@@ -359,7 +359,7 @@ class Text_sel_wid(object):
                         line -= 1
                         if line >= content_len:
                             line = content_len - 1
-                        self.text_sel_select_line(line)
+                        self.__text_sel_select_line(line)
 
 
     #
@@ -367,7 +367,7 @@ class Text_sel_wid(object):
     # is pressed. The selection is changed to cover all items starting at the
     # anchor item and the next item above or below the current selection.
     #
-    def text_sel_key_resize(self, delta):
+    def __text_sel_key_resize(self, delta):
         content_len = self.len_proc()
         if len(self.sel) > 0:
             sel = sorted(self.sel)
@@ -380,14 +380,14 @@ class Text_sel_wid(object):
 
             line += delta
             if (line >= 0) and (line < content_len):
-                self.sel = Text_sel_wid.idx_range(self.anchor_idx, line)
+                self.sel = Text_sel_wid.__idx_range(self.anchor_idx, line)
 
                 self.text_sel_show_selection()
                 self.wid.see("%d.0" % (line + 1))
                 self.cb_proc(self.sel)
 
         else:
-            self.text_sel_key_up_down(delta)
+            self.__text_sel_key_up_down(delta)
 
 
     #
@@ -396,7 +396,7 @@ class Text_sel_wid(object):
     # If the Shift key is pressed, the selection is extended to include all
     # items between the anchor and the first or last item.
     #
-    def text_sel_key_home_end(self, is_end, is_resize):
+    def __text_sel_key_home_end(self, is_end, is_resize):
         content_len = self.len_proc()
         if content_len > 0:
             if is_end:
@@ -409,7 +409,7 @@ class Text_sel_wid(object):
                 self.sel = [line]
             else:
                 if self.anchor_idx >= 0:
-                    self.sel = Text_sel_wid.idx_range(self.anchor_idx, line)
+                    self.sel = Text_sel_wid.__idx_range(self.anchor_idx, line)
 
             self.text_sel_show_selection()
             self.wid.see("%d.0" % (line + 1))
@@ -420,10 +420,10 @@ class Text_sel_wid(object):
     # This function is bound to the "CTRL-A" key to select all entries in
     # the list.
     #
-    def text_sel_select_all(self):
+    def __text_sel_select_all(self):
         content_len = self.len_proc()
         if content_len > 0:
-            self.sel = Text_sel_wid.idx_range(0, content_len - 1)
+            self.sel = Text_sel_wid.__idx_range(0, content_len - 1)
 
             self.text_sel_show_selection()
             self.cb_proc(self.sel)
@@ -433,7 +433,7 @@ class Text_sel_wid(object):
     # This helper function is used to build a list of all indices between
     # (and including) two given values in increasing order.
     #
-    def idx_range(start, end):
+    def __idx_range(start, end):
         if start > end:
             return list(range(end, start + 1))
         else:
@@ -441,8 +441,8 @@ class Text_sel_wid(object):
 
 
     #
-    # This function displays a selection in the text widget by adding the
-    # "sel" tag to all selected lines.  (Note the view is not affected, i.e.
+    # This interface function displays a selection in the text widget by adding
+    # the "sel" tag to all selected lines. (Note the view is not affected, i.e.
     # the selection may be outside of the viewable area.)
     #
     def text_sel_show_selection(self):
@@ -462,7 +462,7 @@ class Text_sel_wid(object):
     #
     # This function changes the selection to the single given line.
     #
-    def text_sel_select_line(self, line):
+    def __text_sel_select_line(self, line):
         self.anchor_idx = line
         self.sel = [line]
 
@@ -475,7 +475,7 @@ class Text_sel_wid(object):
     # This function determines the line under the mouse pointer.
     # If the pointer is not above a content line, -1 is returned.
     #
-    def text_sel_coo2_line(self, xcoo, ycoo):
+    def __text_sel_coo2_line(self, xcoo, ycoo):
         pos = self.wid.index("@%d,%d" % (xcoo,ycoo))
         if pos != "":
             line = int(pos.split(".")[0]) - 1
