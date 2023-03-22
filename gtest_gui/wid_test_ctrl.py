@@ -309,9 +309,9 @@ class Test_control_widget(object):
         wid_frm = tk.LabelFrame(parent, text="Progress", borderwidth=2, relief=tk.GROOVE)
         self.wid_progress_frm = tk.Frame(wid_frm)
         self.wid_progress_bar = tk.Frame(self.wid_progress_frm, width=20,
-                background="#6868FF", borderwidth=1, relief=tk.RAISED)
+                                         background="#6868FF", borderwidth=1, relief=tk.RAISED)
         self.wid_progress_frm.pack(side=tk.TOP, fill=tk.Y, expand=1)
-        wid_tool_tip.tool_tip_add(self.wid_progress_frm, self.__get_progress_tool_tip)
+        wid_tool_tip.tool_tip_add(wid_frm, self.__get_progress_tool_tip)
         wid_frm.grid(row=grid_row, column=grid_col, sticky="ns")
 
 

@@ -458,8 +458,8 @@ class Test_log_widget(object):
                 tc_names = [test_db.test_results[log_idx][0]
                                 for log_idx in self.__get_mapped_selection()]
             if not tc_names:
+                self.var_opt_filter_tc_name.set(False) # must come before messagebox
                 tk_messagebox.showerror(parent=self.tk, message="No results selected")
-                self.var_opt_filter_tc_name.set(False)
                 return
 
             self.opt_filter_tc_names = set(tc_names)

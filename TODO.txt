@@ -8,7 +8,6 @@ gtest:
 - hard link for exe as "exe.exe_ts" to allow recompilation during run
   keep link as long as there are core files referencing it
 - handle I/O error in trace writing
-- during import: for CRASHED logs, import core files names core.trace.*
 - after crash: check if core dump is enabled, add warning to trace file
 - unit-test on many CPUs: GUI is overloaded => throttle updates of result log
 - optimize TC allocation per CPU: consider actual duration
@@ -32,6 +31,7 @@ wid_test_log:
 
 dlg_browser:
 -! command line config: use shell only if contains space or special chars; check if escape needed
+- errors from subprocess are not visible
 - clean up browser & gdb temporary input files
 - use matching exe for opening core
 - export trace files in other archive formats, or uncompressed to directory

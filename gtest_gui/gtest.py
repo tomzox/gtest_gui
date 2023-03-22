@@ -715,12 +715,24 @@ def extract_trace(file_name, file_offs, length):
 
 
 # ----------------------------------------------------------------------------
-# TODO move into background loop as this may take a while
 
 def gtest_import_tc_result(tc_name, is_failed, duration, snippet, start_off, file_name, file_ts):
     tc_name = tc_name.decode(errors="backslashreplace")
-    if duration:
-        duration = duration.decode(errors="backslashreplace")
+
+    if not duration:
+        duration = 0
+    else:
+        try:
+            duration = int(duration.decode())
+        except:
+            duration = 0
+
+    core_name = None
+    if is_failed == 3: # CRASHED
+        file_split = os.path.split(file_name)
+        core_name = os.path.join(file_split[0], "core." + file_split[1])
+        if not os.access(core_name, os.R_OK):
+            core_name = None
 
     fail_file = ""
     fail_line = 0
@@ -740,13 +752,8 @@ def gtest_import_tc_result(tc_name, is_failed, duration, snippet, start_off, fil
         except:
             pass
 
-    if duration is None:
-        duration = 0
-    else:
-        duration = int(duration)
-
     test_db.import_result((tc_name, seed, 0, is_failed, file_name, start_off, len(snippet),
-                           None, fail_file, fail_line, duration, file_ts, False, True))
+                           core_name, fail_file, fail_line, duration, file_ts, False, True))
 
 
 def gtest_import_result_file(file_name):

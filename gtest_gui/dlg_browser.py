@@ -40,21 +40,23 @@ def show_trace_snippet(tk_top, file_name, file_off, length):
     txt = gtest.extract_trace(file_name, file_off, length)
     if txt:
         browser_exe = config_db.options["browser"]
+        if browser_exe:
+            # TODO delete temporary
+            if not config_db.options["browser_stdin"]:
+                tmp_name = file_name + "." + str(file_off)
+                with open(tmp_name, "w") as f:
+                    f.write(txt)
+                cmd = browser_exe + " " + tmp_name
+            else:
+                cmd = browser_exe + " -"
 
-        # TODO delete temporary
-        if not config_db.options["browser_stdin"]:
-            tmp_name = file_name + "." + str(file_off)
-            with open(tmp_name, "w") as f:
-                f.write(txt)
-            cmd = browser_exe + " " + tmp_name
+            try:
+                proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, text=True, shell=True)
+                threading.Thread(target=lambda:__thread_browser(proc, txt), daemon=True).start()
+            except Exception as e:
+                tk_messagebox.showerror(parent=tk_top, message="Failed to start external trace browser: " + str(e))
         else:
-            cmd = browser_exe + " -"
-
-        try:
-            proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, text=True, shell=True)
-            threading.Thread(target=lambda:__thread_browser(proc, txt), daemon=True).start()
-        except Exception as e:
-            tk_messagebox.showerror(parent=tk_top, message="Failed to start external trace browser: " + str(e))
+            wid_status_line.show_message("error", "No trace browser app is configured")
     elif txt is None:
         wid_status_line.show_message("error", "Failed to read trace file")
     else:
@@ -63,13 +65,16 @@ def show_trace_snippet(tk_top, file_name, file_off, length):
 
 def show_trace(tk_top, file_name):
     browser_exe = config_db.options["browser"]
-    try:
-        proc = subprocess.Popen([browser_exe, file_name])
-        threading.Thread(target=lambda:__thread_browser(proc, None),
-                         daemon=True).start()
-    except Exception as e:
-        tk_messagebox.showerror(parent=tk_top,
-                                message="Failed to start external trace browser: " + str(e))
+    if browser_exe:
+        try:
+            proc = subprocess.Popen([browser_exe, file_name])
+            threading.Thread(target=lambda:__thread_browser(proc, None),
+                             daemon=True).start()
+        except Exception as e:
+            tk_messagebox.showerror(parent=tk_top,
+                                    message="Failed to start external trace browser: " + str(e))
+    else:
+        wid_status_line.show_message("error", "No trace browser app is configured")
 
 
 def __thread_browser(proc, txt):
@@ -173,7 +178,7 @@ class Log_browser(object):
         wid_top.wm_group(tk_top)
         wid_top.wm_title(title)
 
-        wid_txt = tk.Text(wid_top, width=100, height=60, wrap=tk.NONE, relief=tk.FLAT,
+        wid_txt = tk.Text(wid_top, width=100, height=50, wrap=tk.NONE, relief=tk.FLAT,
                           font=tk_utils.font_content, insertofftime=0, cursor="top_left_arrow")
         wid_txt.pack(side=tk.LEFT, fill=tk.BOTH, expand=1, padx=5, pady=5)
 
