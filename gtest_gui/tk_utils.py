@@ -152,6 +152,16 @@ def create_images():
         '0x00, 0x00,'
         '0x00, 0x00};')
 
+    tk_top.call('image', 'create', 'bitmap', 'img_folder', '-data',
+      '#define img_width 14\n'
+      '#define img_height 5\n'
+      'static unsigned char img_bits[] = {\n'
+        '0x00, 0x00,'
+        '0x00, 0x00,'
+        '0x00, 0x00,'
+        '0xd8, 0x06,'
+        '0xd8, 0x06};')
+
 
 def bind_classes():
     text_modifier_events = (

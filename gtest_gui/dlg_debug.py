@@ -21,6 +21,7 @@ import re
 import tkinter as tk
 
 import gtest_gui.tk_utils as tk_utils
+import gtest_gui.wid_tool_tip as wid_tool_tip
 
 prev_dialog_wid = None
 
@@ -49,7 +50,7 @@ class Debug_dialog(object):
         self.__create_var_name_entry_frame(self.wid_top)
 
         wid_pane = tk.PanedWindow(self.wid_top, orient=tk.VERTICAL,
-                                    sashrelief=tk.RAISED, showhandle=1, sashpad=4)
+                                  sashrelief=tk.RAISED, showhandle=1, sashpad=4)
         wid_pane.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
         self.__create_output_frame(wid_pane)
@@ -77,6 +78,7 @@ class Debug_dialog(object):
         wid_but = tk.Button(wid_frm, text="Lookup", padx=5, pady=1,
                             command=lambda: self.__show_variable_value(True))
         wid_but.pack(side=tk.LEFT)
+        wid_tool_tip.tool_tip_add(wid_but, "debug.lookup")
         wid_frm.pack(side=tk.TOP, fill=tk.X)
         self.wid_var_name = wid_ent
 
@@ -133,6 +135,10 @@ class Debug_dialog(object):
         wid_but_clear.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=1)
         wid_but_new.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=1)
         wid_frm.pack(side=tk.TOP, fill=tk.X, padx=10, pady=5)
+        wid_tool_tip.tool_tip_add(wid_but_eval, "debug.eval")
+        wid_tool_tip.tool_tip_add(wid_but_exec, "debug.exec")
+        wid_tool_tip.tool_tip_add(wid_but_clear, "debug.clear")
+        wid_tool_tip.tool_tip_add(wid_but_new, "debug.new")
 
 
     def __eval_input(self, use_exec):

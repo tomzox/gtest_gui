@@ -61,7 +61,8 @@ class Font_selection_dialog(object):
         self.wid_font_list.configure(yscrollcommand=wid_sb.set)
         wid_frm.pack(side=tk.TOP, fill=tk.BOTH, expand=1, padx=5, pady=5)
         self.wid_font_list.bind("<<ListboxSelect>>",
-                    lambda e: tk_utils.bind_call_and_break(self.__handle_selection_change))
+                                lambda e: tk_utils.bind_call_and_break(
+                                            self.__handle_selection_change))
 
         # frame #2: size and weight controls
         wid_frm2 = tk.Frame(self.wid_top)
@@ -78,7 +79,7 @@ class Font_selection_dialog(object):
         # frame #3: demo text
         self.wid_demo = tk.Text(self.wid_top, width=20, height=4, wrap=tk.NONE,
                                 exportselection=tk.FALSE, relief=tk.RIDGE, takefocus=0)
-        self.wid_demo.pack(side=tk.TOP, fill=tk.X, expand=1, padx=15, pady=10)
+        self.wid_demo.pack(side=tk.TOP, fill=tk.X, padx=15, pady=10)
         self.wid_demo.bindtags([self.wid_demo, "TextReadOnly", self.tk, "all"])
 
         self.wid_demo.insert("end", "ABCDEFGHIJKLMNOPQRSTUVWXYZ\n")

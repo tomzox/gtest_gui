@@ -59,6 +59,27 @@ class Gtest_control(object):
         self.__is_valgrind = bool(valgrind_cmd)
         self.__exe_ts = test_db.test_exe_ts
 
+        trace_dir_path = gtest_control_get_trace_dir(self.__exe_ts)
+        if not os.path.exists(trace_dir_path):
+            try:
+                os.mkdir(trace_dir_path)
+            except OSError as e:
+                tk_messagebox.showerror(parent=tk_utils.tk_top,
+                                        message="Failed to create trace output directory: " + str(e))
+                return
+
+        exe_name = gtest_control_get_exe_file_link_name(test_db.test_exe_name, self.__exe_ts)
+        if config_db.options["copy_executable"] and not os.access(exe_name, os.X_OK):
+            try:
+                os.link(test_db.test_exe_name, exe_name)
+            except OSError as e:
+                msg = ("Failed to link or copy executable: %s. Will use executable directly. "
+                       "See Configuration to disable this warning.") % str(e)
+                answer = tk_messagebox.showwarning(parent=tk_utils.tk_top, message=msg)
+                if answer == "cancel":
+                    return
+                exe_name = test_db.test_exe_name
+
         (shard_parts, shard_reps) = calc_sharding_partitioning(
                                         len(tc_list), rep_cnt, job_cnt - job_runall_cnt)
         for idx in range(job_runall_cnt):
@@ -73,7 +94,7 @@ class Gtest_control(object):
             if idx >= job_cnt - job_runall_cnt:
                 filter_str = ""
             try:
-                self.__jobs.append(Gtest_job(self, test_db.test_exe_name, self.__exe_ts,
+                self.__jobs.append(Gtest_job(self, exe_name, self.__exe_ts,
                                              gtest_control_get_trace_file_name(self.__exe_ts, trace_idx),
                                              filter_str, run_disabled, shuffle, valgrind_cmd,
                                              clean_trace, clean_core, break_on_fail, break_on_except,
@@ -118,14 +139,18 @@ class Gtest_control(object):
 
         next_poll = time.time() + 0.150
         while True:
+            # Wait for EVENT_READ on any input pipe
+            pending_events = selector.select()
+
             with self.__thr_lock:
+                # Process events under lock to support abort with clean-up by main control
                 if not self.__jobs:
                     return
 
-            for event in selector.select():
-                fd = event[0].data.get_pipe()
-                if not event[0].data.communicate():
-                    selector.unregister(fd)
+                for event in pending_events:
+                    fd = event[0].data.get_pipe()
+                    if not event[0].data.communicate():
+                        selector.unregister(fd)
 
             # Add minimum delay between reading pipes for reducing parser overhead
             sleep = next_poll - time.time()
@@ -172,10 +197,13 @@ class Gtest_control(object):
             self.__tid = None
 
 
-    def stop(self):
+    def stop(self, kill=False):
         with self.__thr_lock:
             for job in self.__jobs:
-                job.terminate()
+                job.terminate(kill)
+
+            if kill:
+                self.__jobs = []
 
 
     def is_active(self):
@@ -321,19 +349,178 @@ def calc_sharding_partitioning(tc_cnt, rep_cnt, job_cnt):
 
 def gtest_control_first_free_trace_file_idx(exe_ts):
     free_idx = 0
-    for entry in os.scandir("."):
+    for entry in os.scandir(gtest_control_get_trace_dir(exe_ts)):
         if entry.is_file():
-            match = re.match(r"^trace\.(\d+)\.(\d+)$", entry.name)
+            match = re.match(r"^trace\.(\d+)$", entry.name)
             if match:
-                this_exe_ts = int(match.group(1))
-                this_idx = int(match.group(2))
-                if this_exe_ts == exe_ts and this_idx >= free_idx:
+                this_idx = int(match.group(1))
+                if this_idx >= free_idx:
                     free_idx = this_idx + 1
     return free_idx
 
 
+def gtest_control_search_trace_dirs():
+    if config_db.options["trace_dir"]:
+        trace_dir_path = config_db.options["trace_dir"]
+    else:
+        trace_dir_path = "."
+
+    trace_files = []
+    for base_entry in os.scandir(trace_dir_path):
+        if re.match(r"^trace\.\d+$", base_entry.name):
+            for entry in os.scandir(os.path.join(trace_dir_path, base_entry.name)):
+                if entry.is_file():
+                    if re.match(r"^trace\.(\d+)$", entry.name):
+                        trace_files.append(os.path.join(trace_dir_path, base_entry.name, entry.name))
+
+    return trace_files
+
+
+def gtest_control_get_trace_dir(exe_ts):
+    trace_dir_path = "trace.%d" % exe_ts
+    if config_db.options["trace_dir"]:
+        trace_dir_path = os.path.join(config_db.options["trace_dir"], trace_dir_path)
+    return trace_dir_path
+
+
+def gtest_control_get_exe_file_link_name(exe_name, exe_ts):
+    if config_db.options["copy_executable"]:
+        trace_dir_path = gtest_control_get_trace_dir(exe_ts)
+        return os.path.join(trace_dir_path, os.path.basename(exe_name))
+    else:
+        return exe_name
+
+
 def gtest_control_get_trace_file_name(exe_ts, idx):
-    return "trace.%d.%d" % (exe_ts, idx)
+    return os.path.join(gtest_control_get_trace_dir(exe_ts), "trace.%d" % idx)
+
+
+def gtest_control_get_core_file_name(trace_name, is_valgrind):
+    split_name = os.path.split(trace_name)
+    core_name = "vgcore" if is_valgrind else "core"
+
+    return os.path.join(split_name[0], core_name + "." + split_name[1])
+
+
+def release_exe_file_copy(exe_name=None, exe_ts=None):
+    if exe_name is None:
+        exe_name = test_db.test_exe_name
+    if exe_ts is None:
+        exe_ts = test_db.test_exe_ts
+    if not exe_name or not exe_ts:
+        return
+
+    if not config_db.options["copy_executable"]:
+        return
+
+    trace_dir_path = gtest_control_get_trace_dir(exe_ts)
+    if os.path.exists(trace_dir_path):
+        dir_list = os.listdir(trace_dir_path)
+
+        if not any([x.startswith(("core.", "vgcore.")) for x in dir_list]):
+            exe_link = gtest_control_get_exe_file_link_name(exe_name, exe_ts)
+            try:
+                os.unlink(exe_link)
+                try:
+                    dir_list.remove(os.path.basename(exe_link))
+                except:
+                    pass
+            except OSError:
+                pass
+
+            if not dir_list:
+                try:
+                    os.rmdir(trace_dir_path)
+                except OSError:
+                    pass
+
+
+def remove_trace_or_core_files(rm_files, rm_exe):
+    for exe_name_ts in rm_exe:
+        rm_files.add(gtest_control_get_exe_file_link_name(exe_name_ts[0], exe_name_ts[1]))
+
+    try:
+        for file_name in rm_files:
+            os.remove(file_name);
+    except OSError:
+        pass
+
+    rm_dirs = {os.path.dirname(x) for x in rm_files}
+    for adir in rm_dirs:
+        if not os.listdir(adir):
+            try:
+                os.rmdir(adir)
+            except OSError:
+                pass
+
+
+def clean_all_trace_files(clean_failed=False):
+    contains_fail = set()
+    pass_parts = {}
+    rm_files = set()
+    rm_exe = set()
+    for log in test_db.test_results:
+        if log[4]:
+            rm_files.add(log[4])
+            if not clean_failed:
+                if log[3] == 2 or log[3] == 3:
+                    contains_fail.add(log[4])
+                elif log[3] == 4: # valgrind: keep all pass traces
+                    del pass_parts[log[4]]
+                else:
+                    __add_passed_section(pass_parts, log[4], log[5], log[6])
+
+        if clean_failed and log[7]:
+            rm_files.add(log[7])
+            rm_exe.add((log[1], log[2]))
+
+    if not clean_failed:
+        for name in contains_fail:
+            rm_files.remove(name)
+            pp = pass_parts.get(name)
+            if pp:
+                __compress_trace_file(name, pp)
+
+    remove_trace_or_core_files(rm_files, rm_exe)
+
+
+def __add_passed_section(pass_parts, name, start, end):
+    parts = pass_parts.get(name)
+    if parts:
+        if parts[-1][1] == start:
+            parts[-1] = (pp[-1][0], end)
+        else:
+            pass_parts[name].append((start, end))
+    else:
+        pass_parts[name] = [(start, end)]
+
+
+def __compress_trace_file(name, parts):
+    if sys.platform == "win32":
+        fd = os.open(name, os.O_RDWR | os.O_BINARY)
+    else:
+        fd = os.open(name, os.O_RDWR)
+    size = os.stat(name).st_size
+    off = parts[0][0]
+    for idx in range(len(parts)):
+        if idx + 1 < len(parts):
+            next_start = parts[idx + 1][0]
+        else:
+            next_start = size
+        cur_end = parts[idx][0] + parts[idx][1]
+
+        os.lseek(fd, cur_end, os.SEEK_SET)
+        data = os.read(fd, next_start - cur_end)
+
+        os.lseek(fd, off, os.SEEK_SET)
+        os.write(fd, data)
+
+        off += len(data)
+        idx += 1
+
+    os.close(fd)
+    os.truncate(name, off)
+
 
 
 # ----------------------------------------------------------------------------
@@ -344,6 +531,7 @@ class Gtest_job(object):
                  clean_trace, clean_core, break_on_fail, break_on_except,
                  rep_cnt, shard_cnt, shard_idx, is_bg_job, result_queue):
         self.__parent = parent
+        self.__exe_name = test_db.test_exe_name
         self.__exe_ts = exe_ts
         self.__out_file_name = out_file_name
         self.__clean_trace = clean_trace
@@ -358,6 +546,7 @@ class Gtest_job(object):
         self.__trailer = False
         self.__clean_trace_file = clean_trace
         self.__sum_input_trace = 0
+        self.__failed_cnt = 0
         self.__result_cnt = 0
         self.__terminated = False
         self.log = ""
@@ -411,16 +600,28 @@ class Gtest_job(object):
         self.__proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                        stdin=subprocess.DEVNULL, env=env,
                                        creationflags=gtest_gui.fcntl.subprocess_creationflags())
+        # Configure output pipe as non-blocking:
+        # Caller is responsible for periodically calling communicate() to collect trace output
+        flags = gtest_gui.fcntl.set_nonblocking(self.__proc.stdout)
+
+        self.__out_file = open(out_file_name, "wb", buffering=0)
+
+
+    def terminate(self, kill=False):
         if self.__proc:
-            flags = gtest_gui.fcntl.set_nonblocking(self.__proc.stdout)
+            if kill or self.__terminated: # use more force in 2nd attempt
+                self.__proc.kill()
+            else:
+                self.__proc.terminate()
 
-            self.__out_file = open(out_file_name, "wb", buffering=0)
-
-
-    def terminate(self):
-        if self.__proc:
-            self.__terminated = True
-            self.__proc.terminate()
+            if kill:
+                self.__close_trace_file()
+                try:
+                    os.remove(self.__out_file_name + ".running")
+                    os.remove("vgcore.%d" % self.__proc.pid)
+                    os.remove("core.%d" % self.__proc.pid)
+                except OSError:
+                    pass
 
 
     def abort(self):
@@ -522,31 +723,34 @@ class Gtest_job(object):
         try:
             os.remove(self.__out_file_name + ".running")
             aborted = True
-        except OSError as e:
+        except OSError:
             aborted = False
 
         if (retval != 0 or aborted) and not self.__terminated:
-            # Detect core dump (POSIX only)
-            try:
-                if self.__clean_core:
-                    os.remove("core.%d" % self.__proc.pid)
-                    core_file = None
-                else:
-                    core_file = "core." + self.__out_file_name
-                    os.rename("core.%d" % self.__proc.pid, core_file)
-            except OSError as e:
-                core_file = None
-            # Detect crash under valgrind
-            if self.__is_valgrind and not core_file:
+            if self.__is_valgrind:
+                # Detect crash under valgrind
+                # (A core file from valgrind itself crashing is intentionally ignored)
                 try:
                     if self.__clean_core:
                         os.remove("vgcore.%d" % self.__proc.pid)
                         core_file = None
                     else:
-                        core_file = "vgcore." + self.__out_file_name
+                        core_file = gtest_control_get_core_file_name(self.__out_file_name, True)
                         os.rename("vgcore.%d" % self.__proc.pid, core_file)
-                except OSError as e:
+                except OSError:
                     core_file = None
+            else:
+                # Detect POSIX core dump file
+                try:
+                    if self.__clean_core:
+                        os.remove("core.%d" % self.__proc.pid)
+                        core_file = None
+                    else:
+                        core_file = gtest_control_get_core_file_name(self.__out_file_name, False)
+                        os.rename("core.%d" % self.__proc.pid, core_file)
+                except OSError:
+                    core_file = None
+
             # Detect error reported by valgrind
             valgrind_error = self.__is_valgrind and (retval == self.__valgrind_exit)
 
@@ -562,16 +766,15 @@ class Gtest_job(object):
             elif valgrind_error:
                 # this is a special case as we don't know which test case caused the error
                 self.__process_trace(b"valgrind", 4, 0, None)
-            else:
-                self.__trace_to_file(self.__buf_data)
+            elif not self.__failed_cnt:
+                self.__snippet_data += self.__buf_data
+                self.__snippet_data += (b"\n[----------] Exit code: %d\n" % retval)
+                self.__process_trace(b"error", 5, 0, None)
 
         else:
             self.__trace_to_file(self.__buf_data)
 
-        self.__out_file.close()
-        if self.__clean_trace_file:
-            os.remove(self.__out_file_name)
-        self.__out_file = None
+        self.__close_trace_file()
 
         # report exit to parent
         self.__result_queue.put((None, self))
@@ -587,6 +790,7 @@ class Gtest_job(object):
             if match:
                 fail_file = os.path.basename(match.group(1).decode(errors="backslashreplace"))
                 fail_line = int(match.group(2))
+            self.__failed_cnt += 1
 
         seed = ""
         pat = config_db.options.get("seed_regexp")
@@ -601,27 +805,34 @@ class Gtest_job(object):
         trace_start_off = self.__out_file.tell()
         trace_length = len(self.__snippet_data)
         store_trace = is_failed or not self.__clean_trace
-
-        if is_failed == 4: # valgrind exit error: show complete trace
-            trace_length = trace_start_off
-            trace_start_off = 0
-
         if store_trace:
             self.__clean_trace_file = False
             self.__trace_to_file(self.__snippet_data)
-        self.__result_cnt += 1
 
-        self.__result_queue.put( ((tc_name, seed, self.__exe_ts, is_failed,
+        if is_failed >= 4: # summary error: show complete trace
+            trace_start_off = 0
+            trace_length = self.__out_file.tell()
+
+        self.__result_queue.put( ((tc_name, self.__exe_name, self.__exe_ts, is_failed,
                                    self.__out_file_name if store_trace else None,
                                    trace_start_off, trace_length, core_file,
                                    fail_file, fail_line, duration, int(time.time()),
-                                   self.__is_valgrind, False),
+                                   self.__is_valgrind, False, seed),
                                   self.__is_bg_job) )
+        self.__result_cnt += 1
 
 
     def __trace_to_file(self, data):
         # TODO catch error -> abort process
         self.__out_file.write(data)
+
+
+    def __close_trace_file(self):
+        self.__out_file.close()
+        # delete output if "clean" option, or no result log entry (i.e. file would be invisible)
+        if self.__clean_trace_file or (self.__result_cnt == 0):
+            os.remove(self.__out_file_name)
+        self.__out_file = None
 
 
 # ----------------------------------------------------------------------------
@@ -727,12 +938,14 @@ def gtest_import_tc_result(tc_name, is_failed, duration, snippet, start_off, fil
         except:
             duration = 0
 
-    core_name = None
+    core_path = None
     if is_failed == 3: # CRASHED
         file_split = os.path.split(file_name)
-        core_name = os.path.join(file_split[0], "core." + file_split[1])
-        if not os.access(core_name, os.R_OK):
-            core_name = None
+        for with_valgrind in (False, True):
+            path = os.path.join(file_split[0],
+                                gtest_control_get_core_file_name(file_split[1], with_valgrind))
+            if os.access(path, os.R_OK):
+                core_path = path
 
     fail_file = ""
     fail_line = 0
@@ -752,8 +965,8 @@ def gtest_import_tc_result(tc_name, is_failed, duration, snippet, start_off, fil
         except:
             pass
 
-    test_db.import_result((tc_name, seed, 0, is_failed, file_name, start_off, len(snippet),
-                           core_name, fail_file, fail_line, duration, file_ts, False, True))
+    test_db.import_result((tc_name, None, 0, is_failed, file_name, start_off, len(snippet),
+                           core_path, fail_file, fail_line, duration, file_ts, False, True, seed))
 
 
 def gtest_import_result_file(file_name):
@@ -816,3 +1029,7 @@ def gtest_import_result_file(file_name):
                 snippet_data += buf_data[done_off : last_line_off]
             buf_data = buf_data[last_line_off:]
             file_off += last_line_off
+
+def gtest_automatic_import():
+    for file_name in gtest_control_search_trace_dirs():
+        gtest_import_result_file(file_name)

@@ -43,6 +43,7 @@ class Test_control_widget(object):
         self.var_men_chkb = {}
         self.wid_men_cascades = []
         self.wid_men = None
+        self.prev_campaign_options = None
         self.prev_exec_status = None
 
         self.filter_undo_history = []
@@ -318,8 +319,6 @@ class Test_control_widget(object):
     def __get_progress_tool_tip(self):
         totals = test_db.campaign_stats
         if totals[4]:
-            max_h = self.wid_progress_frm.winfo_height()
-            bar_h = min(max_h, max_h * totals[5] // totals[4])
             return "%d of %d" % (totals[5], totals[4])
         else:
             return ""
@@ -375,11 +374,10 @@ class Test_control_widget(object):
                         self.wid_opt_valgrind2):
                 wid.configure(state=cmd_state)
 
-            cmd_state = state=tk.DISABLED
-            if not tests_active:
-                remaining_rep = self.__calc_remaining_repetitions()
-                if remaining_rep:
-                    cmd_state = state=tk.NORMAL
+            if tests_active or (self.prev_campaign_options is None):
+                cmd_state = state=tk.DISABLED
+            else:
+                cmd_state = state=tk.NORMAL
             self.wid_cmd_resume.configure(state=cmd_state)
 
         self.prev_exec_status = tests_active
@@ -530,7 +528,7 @@ class Test_control_widget(object):
         if gtest.gtest_ctrl.is_active(): # block call via key binding
             return
 
-        if not self.__check_executable_update(False):
+        if not self.__check_executable_update():
             return
 
         # check if given test case exists - needs to be done after exe update & reading new TC list
@@ -551,21 +549,34 @@ class Test_control_widget(object):
         if gtest.gtest_ctrl.is_active(): # block call via key binding
             return
 
-        if not self.__check_executable_update(True):
+        if self.prev_campaign_options is None:
+            wid_status_line.show_message("warn", "Campaign cannot be resumed.")
             return
 
-        # TODO remember previously used options
-        if not self.check_filter_expression():
-            return
+        if ((self.prev_campaign_options["filter_str"] != self.var_opt_filter.get()) or
+            (self.prev_campaign_options["run_disabled"] != self.var_opt_run_disabled.get())):
+            if not tk_messagebox.askokcancel(
+                    parent=self.tk,
+                    message="Test filter options have been changed. Really resume with previous filter?"):
+                return
+
+        if not os.access(test_db.test_exe_name, os.X_OK):
+            tk_messagebox.showerror(parent=self.tk,
+                                    message="Test executable inaccessible: " + str(e))
+            return False
+
         if not self.__check_test_options():
             return
 
         remaining_rep_cnt = self.__calc_remaining_repetitions()
-        if remaining_rep_cnt:
-            self.__start_campaign_sub(self.var_opt_filter.get(),
-                                    remaining_rep_cnt=remaining_rep_cnt)
-        else:
-            wid_status_line.show_message("warn", "Tests have been completed already.")
+        if remaining_rep_cnt <= 0:
+            tk_messagebox.showerror(
+                    parent=self.tk,
+                    message="Configured number of repetitions were already completed.")
+            return
+
+        self.__start_campaign_sub(self.prev_campaign_options["filter_str"],
+                                  resume_rep_cnt=remaining_rep_cnt)
 
 
     def start_repetition(self):
@@ -584,7 +595,7 @@ class Test_control_widget(object):
                           "No results selected and no repetitions requested previously.")
             return
 
-        if not self.__check_executable_update(False):
+        if not self.__check_executable_update():
             return
 
         current_exe_cnt = sum([test_db.repeat_requests[x] == test_db.test_exe_ts
@@ -607,7 +618,7 @@ class Test_control_widget(object):
         self.__start_campaign_sub(":".join(tc_names), is_repeat=True)
 
 
-    def __check_executable_update(self, is_resume):
+    def __check_executable_update(self):
         if not test_db.test_exe_name:
             tk_messagebox.showerror(parent=self.tk,
                                     message="Please select an executable via the Control menu")
@@ -621,30 +632,26 @@ class Test_control_widget(object):
             return False
 
         if test_db.test_exe_ts == latest_exe_ts:
-            if not is_resume:
-                delta = time.time() - latest_exe_ts
-                if delta < 2*60:
-                    msg = ""
-                elif delta < 90*60:
-                    msg = "%d minutes ago" % (delta // 60)
-                elif delta < 11*60*60:
-                    msg = "%.1f hours ago" % (delta / (60*60))
-                else:
-                    msg = datetime.fromtimestamp(test_db.test_exe_ts).strftime("%a %d.%m %H:%M")
+            delta = time.time() - latest_exe_ts
+            if delta < 2*60:
+                msg = ""
+            elif delta < 90*60:
+                msg = "%d minutes ago" % (delta // 60)
+            elif delta < 11*60*60:
+                msg = "%.1f hours ago" % (delta / (60*60))
+            else:
+                msg = datetime.fromtimestamp(test_db.test_exe_ts).strftime("%a %d.%m %H:%M")
 
-                if msg:
-                    wid_status_line.show_message("info", "Executable compiled " + msg)
+            if msg:
+                wid_status_line.show_message("info", "Executable compiled " + msg)
 
         else:
-            if is_resume:
-                tk_messagebox.showerror(parent=self.tk,
-                                        message="Cannot resume - executable has changed.")
-                return False
-
             tc_names = gtest.gtest_list_tests()
             if tc_names is None:
                 return False
 
+            self.prev_campaign_options = None
+            gtest.release_exe_file_copy()
             test_db.update_executable(test_db.test_exe_name, latest_exe_ts, tc_names)
 
         return True
@@ -667,19 +674,16 @@ class Test_control_widget(object):
 
 
     def __calc_remaining_repetitions(self):
-        filter_str = self.var_opt_filter.get()
-        expr = filter_expr.Filter_expr(filter_str, self.var_opt_run_disabled.get())
+        filter_str = self.prev_campaign_options["filter_str"]
+        expr = filter_expr.Filter_expr(filter_str, self.prev_campaign_options["run_disabled"])
         tc_list = expr.get_selected_tests()
         if tc_list:
-            try: # to be checked by caller
-                rep_cnt = int(self.var_opt_repetitions.get())
-            except:
-                rep_cnt = 1
-            runs = [test_db.test_case_stats[x][0] +
-                    test_db.test_case_stats[x][1] +
-                    test_db.test_case_stats[x][2] for x in tc_list]
-            if max(runs): # disable resuming if never started yet
-                min_cnt = min(runs)
+            rep_cnt = int(self.var_opt_repetitions.get())
+
+            min_cnt = min([test_db.test_case_stats[x][0] +
+                           test_db.test_case_stats[x][1] +
+                           test_db.test_case_stats[x][2] for x in tc_list])
+            if rep_cnt > min_cnt:
                 return rep_cnt - min_cnt
         return 0
 
@@ -710,8 +714,10 @@ class Test_control_widget(object):
         return True
 
 
-    def __start_campaign_sub(self, filter_str, remaining_rep_cnt=0, is_repeat=False):
-        expr = filter_expr.Filter_expr(filter_str, self.var_opt_run_disabled.get())
+    def __start_campaign_sub(self, filter_str, resume_rep_cnt=0, is_repeat=False):
+        run_disabled = self.var_opt_run_disabled.get() if resume_rep_cnt == 0 \
+                            else self.prev_campaign_options["run_disabled"]
+        expr = filter_expr.Filter_expr(filter_str, run_disabled)
         tc_list = expr.get_selected_tests()
 
         valgrind_cmd = ""
@@ -726,9 +732,21 @@ class Test_control_widget(object):
                 dlg_config.create_dialog(self.tk)
             return
 
-        rep_cnt = remaining_rep_cnt
-        if not rep_cnt:
+        clean_trace = self.var_opt_clean_trace.get()
+        if valgrind_cmd:
+            wid_status_line.show_message("warning", "Ignoring clean-trace option with valgrind")
+            clean_trace = False
+
+        if not resume_rep_cnt:
             rep_cnt = 1 if is_repeat else self.var_opt_repetitions.get()
+        else:
+            rep_cnt = resume_rep_cnt
+
+        if not is_repeat:
+            self.prev_campaign_options = {
+                "filter_str": filter_str,
+                "run_disabled": run_disabled,
+            }
 
         self.wid_cmd_run.configure(cursor="watch")
 
@@ -738,12 +756,12 @@ class Test_control_widget(object):
             rep_cnt,
             filter_str,
             tc_list,
-            remaining_rep_cnt != 0,
+            resume_rep_cnt != 0,
             self.var_opt_run_disabled.get(),
             self.var_opt_shuffle.get(),
             valgrind_cmd.split(" ") if valgrind_cmd else None,
             self.var_opt_fail_max.get(),
-            self.var_opt_clean_trace.get(),
+            clean_trace,
             self.var_opt_clean_core.get(),
             self.var_opt_break_on_fail.get(),
             self.var_opt_break_on_except.get())

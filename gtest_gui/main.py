@@ -54,24 +54,25 @@ def parse_argv(tk_top):
             parse_argv_error(tk_top, "Unknown command line option: %s" % file_name)
 
         try:
-            if (os.name == "posix"):
-                is_exe = os.access(file_name, os.X_OK)
-            else:
-                is_exe = os.path.splitext(file_name)[1] == ".exe"
-
-            if is_exe and not next_is_trace:
-                if test_db.test_exe_name:
-                    parse_argv_error(tk_top, "More than one executable on the command line: %s" % file_name)
-                test_db.test_exe_name = file_name
-                test_db.test_exe_ts = int(os.stat(file_name).st_mtime)  # cast away sub-second fraction
-            else:
-                trace_files.append(file_name)
-
-            next_is_trace = False
-
+            st = os.stat(file_name)
         except OSError as e:
             # Note the file name is already included in the exception text
             parse_argv_error(tk_top, "Failed to access file: %s" % str(e), False)
+
+        if (os.name == "posix"):
+            is_exe = os.access(file_name, os.X_OK)
+        else:
+            is_exe = os.path.splitext(file_name)[1] == ".exe"
+
+        if is_exe and not next_is_trace:
+            if test_db.test_exe_name:
+                parse_argv_error(tk_top, "More than one executable on the command line: %s" % file_name)
+            test_db.test_exe_name = file_name
+            test_db.test_exe_ts = int(st.st_mtime)  # cast away sub-second fraction
+        else:
+            trace_files.append(file_name)
+
+        next_is_trace = False
 
     return trace_files
 
@@ -93,6 +94,9 @@ def main():
     gtest.initialize()
 
     config_db.rc_file_load()
+
+    if config_db.options["startup_import_trace"]:
+        gtest.gtest_automatic_import()
 
     for file_name in trace_files:
         try:

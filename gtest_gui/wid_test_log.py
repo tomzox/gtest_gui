@@ -41,9 +41,9 @@ import gtest_gui.wid_text_sel as wid_text_sel
 
 class Sort_mode(Enum):
     by_name = 0
-    by_seed = 1
-    by_failure = 2
-    by_duration = 3
+    by_failure = 1
+    by_duration = 2
+    by_seed = 3
 
 
 class Test_log_widget(object):
@@ -277,7 +277,7 @@ class Test_log_widget(object):
         else:
             txt = datetime.fromtimestamp(log[11]).strftime("%a %d.%m %H:%M")
 
-        if log[3] != 4:
+        if log[3] < 4:
             if log[3] == 0:
                 txt += " Passed "
             elif log[3] == 2:
@@ -289,8 +289,8 @@ class Test_log_widget(object):
 
             txt += log[0]
 
-            if log[1]:
-                txt += ", seed " + log[1]
+            if log[14]:
+                txt += ", seed " + log[14]
 
             if log[12]:
                 txt += " under valgrind"
@@ -317,7 +317,10 @@ class Test_log_widget(object):
                 tagged_txt.append("highlight")
 
         else:
-            txt += " Valgrind error at end of test run"
+            if log[3] == 4:
+                txt += " Valgrind error at end of test run"
+            else:
+                txt += " Error outside of test case"
             tagged_txt = [txt, []]
 
         if log[13]:
@@ -325,7 +328,10 @@ class Test_log_widget(object):
             tagged_txt.append([])
 
         else:
-            if log[2] != test_db.test_exe_ts:
+            if log[1] != test_db.test_exe_name:
+                tagged_txt.append(" (%s)" % os.path.basename(log[1]))
+                tagged_txt.append([])
+            elif log[2] != test_db.test_exe_ts:
                 if log[2] == 0:
                     tagged_txt.append(" (unknown executable)")
                     tagged_txt.append([])
@@ -388,13 +394,13 @@ class Test_log_widget(object):
         for mode in reversed(self.opt_sort_modes):
             if mode == Sort_mode.by_name:
                 logs = sorted(logs, key=lambda x: test_db.test_results[x][0])
-            elif mode == Sort_mode.by_seed:
-                logs = sorted(logs, key=lambda x: test_db.test_results[x][1])
             elif mode == Sort_mode.by_failure:
                 logs = sorted(logs, key=lambda x: test_db.test_results[x][9])
                 logs = sorted(logs, key=lambda x: test_db.test_results[x][8])
             elif mode == Sort_mode.by_duration:
                 logs = sorted(logs, key=lambda x: test_db.test_results[x][10])
+            elif mode == Sort_mode.by_seed:
+                logs = sorted(logs, key=lambda x: test_db.test_results[x][14])
         return logs
 
 
@@ -411,7 +417,7 @@ class Test_log_widget(object):
                 return lambda x: test_db.test_results[x][10]
 
             elif mode == Sort_mode.by_seed:
-                return lambda x: test_db.test_results[x][1]
+                return lambda x: test_db.test_results[x][14]
 
         elif len(self.opt_sort_modes) > 1:
             key_idx = []
@@ -427,7 +433,7 @@ class Test_log_widget(object):
                     key_idx.append(10)
 
                 elif mode == Sort_mode.by_seed:
-                    key_idx.append(1)
+                    key_idx.append(14)
 
             return lambda log_idx: [test_db.test_results[log_idx][x] for x in key_idx]
 
@@ -558,8 +564,9 @@ class Test_log_widget(object):
 
                 if log[7]:
                     wid_men.add_command(label="Extract stack trace from core dump file",
-                                        command=lambda name=log[0], core=log[7]:
-                                            self.do_open_stack_trace(name, core))
+                                        command=lambda name=log[0], exe_name=log[1],
+                                                       exe_ts=log[2], core=log[7]:
+                                            self.do_open_stack_trace(name, exe_name, exe_ts, core))
 
                 if log[4] or log[7]:
                     wid_men.add_separator()
@@ -657,8 +664,10 @@ class Test_log_widget(object):
     def __remove_trace_files(self, idx_list):
         idx_list = sorted(idx_list)
         rm_files = set()
+        rm_exe = set()
         rm_idx = 0
         used_files = set()
+        used_exe = set()
         for idx in range(len(test_db.test_results)):
             log = test_db.test_results[idx]
             if idx == idx_list[rm_idx]:
@@ -666,6 +675,7 @@ class Test_log_widget(object):
                     rm_files.add(log[4])
                 if log[7]:
                     rm_files.add(log[7])
+                    rm_exe.add((log[1], log[2]))
                 if rm_idx + 1 < len(idx_list):
                     rm_idx += 1
             else:
@@ -673,9 +683,13 @@ class Test_log_widget(object):
                     used_files.add(log[4])
                 if log[7]:
                     used_files.add(log[7])
+                    used_exe.add((log[1], log[2]))
 
         rm_files -= used_files
         rm_files -= gtest.gtest_ctrl.get_out_file_names()
+
+        rm_exe -= used_exe
+        rm_exe.discard((test_db.test_exe_name, test_db.test_exe_ts))
 
         count = len(idx_list)
         if count == 1:
@@ -691,16 +705,12 @@ class Test_log_widget(object):
         msg += "? (This cannot be undone.)"
         answer = tk_messagebox.askokcancel(parent=self.tk, message=msg)
         if answer:
-            try:
-                for file_name in rm_files:
-                    os.remove(file_name);
-            except OSError:
-                pass
-
             if len(idx_list) == 1:
                 self.__delete_single_result(idx_list[0])
             else:
                 self.__delete_multiple_results(idx_list)
+
+            gtest.remove_trace_or_core_files(rm_files, rm_exe)
 
 
     def do_request_repetition(self, enable_rep):
@@ -739,8 +749,8 @@ class Test_log_widget(object):
             dlg_browser.export_traces(self.tk, sel)
 
 
-    def do_open_stack_trace(self, tc_name, core_name):
-        dlg_browser.show_stack_trace(self.tk, tc_name, core_name)
+    def do_open_stack_trace(self, tc_name, exe_name, exe_ts, core_name):
+        dlg_browser.show_stack_trace(self.tk, tc_name, exe_name, exe_ts, core_name)
 
 
     def do_open_trace_browser(self, complete_trace=False):

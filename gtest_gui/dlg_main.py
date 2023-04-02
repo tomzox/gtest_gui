@@ -141,7 +141,11 @@ class Main_window(object):
                 return
 
         config_db.rc_file_update_upon_exit()
-        gtest.gtest_ctrl.stop()
+        gtest.gtest_ctrl.stop(kill=True)
+        gtest.release_exe_file_copy()
+        if config_db.options["exit_clean_trace"]:
+            gtest.clean_all_trace_files()
+
         tk_utils.safe_destroy(self.tk)
         return True
 
@@ -151,8 +155,82 @@ class Main_window(object):
             msg = "This operation requires stopping ongoing tests."
             if not tk_messagebox.askokcancel(parent=self.tk, message=msg):
                 return True
-            gtest.gtest_ctrl.stop()
+            gtest.gtest_ctrl.stop(kill=True)
         return False
+
+
+    @staticmethod
+    def __get_unique_prev_exe_name(input_paths, mapped):
+        # Build reverse list of path elements: split at separators
+        input_paths = sorted(input_paths)
+        path_lists = []
+        for path in input_paths:
+            path_list = []
+            while path:
+                p1, p2 = os.path.split(path)
+                if not p2 or p1 == os.path.sep:
+                    path_list.append(path)
+                    break
+                path_list.append(p2)
+                path = p1
+
+            path_lists.append(path_list)
+
+        # Determine indices where paths differ
+        delta_sets = [set() for x in path_lists]
+        for idx1 in range(len(path_lists) - 1):
+            prev_path_list = path_lists[idx1]
+            idx2 = 0
+            for path_list in path_lists[idx1:]:
+                for idx in range(0, len(path_list)):
+                    if idx >= len(prev_path_list):
+                        delta_sets[idx2].add(idx)
+                        break
+                    elif path_list[idx] != prev_path_list[idx]:
+                        delta_sets[idx1].add(idx)
+                        delta_sets[idx2].add(idx)
+                        break
+                idx2 += 1
+
+        # Reassemble paths, while skipping equal elements
+        idx1 = 0
+        for path_list in path_lists:
+            delta_set = delta_sets[idx1]
+            delta_set.add(0)
+
+            prev_skip = False
+            new_path_list = []
+            for idx in reversed(range(len(path_list))):
+                if idx in delta_set:
+                    if prev_skip and new_path_list:
+                        new_path_list.append("...")
+                    new_path_list.append(path_list[idx])
+                    prev_skip = False
+                else:
+                    prev_skip = True
+
+            mapped[input_paths[idx1]] = os.path.join(*new_path_list)
+            idx1 += 1
+
+
+    @staticmethod
+    def __get_prev_exe_names(exe_names):
+        base_names = {}
+        for exe_name in exe_names:
+            base = os.path.basename(exe_name)
+            if base_names.get(base) is None:
+                base_names[os.path.basename(exe_name)] = [exe_name]
+            else:
+                base_names[os.path.basename(exe_name)].append(exe_name)
+
+        mapped = {}
+        for base_name, paths in base_names.items():
+            if len(paths) > 1:
+                Main_window.__get_unique_prev_exe_name(paths, mapped)
+            else:
+                mapped[paths[0]] = os.path.basename(paths[0])
+
+        return mapped
 
 
     def __fill_prev_exe_menu(self):
@@ -160,6 +238,7 @@ class Main_window(object):
         if int(end_idx) > 0:
             self.wid_men_set_exe.delete(1, "end")
 
+        mapped = Main_window.__get_prev_exe_names(config_db.prev_exe_file_list)
         need_sep = True
         for exe_name in reversed(config_db.prev_exe_file_list):
             if exe_name != test_db.test_exe_name:
@@ -167,7 +246,7 @@ class Main_window(object):
                     self.wid_men_set_exe.add_separator()
                     need_sep = False
                 self.wid_men_set_exe.add_command(
-                    label=os.path.basename(exe_name),
+                    label=mapped[exe_name],
                     command=lambda path=exe_name: self.__select_prev_exe(path))
 
 
@@ -189,7 +268,7 @@ class Main_window(object):
                         title="Select test executable",
                         initialfile=os.path.basename(def_name),
                         initialdir=os.path.dirname(def_name))
-        if len(filename) != 0:
+        if filename:
             self.__update_executable(filename)
 
 
@@ -229,6 +308,7 @@ class Main_window(object):
             return
 
         self.tk.wm_title("GtestGui: " + os.path.basename(filename))
+        gtest.release_exe_file_copy()
         test_db.update_executable(filename, exe_ts, tc_names)
 
         config_db.update_prev_exe_file_list(filename)

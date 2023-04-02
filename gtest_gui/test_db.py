@@ -21,9 +21,9 @@
 test_case_names = []
 
 # [ 0] test case name
-# [ 1] seed extracted from trace ("" if not configured or not found)
-# [ 2] executable timestamp
-# [ 3] verdict (0: pass, 1: skipped, 2: fail, 3: crash, 4: valgrind summary error)
+# [ 1] executable name, or None if imported
+# [ 2] executable timestamp, or 0 if imported
+# [ 3] verdict (0: pass, 1: skipped, 2: fail, 3: crash, 4: valgrind summary error, 5:error)
 # [ 4] trace file name (or None)
 # [ 5] trace file offset to start of line "[ RUN ]"
 # [ 6] trace length from start offset to end of line "[ OK|FAILED ]"
@@ -34,6 +34,7 @@ test_case_names = []
 # [11] execution end time (epoch timestamp)
 # [12] executed under valgrind (bool)
 # [13] imported from trace file (bool)
+# [14] seed extracted from trace ("" if not configured or not found)
 test_results = []
 
 # [0] pass count
@@ -108,12 +109,12 @@ def add_result(log, from_bg_job):
         if Test_db_slots.repeat_req_update:
             Test_db_slots.repeat_req_update(tc_name)
 
-    if verdict == 1:
-        campaign_stats[2] += 1
-    elif verdict != 0:
-        campaign_stats[1] += 1
-    else:
+    if verdict == 0: # pass
         campaign_stats[0] += 1
+    elif verdict == 1: # skip
+        campaign_stats[2] += 1
+    elif (verdict == 2) or (verdict == 3): # fail or crash
+        campaign_stats[1] += 1
 
     if not from_bg_job:
         campaign_stats[5] += 1
@@ -149,7 +150,7 @@ def reset_run_stats(exp_result_cnt, is_resume):
             stat[3] = 0
     else:
         #prev_runs = sum([x[0] + x[1] + x[2] for x in test_case_stats.values()])
-        campaign_stats[4] += campaign_stats[5]
+        campaign_stats[4] += exp_result_cnt
 
     if Test_db_slots.campaign_stats_update:
         Test_db_slots.campaign_stats_update()

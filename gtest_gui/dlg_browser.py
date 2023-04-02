@@ -20,6 +20,7 @@
 import os
 import subprocess
 import sys
+import tempfile
 import threading
 
 if (os.name == "posix"): import fcntl
@@ -88,7 +89,7 @@ def __thread_browser(proc, txt):
         print("External trace browser exited with code %d" % proc.returncode, file=sys.stderr)
 
 
-def show_stack_trace(tk_top, tc_name, core_name):
+def show_stack_trace(tk_top, tc_name, exe_name, exe_ts, core_name):
     cmd_filename = ".gdb_command.bat"
     try:
         with open(cmd_filename, "w") as f:
@@ -99,8 +100,29 @@ def show_stack_trace(tk_top, tc_name, core_name):
         tk_messagebox.showerror(parent=tk_top, message=msg)
         return
 
+    if not exe_name:
+        msg = "Executable from which this core originates is unknown. " \
+              "Use current executable? Press 'No' to manually select an executable."
+        answer = tk_messagebox.askyesnocancel(parent=tk_top, message=msg)
+        if answer is None:
+            return
+        if not answer:
+            if (os.name == "posix"):
+                filetypes = [("all", "*"), ("Executable", "*.exe")]
+            else:
+                filetypes = [("Executable", "*.exe"), ("all", "*")]
+            exe_file = tk_filedialog.askopenfilename(
+                            parent=tk_top, filetypes=filetypes,
+                            title="Select test executable")
+            if not exe_file:
+                return
+        else:
+            exe_file = test_db.test_exe_name
+    else:
+        exe_file = gtest.gtest_control_get_exe_file_link_name(exe_name, exe_ts)
+
     try:
-        cmd = ["gdb", "-batch", "-x", cmd_filename, test_db.test_exe_name, core_name]
+        cmd = ["gdb", "-batch", "-x", cmd_filename, exe_file, core_name]
         # Null device to prevent gdb from getting suspended by SIGTTIN
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                 stdin=subprocess.DEVNULL, text=True)
@@ -122,6 +144,8 @@ def show_stack_trace(tk_top, tc_name, core_name):
 
 
 def export_traces(tk_top, log_idx_sel):
+    global prev_trace_export_path
+
     types = [("ZIP archive", "*.zip"), ("all", "*")]
     out_name = tk_filedialog.asksaveasfilename(
                     parent=tk_top, filetypes=types,
@@ -147,7 +171,7 @@ def export_traces(tk_top, log_idx_sel):
                     try:
                         with open(abs_filename, "w") as f:
                             f.write(txt)
-                    except:
+                    except OSError as e:
                         tk_messagebox.showerror(
                             parent=tk_top,
                             message="Failed to write temporary file: " + str(e))

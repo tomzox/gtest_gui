@@ -33,6 +33,10 @@ options = {
     "browser": "trowser.py",
     "browser_stdin": True,
     "seed_regexp": "",
+    "trace_dir": "",
+    "exit_clean_trace": True,
+    "startup_import_trace": True,
+    "copy_executable": True,
     "valgrind1": "valgrind --leak-check=full --show-leak-kinds=definite,possible,indirect --show-reachable=yes --num-callers=50",
     "valgrind2": "valgrind --leak-check=full --show-leak-kinds=definite,possible,indirect --expensive-definedness-checks=yes --show-reachable=yes --num-callers=50 --track-origins=yes",
     "valgrind_exit": True,
@@ -59,7 +63,7 @@ tid_update_rc_min = None
 
 # "compat" := oldest version of gtest_gui that can parse this file
 rcfile_compat = 0x01000000
-rcfile_version = 0x01000000
+rcfile_version = 0x01000001
 rcfile_error = 0
 
 
@@ -134,6 +138,10 @@ def rc_file_load():
                         elif (var == "cmd_valgrind2"):          options["valgrind2"] = val
                         elif (var == "valgrind_exit"):          options["valgrind_exit"] = val
                         elif (var == "seed_regexp"):            options["seed_regexp"] = val
+                        elif (var == "trace_dir"):              options["trace_dir"] = val
+                        elif (var == "exit_clean_trace"):       options["exit_clean_trace"] = val
+                        elif (var == "startup_import_trace"):   options["startup_import_trace"] = val
+                        elif (var == "copy_executable"):        options["copy_executable"] = val
                         elif (var == "enable_tool_tips"):       options["enable_tool_tips"] = val
 
                         elif (var == "font_content"):           font_content_opt = val
@@ -224,6 +232,10 @@ def rc_file_update():
             print("cmd_valgrind2=", json.dumps(options["valgrind2"]), file=rcfile)
             print("valgrind_exit=", json.dumps(options["valgrind_exit"]), file=rcfile)
             print("seed_regexp=", json.dumps(options["seed_regexp"]), file=rcfile)
+            print("trace_dir=", json.dumps(options["trace_dir"]), file=rcfile)
+            print("exit_clean_trace=", json.dumps(options["exit_clean_trace"]), file=rcfile)
+            print("startup_import_trace=", json.dumps(options["startup_import_trace"]), file=rcfile)
+            print("copy_executable=", json.dumps(options["copy_executable"]), file=rcfile)
             print("enable_tool_tips=", json.dumps(options["enable_tool_tips"]), file=rcfile)
 
             # dump font selection

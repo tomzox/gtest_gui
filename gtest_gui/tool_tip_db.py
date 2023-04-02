@@ -37,7 +37,7 @@ This entry field supports undo/redo via Control-Z and Control-Y.
 '''
 Number of processes to spawn which will execute tests concurrently.
 Gtest\'s "sharding" feature is used for partitioning the set of test cases into
-sub-sets. For small number of tests, gtest_gui may additionally partition by
+sub-sets. For small number of tests, GtestGui may additionally partition by
 repetiton count for achieving better load distribution.  Due to static
 partitioning, some processes may finish early if test case execution times are
 non-uniform.
@@ -133,7 +133,7 @@ files. The file name will be appended to the given command line.
 '''
 Enable this if the selected trace browser supports reading text from "standard
 input" via a pipeline. In this case filename "-" is passed on the command line.
-The default browser "trowser" supports this. When not enabled, gtest_gui has to
+The default browser "trowser" supports this. When not enabled, GtestGui has to
 create temporary files for passing trace snippets to the browser application.
 ''',
 
@@ -142,9 +142,51 @@ create temporary files for passing trace snippets to the browser application.
 If a regular expression pattern is specified here, it will be applied to the
 trace of each test case. The string returned by the first match group (i.e.
 the first set of capturing parenthesis) will be shown in the corresponding
-result log as "seed". (This is intended for allowing to repeat the test case
-with the same seed by passing the string as parameter to the test process; This
-is not yet supported however.)
+result log as "seed". (This is intended for allowing repeat of a test sequence
+exactly even for test cases using randomness, by starting their PRNG with the
+same seed. This is not yet supported however, due to lack of an interface for
+passing a list of seed values via the GTest command line interface.)
+''',
+
+'config.trace_dir':
+'''
+Specifies the directory where to store temporary files for trace output and
+core dump files collected from the executable under test. If empty, the current
+working directory in which GtestGui was started is used. Note sub-directories
+will be created in the given directory for each executable version. If you want
+to use the "copy executable" option, the directory needs to be in the same
+filesystem as the executables. If you want to keep core dumps, the directory
+needs to be in the same filesystem as the working directory (because they will
+be moved, not copied due to size.)
+''',
+
+'config.exit_clean_trace':
+'''
+When enabled, trace output from passed test cases is removed when exiting
+GtestGui: Files that only contains output from passed tests are removed. Files
+containing a mixture of passed and failed test cases are "compressed" by
+rewriting them so that output from passed test cases is omitted.
+''',
+
+'config.startup_import_trace':
+'''
+When enabled, all trace files found in sub-directories under the configured
+trace directory are read after starting GtestGui. Test case results found in
+the files are shown in the result log window.
+''',
+
+'config.copy_executable':
+'''
+When enabled, a copy of the current executable under test is made within the
+configured trace directory. (Technically, the copy is achieved by creating a
+so-called "hard link", so that no additional disk space is needed.) This is
+recommended so that recompiling the executable does not affect the current test
+run (i.e. compilation may either fail with error "file busy" when tests are
+running, or tests may crash). This option is required for allowing to extract
+stack traces from core dump files taken from an older executable version. Note
+this option may not work when using trace directories in locations such as /tmp
+on UNIX-like systems, as these usually are configured to disallow executable
+files for security reasons.
 ''',
 
 'config.valgrind1':
@@ -166,6 +208,49 @@ When this option is set, parameter "--error-exitcode=125" will be appended to
 the given valgrind command lines. This is required for detecting automatically
 that valgrind found errors during test execution. Only when enabled, result
 logs will report valgrind errors.
+''',
+
+# Debug dialog
+'debug.lookup':
+'''
+After clicking this button, all global variables with the prefix entered in the
+entry field to the left are shown in the "Output" frame. When the field is
+empty, all globals of module "dlg_main" are shown. To see globals of other
+modules, enter the module name followed by a dot. To see attributes of a class
+instance, type the name of the variable holding the reference followed by a
+dot. When clicking on a name shown in the "Output" frame afterward, the
+variable's value is shown in the "Input" frame in form of an assignment. (The
+idea is that the value can then by modified by editing the content and
+"Execute", however this only works for integral values and types that print
+their value in form of a constructor call.)
+''',
+
+'debug.eval':
+'''
+When clicking this button, the complete content of the "Input" text entry field
+is passed to Python's "eval()" function. The result is converted to a string
+and shown in the "Output" frame. Note Python's "eval()" only accepts
+expressions (including function calls, but not for example assignments.)
+You can run this command also via key binding "Control-E".
+''',
+
+'debug.exec':
+'''
+When clicking this button, the complete content of the "Input" text entry field
+is passed to Python's "exec()" function. The "Output" frame will show "None" in
+case of success, or else an error or exception message. Note the output of
+"print()" will be shown on the console where you started Python instead of this
+window. You can run this command also via key binding "Control-X".
+''',
+
+'debug.clear':
+'''
+Clears the content of the "Output" frame.
+''',
+
+'debug.new':
+'''
+Opens a new window just as this one.
 ''',
 
 }
