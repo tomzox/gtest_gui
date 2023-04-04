@@ -366,12 +366,14 @@ def gtest_control_search_trace_dirs():
         trace_dir_path = "."
 
     trace_files = []
-    for base_entry in os.scandir(trace_dir_path):
-        if re.match(r"^trace\.\d+$", base_entry.name):
-            for entry in os.scandir(os.path.join(trace_dir_path, base_entry.name)):
-                if entry.is_file():
-                    if re.match(r"^trace\.(\d+)$", entry.name):
-                        trace_files.append(os.path.join(trace_dir_path, base_entry.name, entry.name))
+    if os.path.isdir(trace_dir_path):
+        for base_entry in os.scandir(trace_dir_path):
+            if re.match(r"^trace\.\d+$", base_entry.name):
+                for entry in os.scandir(os.path.join(trace_dir_path, base_entry.name)):
+                    if entry.is_file():
+                        if re.match(r"^trace\.(\d+)$", entry.name):
+                            trace_files.append(os.path.join(trace_dir_path,
+                                                            base_entry.name, entry.name))
 
     return trace_files
 
@@ -436,8 +438,9 @@ def release_exe_file_copy(exe_name=None, exe_ts=None):
 
 
 def remove_trace_or_core_files(rm_files, rm_exe):
-    for exe_name_ts in rm_exe:
-        rm_files.add(gtest_control_get_exe_file_link_name(exe_name_ts[0], exe_name_ts[1]))
+    if config_db.options["copy_executable"]:
+        for exe_name_ts in rm_exe:
+            rm_files.add(gtest_control_get_exe_file_link_name(exe_name_ts[0], exe_name_ts[1]))
 
     try:
         for file_name in rm_files:
@@ -613,6 +616,8 @@ class Gtest_job(object):
                 self.__proc.kill()
             else:
                 self.__proc.terminate()
+
+            self.__terminated = True
 
             if kill:
                 self.__close_trace_file()
@@ -1029,6 +1034,7 @@ def gtest_import_result_file(file_name):
                 snippet_data += buf_data[done_off : last_line_off]
             buf_data = buf_data[last_line_off:]
             file_off += last_line_off
+
 
 def gtest_automatic_import():
     for file_name in gtest_control_search_trace_dirs():

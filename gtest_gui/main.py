@@ -24,6 +24,7 @@ import tkinter as tk
 
 import gtest_gui.config_db as config_db
 import gtest_gui.dlg_main as dlg_main
+import gtest_gui.dlg_config as dlg_config
 import gtest_gui.gtest as gtest
 import gtest_gui.test_db as test_db
 import gtest_gui.tk_utils as tk_utils
@@ -96,7 +97,14 @@ def main():
     config_db.rc_file_load()
 
     if config_db.options["startup_import_trace"]:
-        gtest.gtest_automatic_import()
+        if config_db.options["trace_dir"] and not os.path.exists(config_db.options["trace_dir"]):
+            answer = tk_messagebox.showwarning(
+                parent=tk_top, type="okcancel",
+                message="Warning: Configured trace directory does not exist. Please check configuration.")
+            if answer == "ok":
+                dlg_config.create_dialog(tk_top)
+        else:
+            gtest.gtest_automatic_import()
 
     for file_name in trace_files:
         try:

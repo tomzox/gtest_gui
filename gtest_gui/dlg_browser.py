@@ -113,7 +113,9 @@ def show_stack_trace(tk_top, tc_name, exe_name, exe_ts, core_name):
                 filetypes = [("Executable", "*.exe"), ("all", "*")]
             exe_file = tk_filedialog.askopenfilename(
                             parent=tk_top, filetypes=filetypes,
-                            title="Select test executable")
+                            title="Select test executable",
+                            initialfile="",
+                            initialdir=os.path.dirname(core_name))
             if not exe_file:
                 return
         else:

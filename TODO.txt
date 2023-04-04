@@ -5,6 +5,7 @@ General:
 - python package
 
 gtest:
+- import of trace with core: executable not linked & not cleaned upon trace removal
 - handle I/O error in trace writing
 - after crash: check if core dump is enabled, add warning to trace file
 - unit-test on many CPUs: GUI is overloaded => throttle updates of result log

@@ -675,7 +675,8 @@ class Test_log_widget(object):
                     rm_files.add(log[4])
                 if log[7]:
                     rm_files.add(log[7])
-                    rm_exe.add((log[1], log[2]))
+                    if log[1]:
+                        rm_exe.add((log[1], log[2]))
                 if rm_idx + 1 < len(idx_list):
                     rm_idx += 1
             else:

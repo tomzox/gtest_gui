@@ -733,7 +733,7 @@ class Test_control_widget(object):
             return
 
         clean_trace = self.var_opt_clean_trace.get()
-        if valgrind_cmd:
+        if clean_trace and valgrind_cmd:
             wid_status_line.show_message("warning", "Ignoring clean-trace option with valgrind")
             clean_trace = False
 
