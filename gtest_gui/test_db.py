@@ -149,8 +149,7 @@ def reset_run_stats(exp_result_cnt, is_resume):
             stat[2] = 0
             stat[3] = 0
     else:
-        #prev_runs = sum([x[0] + x[1] + x[2] for x in test_case_stats.values()])
-        campaign_stats[4] += exp_result_cnt
+        campaign_stats[4] = exp_result_cnt + campaign_stats[5]
 
     if Test_db_slots.campaign_stats_update:
         Test_db_slots.campaign_stats_update()

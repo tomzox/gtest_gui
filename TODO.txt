@@ -8,12 +8,12 @@ gtest:
 - import of trace with core: executable not linked & not cleaned upon trace removal
 - handle I/O error in trace writing
 - after crash: check if core dump is enabled, add warning to trace file
+- if /proc/sys/kernel/core_pattern pipes to apport: copy core from /var/lib/apport/coredump/
 - unit-test on many CPUs: GUI is overloaded => throttle updates of result log
 - optimize TC allocation per CPU: consider actual duration
 - restart test job after crash of a test case (problem: cannot change filter
   without affecting gtest's "sharding", i.e. CPU partitioning)
 - Repeat with the actual SEED value (not supported by gtest)
-- Feature: "Compressing" trace files by removing traces of passed test cases
 
 main:
 - import trace upon start: use separate thread
@@ -22,18 +22,21 @@ main:
 - hide test_ctrl: switch status_line to wid_test_log
 
 wid_test_ctrl:
-- progress bar tool-tip: show % of repetitions done
 - progress bar: add timer in wid_tool_tip to periodically update the message
 - enhance popup_test_list for case that there's single test suite
 - option to make tc filter-string case-independent? (problem: gtest compatibility)
+- win32: hide core & valgrind options
 
 wid_test_log:
 - configure menu: configure font for trace preview text widget separately
+- menu for result mgmt: remove selected, all old passed, all filtered;
+- when removing traces: rewrite trace files to actually remove text?
+  OR: new command for "compressing" trace files
 
 dlg_browser:
--! command line config: use shell only if contains space or special chars; check if escape needed
-- errors from subprocess are not visible
-- clean up browser & gdb temporary input files
+-! trowser command argv: use shell only if contains space or special chars; check if escape needed
+- clean up browser temporary input files
+- errors from trowser subprocess are not visible (trowser)
 - export trace files in other archive formats, or uncompressed to directory
 
 dlg_config:

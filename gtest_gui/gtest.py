@@ -397,6 +397,11 @@ def gtest_control_get_trace_file_name(exe_ts, idx):
     return os.path.join(gtest_control_get_trace_dir(exe_ts), "trace.%d" % idx)
 
 
+def gtest_control_get_temp_name_for_trace(file_name, file_off):
+    trace_dir, trace_name = os.path.split(file_name)
+    return "%s.%s.%d" % (os.path.basename(trace_dir), trace_name, file_off)
+
+
 def gtest_control_get_core_file_name(trace_name, is_valgrind):
     split_name = os.path.split(trace_name)
     core_name = "vgcore" if is_valgrind else "core"
@@ -450,11 +455,11 @@ def remove_trace_or_core_files(rm_files, rm_exe):
 
     rm_dirs = {os.path.dirname(x) for x in rm_files}
     for adir in rm_dirs:
-        if not os.listdir(adir):
-            try:
+        try:
+            if not os.listdir(adir):
                 os.rmdir(adir)
-            except OSError:
-                pass
+        except OSError:
+            pass
 
 
 def clean_all_trace_files(clean_failed=False):
@@ -928,6 +933,23 @@ def extract_trace(file_name, file_offs, length):
       print("Failed to read trace file:" + str(e), file=sys.stderr)
 
     return None
+
+
+def extract_trace_to_temp_file(tmp_dir, trace_name, file_offs, length):
+    tmp_name = os.path.join(tmp_dir, gtest_control_get_temp_name_for_trace(trace_name, file_offs))
+    if not os.path.exists(tmp_name):
+        try:
+            with open(trace_name, "rb") as fread:
+                if fread.seek(file_offs) == file_offs:
+                    with open(tmp_name, "wb") as fwrite:
+                        snippet = fread.read(length)
+                        fwrite.write(snippet)
+        except OSError as e:
+            tk_messagebox.showerror(parent=tk_utils.tk_top,
+                                    message="Failed to copy trace to temporary file: " + str(e))
+            tmp_name = None
+
+    return tmp_name
 
 
 # ----------------------------------------------------------------------------

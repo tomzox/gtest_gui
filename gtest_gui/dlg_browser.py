@@ -37,31 +37,44 @@ import gtest_gui.wid_status_line as wid_status_line
 
 prev_trace_export_path = ""
 
-def show_trace_snippet(tk_top, file_name, file_off, length):
-    txt = gtest.extract_trace(file_name, file_off, length)
-    if txt:
-        browser_exe = config_db.options["browser"]
-        if browser_exe:
-            # TODO delete temporary
-            if not config_db.options["browser_stdin"]:
-                tmp_name = file_name + "." + str(file_off)
-                with open(tmp_name, "w") as f:
-                    f.write(txt)
-                cmd = browser_exe + " " + tmp_name
-            else:
-                cmd = browser_exe + " -"
+temp_dir = None
 
-            try:
-                proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, text=True, shell=True)
-                threading.Thread(target=lambda:__thread_browser(proc, txt), daemon=True).start()
-            except Exception as e:
-                tk_messagebox.showerror(parent=tk_top, message="Failed to start external trace browser: " + str(e))
-        else:
-            wid_status_line.show_message("error", "No trace browser app is configured")
-    elif txt is None:
-        wid_status_line.show_message("error", "Failed to read trace file")
+def __get_temp_dir_name():
+    global temp_dir
+    if not temp_dir:
+        temp_dir = tempfile.TemporaryDirectory(prefix="gtest_gui_tmp")
+    return temp_dir.name
+
+
+def show_trace_snippet(tk_top, file_name, file_off, length):
+    browser_exe = config_db.options["browser"]
+    if not browser_exe:
+        wid_status_line.show_message("error", "No trace browser app is configured")
+        return
+
+    if config_db.options["browser_stdin"]:
+        txt = gtest.extract_trace(file_name, file_off, length)
+        if txt is None:
+            wid_status_line.show_message("error", "Failed to read trace file")
+            return
+        elif txt == "":
+            wid_status_line.show_message("error", "Trace empty for this result")
+            return
+        cmd = browser_exe + " -"
+
     else:
-        wid_status_line.show_message("error", "Trace empty for this result")
+        tmp_name = gtest.extract_trace_to_temp_file(__get_temp_dir_name(),
+                                                    file_name, file_off, length)
+        if not tmp_name:
+            return
+        cmd = browser_exe + " " + tmp_name
+        txt = ""
+
+    try:
+        proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, text=True, shell=True)
+        threading.Thread(target=lambda:__thread_browser(proc, txt), daemon=True).start()
+    except Exception as e:
+        tk_messagebox.showerror(parent=tk_top, message="Failed to start external trace browser: " + str(e))
 
 
 def show_trace(tk_top, file_name):
@@ -90,15 +103,16 @@ def __thread_browser(proc, txt):
 
 
 def show_stack_trace(tk_top, tc_name, exe_name, exe_ts, core_name):
-    cmd_filename = ".gdb_command.bat"
-    try:
-        with open(cmd_filename, "w") as f:
-            print("info thread", file=f)
-            print("thread apply all backtrace", file=f)
-    except Exception as e:
-        msg = "Error writing command input file for gdb: " + str(e)
-        tk_messagebox.showerror(parent=tk_top, message=msg)
-        return
+    cmd_filename = os.path.join(__get_temp_dir_name(), "gdb_command.bat")
+    if not os.path.exists(cmd_filename):
+        try:
+            with open(cmd_filename, "w") as f:
+                print("info thread", file=f)
+                print("thread apply all backtrace", file=f)
+        except Exception as e:
+            msg = "Error writing command input file for gdb: " + str(e)
+            tk_messagebox.showerror(parent=tk_top, message=msg)
+            return
 
     if not exe_name:
         msg = "Executable from which this core originates is unknown. " \
@@ -137,12 +151,6 @@ def show_stack_trace(tk_top, tc_name, exe_name, exe_ts, core_name):
 
     title = "GtestGui: Stack trace - %s (%s)" % (tc_name, core_name)
     Log_browser(tk_top, title, proc)
-
-    # TODO
-    #try:
-    #    os.remove(cmd_filename)
-    #except OSError:
-    #    pass
 
 
 def export_traces(tk_top, log_idx_sel):

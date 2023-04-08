@@ -62,6 +62,7 @@ class Job_list_dialog(object):
 
 
     def __destroy_window(self):
+        global prev_dialog_wid
         tk_utils.safe_destroy(self.wid_top)
         self.tk.after_cancel(self.timer_id)
         prev_dialog_wid = None
@@ -169,6 +170,7 @@ class Job_list_dialog(object):
             new_size = self.wid_top.wm_geometry()
             if new_size != config_db.job_list_geometry:
                 config_db.job_list_geometry = new_size
+                config_db.rc_file_update_after_idle()
 
 
     def __format_table_row(self, stats):

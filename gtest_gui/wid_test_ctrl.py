@@ -319,7 +319,27 @@ class Test_control_widget(object):
     def __get_progress_tool_tip(self):
         totals = test_db.campaign_stats
         if totals[4]:
-            return "%d of %d" % (totals[5], totals[4])
+            filter_str = self.prev_campaign_options["filter_str"]
+            expr = filter_expr.Filter_expr(filter_str, self.prev_campaign_options["run_disabled"])
+            tc_list = expr.get_selected_tests()
+            tc_exec = [test_db.test_case_stats[x][0] +
+                       test_db.test_case_stats[x][1] +
+                       test_db.test_case_stats[x][2] for x in tc_list]
+            min_cnt = min(tc_exec)
+            max_cnt = max(tc_exec)
+            rep_cnt = int(self.var_opt_repetitions.get())
+
+            if len(tc_list) > 1 and (rep_cnt > 1):
+                if max_cnt < min_cnt + 2:
+                    return ("%d of %d test case runs\n%d of %d repetitions" %
+                            (totals[5], totals[4], min_cnt, rep_cnt))
+                else:
+                    return ("%d of %d test case runs\n%d..%d of %d repetitions" %
+                            (totals[5], totals[4], min_cnt, max_cnt, rep_cnt))
+            elif len(tc_list) > 1:
+                return "%d of %d test case runs" % (totals[5], totals[4])
+            else:
+                return "%d of %d repetitions" % (min_cnt, rep_cnt)
         else:
             return ""
 
@@ -339,6 +359,12 @@ class Test_control_widget(object):
             self.wid_progress_bar.pack(side=tk.BOTTOM)
         else:
             self.wid_progress_bar.pack_forget()
+
+        # Executable update
+        if (self.prev_campaign_options and
+                (self.prev_campaign_options["exe_name"] != test_db.test_exe_name)):
+            self.prev_campaign_options = None
+            self.wid_cmd_resume.configure(state=tk.DISABLED)
 
         # Update button states if campaign was started or stopped
         tests_active = bool(totals[3])
@@ -744,6 +770,7 @@ class Test_control_widget(object):
 
         if not is_repeat:
             self.prev_campaign_options = {
+                "exe_name": test_db.test_exe_name,
                 "filter_str": filter_str,
                 "run_disabled": run_disabled,
             }

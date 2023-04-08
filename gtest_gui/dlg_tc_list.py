@@ -80,6 +80,7 @@ class Tc_list_dialog(object):
 
 
     def __destroy_window(self):
+        global prev_dialog_wid
         test_db.Test_db_slots.tc_stats_update = None
         test_db.Test_db_slots.tc_names_update = None
         test_db.Test_db_slots.campaign_stats_reset = None
@@ -197,6 +198,7 @@ class Tc_list_dialog(object):
             new_size = self.wid_top.wm_geometry()
             if new_size != config_db.tc_list_geometry:
                 config_db.tc_list_geometry = new_size
+                config_db.rc_file_update_after_idle()
 
 
     def __format_table_row(self, tc_name):
