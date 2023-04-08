@@ -19,6 +19,56 @@
 
 tips = {
 
+# Main window: Control menu
+'test_ctrl.cmd_start_campaign':
+'''
+Resets result counters and starts a new test campaign by running the configured
+executable in a process with the selected test case filter and options. If the
+executable has changed since the last run, the test case list is refreshed
+automatically.
+''',
+
+'test_ctrl.cmd_stop_campaign':
+'''
+Stops an ongoing test campaign by terminating the test processes. (Stop again
+for killing the processes in case they do not terminated.)
+''',
+
+'test_ctrl.cmd_resume_campaign':
+'''
+Resumes a previously stopped test campaign with the same test case filter.
+There will be a warning if the test case selection changed since the previous
+run. Other options, such as CPU or repetition counts may be changed freely.
+''',
+
+'test_ctrl.cmd_repeat':
+'''
+Repeats the test cases marked manually for repetition via the result log, or
+all previously failed test cases if none were selected. This command allows
+quick repetition of individual test cases without changing the filter.
+''',
+
+'test_ctrl.cmd_tc_list':
+'''
+Open a dialog window that displays all test case names read from the configured
+executable via option "--gtest_list_tests". Use the dialog's context menu for
+filtering or sorting.
+''',
+
+'test_ctrl.cmd_job_list':
+'''
+Open a dialog window that displays the status of currently running test
+processes. Use the dialog's context menu for aborting a process in case it is
+hung.
+''',
+
+'test_ctrl.cmd_refresh':
+'''
+Reads the list of test cases from the current executable using gtest command
+line option "--gtest_list_tests". Afterward, newly added test case names can be
+used in test case filter.
+''',
+
 # Main window: test case filter entry field
 'test_ctrl.tc_filter':
 '''
@@ -120,6 +170,32 @@ for valgrind messages (e.g. lines starting with "==").
 '''
 Executes test processes under valgrind, using the alternate valgrind command
 line specified in configuration.
+''',
+
+# Main window: Configuration menu
+'config.select_font_content':
+'''
+Configures the font used for displaying the result log in the main window and
+test case or job lists in dialog windows.
+''',
+
+'config.select_font_trace':
+'''
+Configures the font used for displaying trace output text at the bottom of the
+main window.
+''',
+
+'config.show_controls':
+'''
+When unchecked, the part of the main window showing the test case filter,
+options and start/stop buttons is hidden, so that there is more screen space
+for the result log.  You can still start and stop test campaigns via the
+control menu.
+''',
+
+'config.show_tool_tips':
+'''
+When unchecked, tool-tips like this one are globally disabled.
 ''',
 
 # Configuration dialog

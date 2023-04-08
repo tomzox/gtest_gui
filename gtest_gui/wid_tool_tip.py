@@ -34,8 +34,8 @@ def tool_tip_add(wid, key):
     else:
         msg = re.sub(r"\n", " ", tool_tip_db.tips[key].strip())
 
-    wid.bind("<Leave>", lambda e: handle_leave(e.widget))
-    wid.bind("<Motion>", lambda e: handle_motion(e.widget, e.x, e.y, msg))
+    wid.bind("<Leave>", lambda e: handle_leave())
+    wid.bind("<Motion>", lambda e: handle_motion(wid, e.x, e.y, e.x_root, e.y_root, msg))
 
 
 # ---- below is private ----
@@ -46,41 +46,49 @@ class Tool_tip_widget:
     timer_id = None
     wid_anchor = None
     wid_tip = None
+    cur_msg = ""
     under_construction = False
 
 
-def handle_leave(wid):
+def handle_leave():
     if not Tool_tip_widget.under_construction:
         destroy_window()
 
 
-def handle_motion(wid, wid_x, wid_y, msg):
+def handle_motion(wid, wid_x, wid_y, wid_xroot, wid_yroot, msg):
     if not Tool_tip_widget.enable_tips:
         return
 
     if wid != Tool_tip_widget.wid_anchor:
         destroy_window()
 
-    if not Tool_tip_widget.wid_tip:
+    if Tool_tip_widget.wid_tip:
+        if callable(msg):
+            if msg(wid_x, wid_y) != Tool_tip_widget.cur_msg:
+                destroy_window()
+                handle_timer(wid, wid_x, wid_y, wid_xroot, wid_yroot, msg)
+
+    else:
         if Tool_tip_widget.timer_id:
             tk_utils.tk_top.after_cancel(Tool_tip_widget.timer_id)
         Tool_tip_widget.timer_id = tk_utils.tk_top.after(
-                                        1000, lambda: handle_timer(wid, wid_x, wid_y, msg))
+                                        1000, lambda: handle_timer(wid, wid_x, wid_y, wid_xroot, wid_yroot, msg))
         Tool_tip_widget.wid_anchor = wid
 
 
-def handle_timer(wid, wid_x, wid_y, msg):
+def handle_timer(wid, wid_x, wid_y, wid_xroot, wid_yroot, msg):
     Tool_tip_widget.timer_id = None
     Tool_tip_widget.wid_anchor = wid
 
     if callable(msg):
-        msg = msg()
+        msg = msg(wid_x, wid_y)
         if not msg:
             return
+        Tool_tip_widget.cur_msg = msg
 
     destroy_window()
     create_window(msg)
-    map_window(wid, wid_x, wid_y)
+    map_window(wid, wid_xroot, wid_yroot)
 
 
 def create_window(msg):
@@ -94,7 +102,7 @@ def create_window(msg):
                          width=60*char_w)
     wid_lab.pack()
 
-    wid_lab.bind("<Leave>", lambda e: handle_leave(e.widget))
+    wid_lab.bind("<Leave>", lambda e: handle_leave())
 
 
 def map_window(wid, coord_x, coord_y):
@@ -104,8 +112,8 @@ def map_window(wid, coord_x, coord_y):
 
     # Window might have been destroyed while waiting
     if tk_utils.wid_exists(Tool_tip_widget.wid_tip):
-        coord_x += wid.winfo_rootx() + 10
-        coord_y += wid.winfo_rooty() - 10 - Tool_tip_widget.wid_tip.winfo_reqheight()
+        coord_x += 10
+        coord_y -= 10 + Tool_tip_widget.wid_tip.winfo_reqheight()
 
         wid_w = Tool_tip_widget.wid_tip.winfo_reqwidth()
         root_w = Tool_tip_widget.wid_tip.winfo_screenwidth()
@@ -139,3 +147,47 @@ def destroy_window():
 
     Tool_tip_widget.timer_id = None
     Tool_tip_widget.wid_tip = None
+
+
+# ---- Wrapper class ----
+
+class Menu(tk.Menu):
+    def __init__(self, parent, **kwargs):
+        self.tooltip = {}
+        super().__init__(parent, **kwargs)
+        tool_tip_add(self, self.__get_tool_tip)
+
+
+    def __get_tool_tip(self, xcoo, ycoo):
+        idx = super().index("@" + str(ycoo))
+        key = self.tooltip.get(idx, None)
+        if key:
+            if callable(key):
+                return key()
+            else:
+                return re.sub(r"\n", " ", tool_tip_db.tips[key].strip())
+        return ""
+
+
+    def __install_tool_tip(self, kwargs, tooltip):
+        if tooltip:
+            idx = super().index(kwargs["label"])
+            self.tooltip[idx] = tooltip
+
+
+    def add_command(self, *cnf, **kwargs):
+        tooltip = kwargs.pop("tooltip", None)
+        super().add_command(*cnf, **kwargs)
+        self.__install_tool_tip(kwargs, tooltip)
+
+
+    def add_checkbutton(self, *cnf, **kwargs):
+        tooltip = kwargs.pop("tooltip", None)
+        super().add_checkbutton(*cnf, **kwargs)
+        self.__install_tool_tip(kwargs, tooltip)
+
+
+    def add_radiobutton(self, *cnf, **kwargs):
+        tooltip = kwargs.pop("tooltip", None)
+        super().add_radiobutton(*cnf, **kwargs)
+        self.__install_tool_tip(kwargs, tooltip)

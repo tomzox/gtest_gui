@@ -18,6 +18,7 @@
 # ------------------------------------------------------------------------ #
 
 import os
+from datetime import datetime
 
 import tkinter as tk
 from tkinter import messagebox as tk_messagebox
@@ -81,50 +82,54 @@ class Main_window(object):
 
         wid_tool_tip.enable_tips(config_db.options["enable_tool_tips"])
 
-        wid_men_ctrl = tk.Menu(wid_men, tearoff=0)
+        wid_men_ctrl = wid_tool_tip.Menu(wid_men, tearoff=0)
         wid_men.add_cascade(menu=wid_men_ctrl, label="Control", underline=0)
         # Included here only for documenting the keyboard shortcut
-        wid_men_ctrl.add_command(label="Start tests",
+        wid_men_ctrl.add_command(label="Start tests", tooltip="test_ctrl.cmd_start_campaign",
                                  command=wid_test_ctrl_.start_campaign, accelerator="Ctrl-r")
-        wid_men_ctrl.add_command(label="Stop tests",    
+        wid_men_ctrl.add_command(label="Stop tests", tooltip="test_ctrl.cmd_stop_campaign",
                                  command=wid_test_ctrl_.stop_campaign, accelerator="Ctrl-s")
-        wid_men_ctrl.add_command(label="Resume tests",
+        wid_men_ctrl.add_command(label="Resume tests", tooltip="test_ctrl.cmd_resume_campaign",
                                  command=wid_test_ctrl_.resume_campaign, accelerator="Ctrl-q")
-        wid_men_ctrl.add_command(label="Repeat tests",
+        wid_men_ctrl.add_command(label="Repeat tests", tooltip="test_ctrl.cmd_repeat",
                                  command=wid_test_ctrl_.start_repetition, accelerator="Ctrl-t")
         wid_men_ctrl.add_separator()
-        wid_men_ctrl.add_command(label="Open test case list...",
+        wid_men_ctrl.add_command(label="Open test case list...", tooltip="test_ctrl.cmd_tc_list",
                                  command=lambda: dlg_tc_list.create_dialog(self.tk, wid_test_ctrl_))
-        wid_men_ctrl.add_command(label="Open job list...",
+        wid_men_ctrl.add_command(label="Open job list...", tooltip="test_ctrl.cmd_job_list",
                                  command=lambda: dlg_job_list.create_dialog(self.tk))
         wid_men_ctrl.add_separator()
-        wid_men_ctrl.add_command(label="Refresh test case list", command=self.reload_exe)
-        wid_men_set_exe = tk.Menu(wid_men_ctrl, tearoff=0, postcommand=self.__fill_prev_exe_menu)
+        wid_men_ctrl.add_command(label="Refresh test case list", tooltip="test_ctrl.cmd_refresh",
+                                 command=self.reload_exe)
+        wid_men_set_exe = wid_tool_tip.Menu(wid_men_ctrl, tearoff=0,
+                                            postcommand=self.__fill_prev_exe_menu)
         wid_men_ctrl.add_cascade(menu=wid_men_set_exe, label="Select test executable")
         wid_men_set_exe.add_command(label="Select executable file...", command=self.select_exe)
         wid_men_ctrl.add_separator()
         wid_men_ctrl.add_command(label="Quit", command=self.quit)
 
-        wid_men_cfg = tk.Menu(wid_men, tearoff=0)
+        wid_men_cfg = wid_tool_tip.Menu(wid_men, tearoff=0)
         wid_men.add_cascade(menu=wid_men_cfg, label="Configure", underline=1)
         wid_men_cfg.add_command(label="Options...",
                                 command=lambda: dlg_config.create_dialog(self.tk))
         wid_men_cfg.add_separator()
         wid_men_cfg.add_command(label="Select font for result log...",
+                                tooltip="config.select_font_content",
                                 command=lambda: dlg_font_sel.create_dialog(
                                             self.tk, "content",
                                             tk_utils.font_content, self.__change_font))
         wid_men_cfg.add_command(label="Select font for trace preview...",
+                                tooltip="config.select_font_trace",
                                 command=lambda: dlg_font_sel.create_dialog(
                                             self.tk, "trace",
                                             tk_utils.font_trace, self.__change_font))
         wid_men_cfg.add_separator()
-        wid_men_cfg.add_checkbutton(label="Show test controls",
+        wid_men_cfg.add_checkbutton(label="Show test controls", tooltip="config.show_controls",
                                     command=self.show_test_ctrl, variable=self.var_opt_test_ctrl)
-        wid_men_cfg.add_checkbutton(label="Show tool tip popups",
+        wid_men_cfg.add_checkbutton(label="Show tool tip popups", tooltip="config.show_tool_tips",
                                     command=self.toggle_tool_tips, variable=self.var_opt_tool_tips)
 
-        wid_men_log = tk.Menu(wid_men, tearoff=0)
+        wid_men_log = wid_tool_tip.Menu(wid_men, tearoff=0)
         wid_men.add_cascade(menu=wid_men_log, label="Result log", underline=0)
         wid_test_log_.add_menu_commands(wid_men_log)
 
@@ -136,6 +141,7 @@ class Main_window(object):
         wid_men_help.add_command(label="About",
                                  command=self.show_about_dialog)
 
+        self.var_prev_exe_name = tk.StringVar(self.tk, "")
         self.wid_men_set_exe = wid_men_set_exe
         self.tk.config(menu=wid_men)
 
@@ -248,16 +254,30 @@ class Main_window(object):
         if int(end_idx) > 0:
             self.wid_men_set_exe.delete(1, "end")
 
+        self.var_prev_exe_name.set(test_db.test_exe_name)
+
         mapped = Main_window.__get_prev_exe_names(config_db.prev_exe_file_list)
         need_sep = True
         for exe_name in reversed(config_db.prev_exe_file_list):
-            if exe_name != test_db.test_exe_name:
-                if need_sep:
-                    self.wid_men_set_exe.add_separator()
-                    need_sep = False
-                self.wid_men_set_exe.add_command(
-                    label=mapped[exe_name],
-                    command=lambda path=exe_name: self.__select_prev_exe(path))
+            if need_sep:
+                self.wid_men_set_exe.add_separator()
+                need_sep = False
+
+            tip_text = exe_name + "\n"
+            try:
+                exe_ts = os.stat(exe_name).st_mtime
+                # RFC 2822-compliant date format
+                tip_text += datetime.fromtimestamp(exe_ts).strftime("Timestamp: %a, %d %b %Y %T %z")
+                state = tk.NORMAL
+            except OSError as e:
+                tip_text += "File not found"
+                state = tk.DISABLED
+
+            self.wid_men_set_exe.add_radiobutton(
+                label=mapped[exe_name], state=state,
+                variable=self.var_prev_exe_name, value=exe_name,
+                tooltip=lambda tip_text=tip_text: tip_text,
+                command=lambda path=exe_name: self.__select_prev_exe(path))
 
 
     def select_exe(self):

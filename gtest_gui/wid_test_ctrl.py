@@ -316,7 +316,7 @@ class Test_control_widget(object):
         wid_frm.grid(row=grid_row, column=grid_col, sticky="ns")
 
 
-    def __get_progress_tool_tip(self):
+    def __get_progress_tool_tip(self, xcoo, ycoo):
         totals = test_db.campaign_stats
         if totals[4]:
             filter_str = self.prev_campaign_options["filter_str"]

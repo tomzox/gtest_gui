@@ -22,7 +22,6 @@ main:
 - hide test_ctrl: switch status_line to wid_test_log
 
 wid_test_ctrl:
-- progress bar: add timer in wid_tool_tip to periodically update the message
 - enhance popup_test_list for case that there's single test suite
 - option to make tc filter-string case-independent? (problem: gtest compatibility)
 - win32: hide core & valgrind options
