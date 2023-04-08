@@ -76,7 +76,7 @@ class Main_window(object):
 
     def __create_menubar(self):
         wid_men = tk.Menu(self.tk, name="menubar", tearoff=0)
-        self.var_opt_test_ctrl = tk.BooleanVar(self.tk, False)
+        self.var_opt_test_ctrl = tk.BooleanVar(self.tk, True)
         self.var_opt_tool_tips = tk.BooleanVar(self.tk, config_db.options["enable_tool_tips"])
 
         wid_tool_tip.enable_tips(config_db.options["enable_tool_tips"])
@@ -109,13 +109,18 @@ class Main_window(object):
         wid_men.add_cascade(menu=wid_men_cfg, label="Configure", underline=1)
         wid_men_cfg.add_command(label="Options...",
                                 command=lambda: dlg_config.create_dialog(self.tk))
-        wid_men_cfg.add_command(label="Font selection...",
-                                command=lambda: dlg_font_sel.create_dialog(
-                                            self.tk, "wid_test_log",
-                                            tk_utils.font_content, wid_test_log_.change_font))
         wid_men_cfg.add_separator()
-        wid_men_cfg.add_checkbutton(label="Hide test controls",
-                                    command=self.hide_test_ctrl, variable=self.var_opt_test_ctrl)
+        wid_men_cfg.add_command(label="Select font for result log...",
+                                command=lambda: dlg_font_sel.create_dialog(
+                                            self.tk, "content",
+                                            tk_utils.font_content, self.__change_font))
+        wid_men_cfg.add_command(label="Select font for trace preview...",
+                                command=lambda: dlg_font_sel.create_dialog(
+                                            self.tk, "trace",
+                                            tk_utils.font_trace, self.__change_font))
+        wid_men_cfg.add_separator()
+        wid_men_cfg.add_checkbutton(label="Show test controls",
+                                    command=self.show_test_ctrl, variable=self.var_opt_test_ctrl)
         wid_men_cfg.add_checkbutton(label="Show tool tip popups",
                                     command=self.toggle_tool_tips, variable=self.var_opt_tool_tips)
 
@@ -157,6 +162,11 @@ class Main_window(object):
                 return True
             gtest.gtest_ctrl.stop(kill=True)
         return False
+
+
+    def __change_font(self, foo):
+        tk_utils.update_derived_fonts()
+        config_db.rc_file_update()
 
 
     @staticmethod
@@ -349,17 +359,17 @@ You should have received a copy of the GNU General Public License along with thi
         wid_but.focus_set()
 
 
-    def hide_test_ctrl(self):
+    def show_test_ctrl(self):
         geom = self.tk.wm_geometry()
         self.tk.wm_geometry(geom)
 
         if self.var_opt_test_ctrl.get():
-            wid_test_log_.toggle_test_ctrl_visible(False)
-            wid_test_ctrl_.get_widget().forget()
-        else:
             wid_test_log_.toggle_test_ctrl_visible(True)
             wid_test_ctrl_.get_widget().pack(
                 side=tk.TOP, fill=tk.BOTH, before=wid_test_log_.get_widget())
+        else:
+            wid_test_log_.toggle_test_ctrl_visible(False)
+            wid_test_ctrl_.get_widget().forget()
 
 
     def toggle_tool_tips(self):

@@ -28,7 +28,6 @@ wid_test_ctrl:
 - win32: hide core & valgrind options
 
 wid_test_log:
-- configure menu: configure font for trace preview text widget separately
 - menu for result mgmt: remove selected, all old passed, all filtered;
 - when removing traces: rewrite trace files to actually remove text?
   OR: new command for "compressing" trace files
@@ -53,7 +52,6 @@ filter_expr:
 
 dlg_tc_list:
 - update column widths after font change - same for dlg_job_list
-- use same font for header as for content
 - add footer containing sums: #test cases, total pass/fail, exec time, #enabled
 - folding: show test suite names only (possibly controllable individually?)
 - add column showing skip count

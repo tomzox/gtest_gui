@@ -81,7 +81,7 @@ class Test_log_widget(object):
         wid_sb.pack(side=tk.LEFT, fill=tk.Y)
         wid_txt.configure(yscrollcommand=wid_sb.set)
 
-        wid_txt.tag_configure("highlight", font=tk_utils.font_bold, foreground="#2020A0")
+        wid_txt.tag_configure("highlight", font=tk_utils.font_content_bold, foreground="#2020A0")
 
         wid_txt.bindtags([wid_txt, self.tk, "TextSel", "all"])
         wid_txt.bind("<ButtonRelease-3>", lambda e: self.__post_context_menu(e.widget, e.x, e.y))
@@ -105,7 +105,7 @@ class Test_log_widget(object):
     def __create_trace_widget(self, wid_pane):
         wid_frm = tk.Frame(wid_pane)
         wid_txt = tk.Text(wid_frm, width=40, height=1, wrap=tk.NONE,
-                          insertofftime=0, font=tk_utils.font_content)
+                          insertofftime=0, font=tk_utils.font_trace)
         wid_txt.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
         wid_txt.bindtags([wid_txt, "TextReadOnly", self.tk, "all"])
         wid_txt.tag_configure("failure", background="#FF4040")
@@ -114,7 +114,7 @@ class Test_log_widget(object):
         wid_txt.configure(yscrollcommand=wid_sb.set)
 
         if not config_db.trace_pane_height:
-            config_db.trace_pane_height = 9 * tk_utils.font_content.metrics("linespace")
+            config_db.trace_pane_height = 9 * tk_utils.font_trace.metrics("linespace")
         wid_pane.add(wid_frm, sticky="news", height=config_db.trace_pane_height)
 
         wid_frm.bind("<Configure>", lambda e: self.__window_resized(False, e.height))
@@ -156,12 +156,6 @@ class Test_log_widget(object):
                 label="Sort by failure type",
                 command=lambda: self.__toggle_sort_mode(self.var_opt_sort_exception.get(), Sort_mode.by_failure),
                 variable=self.var_opt_sort_exception)
-
-
-    def change_font(self, font):
-        #self.wid_log.configure(font=font)
-        #self.wid_trace.configure(font=font)
-        config_db.rc_file_update()
 
 
     def __window_resized(self, is_log, height):

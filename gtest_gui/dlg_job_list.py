@@ -85,10 +85,10 @@ class Job_list_dialog(object):
         self.wid_top.bind("<Configure>", lambda e: self.__handle_window_resize(e.widget))
         self.wid_top.bind("<Destroy>", lambda e: self.__destroy_window())
 
-        self.wid_header.tag_configure("head", font=tk_utils.font_bold,
+        self.wid_header.tag_configure("head", font=tk_utils.font_content_bold,
                                       spacing1=2, spacing3=5, lmargin1=5)
         self.wid_table.tag_configure("body", lmargin1=5)
-        self.wid_table.tag_configure("bold", font=tk_utils.font_bold)
+        self.wid_table.tag_configure("bold", font=tk_utils.font_content_bold)
 
         self.wid_header.insert("0.0", "\t".join(self.table_header_txt), "head", "\n", [])
         self.__update_column_widths()
@@ -134,7 +134,7 @@ class Job_list_dialog(object):
         if char_w == 0: char_w = 15
 
         title_text = self.table_header_txt
-        tab_widths = [tk_utils.font_bold.measure(x) + 2*char_w for x in title_text]
+        tab_widths = [tk_utils.font_content_bold.measure(x) + 2*char_w for x in title_text]
 
         max_width = tk_utils.font_content.measure("9999999") + 2*char_w
         if max_width > tab_widths[0]:
@@ -154,7 +154,7 @@ class Job_list_dialog(object):
                 off + tab_widths[1] + tab_widths[2]/2, "center",
                 off + tab_widths[1] + tab_widths[2] + char_w, "left"]
 
-        self.wid_header.tag_configure("head", font=tk_utils.font_bold, tabs=tabs,
+        self.wid_header.tag_configure("head", font=tk_utils.font_content_bold, tabs=tabs,
                                       spacing1=2, spacing3=5, lmargin1=5)
         self.wid_table.tag_configure("body", tabs=tabs, lmargin1=5)
 

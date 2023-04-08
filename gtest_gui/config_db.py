@@ -63,7 +63,7 @@ tid_update_rc_min = None
 
 # "compat" := oldest version of gtest_gui that can parse this file
 rcfile_compat = 0x01000000
-rcfile_version = 0x01000001
+rcfile_version = 0x01000002
 rcfile_error = 0
 
 
@@ -113,6 +113,9 @@ def rc_file_load():
     global options
     global prev_exe_file_list
 
+    font_content_opt = None
+    font_trace_opt = None
+
     error = False
     ver_check = False
     rc_compat_version = None
@@ -145,6 +148,7 @@ def rc_file_load():
                         elif (var == "enable_tool_tips"):       options["enable_tool_tips"] = val
 
                         elif (var == "font_content"):           font_content_opt = val
+                        elif (var == "font_trace"):             font_trace_opt = val
                         elif (var == "prev_exe_file_list"):     prev_exe_file_list = val
 
                         elif (var == "log_pane_height"):        log_pane_height = val
@@ -184,10 +188,18 @@ def rc_file_load():
 
                         ver_check = True
 
-        try:
-            tk_utils.init_font_content(font_content_opt)
-        except Exception as e:
-            print("Error configuring content font:", str(e), file=sys.stderr)
+        if font_content_opt:
+            try:
+                tk_utils.init_font_content(font_content_opt)
+                tk_utils.init_font_trace(font_trace_opt)
+            except Exception as e:
+                print("Error configuring content font:", str(e), file=sys.stderr)
+
+        if font_trace_opt:
+            try:
+                tk_utils.init_font_trace(font_trace_opt)
+            except Exception as e:
+                print("Error configuring trace font:", str(e), file=sys.stderr)
 
     except OSError as e:
         if e.errno != errno.ENOENT:
@@ -240,6 +252,7 @@ def rc_file_update():
 
             # dump font selection
             print("font_content=", json.dumps(tk_utils.font_content.configure()), file=rcfile)
+            print("font_trace=", json.dumps(tk_utils.font_trace.configure()), file=rcfile)
 
             # dump executable file history
             print("prev_exe_file_list=", json.dumps(prev_exe_file_list), file=rcfile)

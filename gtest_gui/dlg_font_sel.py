@@ -32,7 +32,7 @@ def create_dialog(tk_top, ftype, font, callback):
     if prev_dialog_wid.get(ftype, None) and tk_utils.wid_exists(prev_dialog_wid[ftype].wid_top):
         prev_dialog_wid[ftype].raise_window()
     else:
-      prev_dialog_wid[ftype] = Font_selection_dialog(tk_top, ftype, font, callback)
+        prev_dialog_wid[ftype] = Font_selection_dialog(tk_top, ftype, font, callback)
 
 
 class Font_selection_dialog(object):
@@ -46,8 +46,8 @@ class Font_selection_dialog(object):
         self.wid_top.wm_title("GtestGui: Font selection")
         self.wid_top.wm_group(self.tk)
 
-        self.font_bold = tk.BooleanVar(self.tk, False)
-        self.font_size = tk.IntVar(self.tk, 10)
+        self.var_font_bold = tk.BooleanVar(self.tk, False)
+        self.var_font_size = tk.IntVar(self.tk, 10)
 
         # frame #1: listbox with all available fonts
         wid_frm = tk.Frame(self.wid_top)
@@ -69,10 +69,10 @@ class Font_selection_dialog(object):
         wid_lab = tk.Label(wid_frm2, text="Font size:")
         wid_lab.pack(side=tk.LEFT)
         wid_spin = tk.Spinbox(wid_frm2, from_=1, to=99, width=3,
-                              textvariable=self.font_size, command=self.__handle_selection_change)
+                              textvariable=self.var_font_size, command=self.__handle_selection_change)
         wid_spin.pack(side=tk.LEFT)
         wid_chk = tk.Checkbutton(wid_frm2, text="bold",
-                                 variable=self.font_bold, command=self.__handle_selection_change)
+                                 variable=self.var_font_bold, command=self.__handle_selection_change)
         wid_chk.pack(side=tk.LEFT, padx=15)
         wid_frm2.pack(side=tk.TOP, fill=tk.X, padx=5, pady=5)
 
@@ -105,8 +105,8 @@ class Font_selection_dialog(object):
 
         # fill font list and select current font
         self.__fill_font_list()
-        self.font_bold.set(self.font.cget("weight") != "normal")
-        self.font_size.set(self.font.cget("size"))
+        self.var_font_bold.set(self.font.cget("weight") != "normal")
+        self.var_font_size.set(self.font.cget("size"))
         cur_fam = self.font.cget("family")
         try:
             idx = self.font_families.index(cur_fam)  # raises ValueError if not found
@@ -137,8 +137,8 @@ class Font_selection_dialog(object):
     def __handle_selection_change(self):
         sel = self.wid_font_list.curselection()
         if (len(sel) == 1) and (sel[0] < len(self.font_families)):
-          name = "{%s} %d" % (self.font_families[sel[0]], self.font_size.get())
-          if self.font_bold.get():
+          name = "{%s} %d" % (self.font_families[sel[0]], self.var_font_size.get())
+          if self.var_font_bold.get():
               name = name + " bold"
 
           # succeeds even for unknown fonts, therefore try/except not needed
@@ -154,8 +154,8 @@ class Font_selection_dialog(object):
         sel = self.wid_font_list.curselection()
         if (len(sel) == 1) and (sel[0] < len(self.font_families)):
             self.font.configure(family=self.font_families[sel[0]],
-                                size=self.font_size.get(),
-                                weight=(tkf.BOLD if self.font_bold.get() else tkf.NORMAL))
+                                size=self.var_font_size.get(),
+                                weight=(tkf.BOLD if self.var_font_bold.get() else tkf.NORMAL))
             try:
                 self.callback(self.font)
                 return True

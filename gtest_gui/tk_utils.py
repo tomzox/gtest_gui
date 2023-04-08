@@ -24,6 +24,8 @@ tk_top = None
 font_normal = None
 font_bold = None
 font_content = None
+font_content_bold = None
+font_trace = None
 wid_ctx_men = None
 
 
@@ -203,24 +205,44 @@ def bind_classes():
 
 
 def define_fonts():
-    global font_normal, font_bold, font_content
-
-    # exists since Tcl/Tk 8.4
-    font_family = "TkDefaultFont"
+    global font_normal, font_bold, font_content, font_content_bold, font_trace
 
     # smaller font for the Tk message box
-    tk_top.eval("option add *Dialog.msg.font {%s 10 bold}" % font_family)
+    tk_top.eval("option add *Dialog.msg.font {%s 10 bold}" % "TkDefaultFont")
 
     # fonts for text and label widgets
-    font_normal = tkf.Font(family=font_family, weight=tkf.NORMAL, size=9)
-    font_bold = tkf.Font(family=font_family, weight=tkf.BOLD, size=9)
-    font_content = tkf.Font(family=font_family, weight=tkf.NORMAL, size=9)
+    font_normal = tkf.Font(font="TkDefaultFont")
+    font_bold = font_normal.copy()
+    font_content = tkf.Font(font="TkTextFont")
+    font_content_bold = tkf.Font(font="TkTextFont")
+    font_trace = tkf.Font(font="TkFixedFont")
+    update_derived_fonts()
+
+
+def update_derived_fonts():
+    global font_normal, font_bold, font_content, font_content_bold
+    opt = font_normal.configure()
+    opt["weight"] = tkf.BOLD
+    font_bold.configure(**opt)
+
+    opt = font_content.configure()
+    opt["weight"] = tkf.BOLD
+    font_content_bold.configure(**opt)
 
 
 def init_font_content(opt):
-    global font_content
+    global font_content, font_content_bold
     if font_content.configure() != opt:
         font_content = tkf.Font(**opt)
+
+    opt["weight"] = tkf.BOLD
+    font_content_bold.configure(**opt)
+
+
+def init_font_trace(opt):
+    global font_trace
+    if font_trace.configure() != opt:
+        font_trace = tkf.Font(**opt)
 
 
 #
