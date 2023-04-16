@@ -468,7 +468,8 @@ def clean_all_trace_files(clean_failed=False):
     rm_files = set()
     rm_exe = set()
     for log in test_db.test_results:
-        if log[4]:
+        # never auto-clean imported files: could interfere with other GUI instance
+        if log[4] and not log[13]:
             rm_files.add(log[4])
             if not clean_failed:
                 if log[3] == 2 or log[3] == 3:
@@ -955,7 +956,8 @@ def extract_trace_to_temp_file(tmp_dir, trace_name, file_offs, length):
 
 # ----------------------------------------------------------------------------
 
-def gtest_import_tc_result(tc_name, is_failed, duration, snippet, start_off, file_name, file_ts):
+def gtest_import_tc_result(tc_name, is_failed, duration, snippet, start_off,
+                           file_name, file_ts, import_flag):
     tc_name = tc_name.decode(errors="backslashreplace")
 
     if not duration:
@@ -994,10 +996,12 @@ def gtest_import_tc_result(tc_name, is_failed, duration, snippet, start_off, fil
             pass
 
     test_db.import_result((tc_name, None, 0, is_failed, file_name, start_off, len(snippet),
-                           core_path, fail_file, fail_line, duration, file_ts, False, True, seed))
+                           core_path, fail_file, fail_line, duration, file_ts, False,
+                           import_flag, seed))
 
 
-def gtest_import_result_file(file_name):
+def gtest_import_result_file(file_name, is_auto):
+    import_flag = 1 if is_auto else 2
     file_ts = int(os.stat(file_name).st_mtime)  # cast away sub-second fraction
     with open(file_name, "rb", buffering=0) as f:
         snippet_start = 0
@@ -1041,7 +1045,7 @@ def gtest_import_result_file(file_name):
 
                     gtest_import_tc_result(snippet_name, is_failed, match.group(3),
                                            snippet_data, snippet_start,
-                                           file_name, file_ts)
+                                           file_name, file_ts, import_flag)
                     snippet_name = b""
                     snippet_data = b""
 
@@ -1061,4 +1065,4 @@ def gtest_import_result_file(file_name):
 
 def gtest_automatic_import():
     for file_name in gtest_control_search_trace_dirs():
-        gtest_import_result_file(file_name)
+        gtest_import_result_file(file_name, True)

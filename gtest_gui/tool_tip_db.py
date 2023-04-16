@@ -228,20 +228,22 @@ passing a list of seed values via the GTest command line interface.)
 '''
 Specifies the directory where to store temporary files for trace output and
 core dump files collected from the executable under test. If empty, the current
-working directory in which GtestGui was started is used. Note sub-directories
-will be created in the given directory for each executable version. If you want
-to use the "copy executable" option, the directory needs to be in the same
-filesystem as the executables. If you want to keep core dumps, the directory
-needs to be in the same filesystem as the working directory (because they will
-be moved, not copied due to size.)
+working directory at the time of starting GtestGui is used. Note
+sub-directories will be created in the given directory for each executable file
+version. If you want to use the "copy executable" option, the specified
+directory needs to be in the same filesystem as the executables. If you want to
+keep core dumps, the directory needs to be in the same filesystem as the
+working directory (because they will be moved, not copied due to size.)
 ''',
 
 'config.exit_clean_trace':
 '''
-When enabled, trace output from passed test cases is removed when exiting
-GtestGui: Files that only contains output from passed tests are removed. Files
-containing a mixture of passed and failed test cases are "compressed" by
-rewriting them so that output from passed test cases is omitted.
+When enabled, output from passed test cases is automatically removed from
+created trace files upon exiting the application. Trace files and
+sub-directories only containing passed test results are thus removed entirely.
+Note imported trace files are never modified or removed automatically, so you
+may need to remove these manually once after enabling this option (e.g. via
+result log context menu).
 ''',
 
 'config.startup_import_trace':

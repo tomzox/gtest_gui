@@ -683,7 +683,7 @@ class Test_log_widget(object):
         for idx in range(len(test_db.test_results)):
             log = test_db.test_results[idx]
             if idx == idx_list[rm_idx]:
-                if log[4]:
+                if log[4] and log[13] != 2:  # never remove traces imported via cmd line
                     rm_files.add(log[4])
                 if log[7]:
                     rm_files.add(log[7])

@@ -33,7 +33,7 @@ test_case_names = []
 # [10] execution duration reported by gtest (milliseconds)
 # [11] execution end time (epoch timestamp)
 # [12] executed under valgrind (bool)
-# [13] imported from trace file (bool)
+# [13] imported from trace file: 0: not imported, 1: auto-import; 2: command line
 # [14] seed extracted from trace ("" if not configured or not found)
 test_results = []
 

@@ -108,7 +108,7 @@ def main():
 
     for file_name in trace_files:
         try:
-            gtest.gtest_import_result_file(file_name)
+            gtest.gtest_import_result_file(file_name, False)
         except OSError as e:
             msg = "Failed to import %s: %s" % (file_name, str(e))
             tk_messagebox.showerror(parent=tk_top, message=msg)
