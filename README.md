@@ -86,3 +86,7 @@ In summary, most common usage is as follows:
 
 On the MS-Windows platform, start GtestGui via pythonw.exe to avoid getting a
 console window.
+
+## Documentation
+
+For a detailed description, please refer to the [manual page](doc/gtest_gui.pod)

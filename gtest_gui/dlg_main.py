@@ -30,6 +30,7 @@ import gtest_gui.dlg_debug as dlg_debug
 import gtest_gui.dlg_font_sel as dlg_font_sel
 import gtest_gui.dlg_job_list as dlg_job_list
 import gtest_gui.dlg_tc_list as dlg_tc_list
+import gtest_gui.dlg_help as dlg_help
 import gtest_gui.gtest as gtest
 import gtest_gui.test_db as test_db
 import gtest_gui.tk_utils as tk_utils
@@ -136,6 +137,8 @@ class Main_window(object):
         self.tk.eval("option add *Menu.useMotifHelp true")
         wid_men_help = tk.Menu(wid_men, name="help", tearoff=0)
         wid_men.add_cascade(menu=wid_men_help, label="Help", underline=0)
+        dlg_help.add_menu_commands(self.tk, wid_men_help)
+        wid_men_help.add_separator()
         wid_men_help.add_command(label="Debug console",
                                  command=lambda: dlg_debug.create_dialog(self.tk, globals()))
         wid_men_help.add_command(label="About",
@@ -365,7 +368,7 @@ class Main_window(object):
         wid_lab2.pack(side=tk.TOP)
 
         msg ="""
-Homepage: https://github.com/tomzox/gtest_gui
+Homepage & Documentation: https://github.com/tomzox/gtest_gui
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 

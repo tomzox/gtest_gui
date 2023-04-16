@@ -1,5 +1,4 @@
 General:
-- documentation
 - code comments
 - test suite at least for filter_expr & gtest parser
 - python package

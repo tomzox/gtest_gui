@@ -52,9 +52,10 @@ log_pane_solo_height = 0
 trace_pane_height = 0
 trace_pane_solo_height = 0
 
-# Parameters of test case and job list dialogs
+# Parameters of misc. dialogs
 tc_list_geometry = ""
 job_list_geometry = ""
+help_win_geometry = ""
 
 
 # internal state
@@ -63,7 +64,7 @@ tid_update_rc_min = None
 
 # "compat" := oldest version of gtest_gui that can parse this file
 rcfile_compat = 0x01000000
-rcfile_version = 0x01000002
+rcfile_version = 0x01000003
 rcfile_error = 0
 
 
@@ -109,7 +110,7 @@ def rc_file_load():
     global rcfile_version
     global log_pane_height, log_pane_solo_height
     global trace_pane_height, trace_pane_solo_height
-    global tc_list_geometry, job_list_geometry
+    global tc_list_geometry, job_list_geometry, help_win_geometry
     global options
     global prev_exe_file_list
 
@@ -157,6 +158,7 @@ def rc_file_load():
                         elif (var == "trace_pane_solo_height"): trace_pane_solo_height = val
                         elif (var == "tc_list_geometry"):       tc_list_geometry = val
                         elif (var == "job_list_geometry"):      job_list_geometry = val
+                        elif (var == "help_win_geometry"):      help_win_geometry = val
 
                         elif (var == "rcfile_version"):         rcfile_version = val
                         elif (var == "rc_compat_version"):      rc_compat_version = val
@@ -211,7 +213,7 @@ def rc_file_update():
     global options, tid_update_rc_sec, tid_update_rc_min
     global log_pane_height, log_pane_solo_height
     global trace_pane_height, trace_pane_solo_height
-    global tc_list_geometry, job_list_geometry
+    global tc_list_geometry, job_list_geometry, help_win_geometry
     global prev_exe_file_list
 
     if tid_update_rc_sec: tk_utils.tk_top.after_cancel(tid_update_rc_sec)
@@ -264,6 +266,7 @@ def rc_file_update():
             print("trace_pane_solo_height=", json.dumps(trace_pane_solo_height), file=rcfile)
             print("tc_list_geometry=", json.dumps(tc_list_geometry), file=rcfile)
             print("job_list_geometry=", json.dumps(job_list_geometry), file=rcfile)
+            print("help_win_geometry=", json.dumps(help_win_geometry), file=rcfile)
 
         # copy attributes on the new file
         try:
