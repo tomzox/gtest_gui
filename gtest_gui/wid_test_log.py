@@ -129,13 +129,16 @@ class Test_log_widget(object):
         self.var_opt_sort_exception = tk.BooleanVar(self.tk, False)
 
         self.var_opt_filter_pass = tk.BooleanVar(self.tk, False)
-        self.var_opt_filter_exe = tk.BooleanVar(self.tk, False)
+        self.var_opt_filter_exe_name = tk.BooleanVar(self.tk, False)
+        self.var_opt_filter_exe_ts = tk.BooleanVar(self.tk, False)
         self.var_opt_filter_tc_name = tk.BooleanVar(self.tk, False)
 
         wid_men.add_checkbutton(label="Show only failed results",
                                 command=self.__toggle_verdict_filter, variable=self.var_opt_filter_pass)
-        wid_men.add_checkbutton(label="Show only current results",
-                                command=self.__toggle_exe_filter, variable=self.var_opt_filter_exe)
+        wid_men.add_checkbutton(label="Show only results from current exe. file",
+                                command=self.__toggle_exe_name_filter, variable=self.var_opt_filter_exe_name)
+        wid_men.add_checkbutton(label="Show only results from current exe. version",
+                                command=self.__toggle_exe_ts_filter, variable=self.var_opt_filter_exe_ts)
         wid_men.add_checkbutton(label="Show only selected test cases",
                                 command=self.__toggle_tc_name_filter, variable=self.var_opt_filter_tc_name)
         wid_men.add_separator()
@@ -302,13 +305,14 @@ class Test_log_widget(object):
 
             tagged_txt = [txt, []]
 
-            rep = test_db.repeat_requests.get(log[0])
-            if rep is not None:
-                if rep == test_db.test_exe_ts:
-                    tagged_txt.append(" (repeat with new executable)")
-                else:
-                    tagged_txt.append(" (repetition pending)")
-                tagged_txt.append("highlight")
+            if log[1] == test_db.test_exe_name:
+                rep = test_db.repeat_requests.get(log[0])
+                if rep is not None:
+                    if rep == test_db.test_exe_ts:
+                        tagged_txt.append(" (repeat with new executable)")
+                    else:
+                        tagged_txt.append(" (repetition pending)")
+                    tagged_txt.append("highlight")
 
         else:
             if log[3] == 4:
@@ -317,24 +321,25 @@ class Test_log_widget(object):
                 txt += " Error outside of test case"
             tagged_txt = [txt, []]
 
-        if log[13]:
+        if log[13]:  # currently name and timestamp are unknown for imported trace
             tagged_txt.append(" (imported)")
             tagged_txt.append([])
 
-        else:
-            if log[1] != test_db.test_exe_name:
+        elif log[1] != test_db.test_exe_name:
+            if log[1] is None:
+                tagged_txt.append(" (unknown executable)")
+                tagged_txt.append([])
+            else:
                 tagged_txt.append(" (%s)" % os.path.basename(log[1]))
                 tagged_txt.append([])
-            elif log[2] != test_db.test_exe_ts:
-                if log[2] == 0:
-                    tagged_txt.append(" (unknown executable)")
-                    tagged_txt.append([])
-                elif now - log[2] <= 11*60*60:
-                    tagged_txt.append(datetime.fromtimestamp(log[2]).strftime(" (old exe: %H:%M:%S)"))
-                    tagged_txt.append([])
-                else:
-                    tagged_txt.append(datetime.fromtimestamp(log[2]).strftime(" (old exe: %a %d.%m %H:%M)"))
-                    tagged_txt.append([])
+
+        elif log[2] != test_db.test_exe_ts:
+            if now - log[2] <= 11*60*60:
+                tagged_txt.append(datetime.fromtimestamp(log[2]).strftime(" (old exe: %H:%M:%S)"))
+                tagged_txt.append([])
+            else:
+                tagged_txt.append(datetime.fromtimestamp(log[2]).strftime(" (old exe: %a %d.%m %H:%M)"))
+                tagged_txt.append([])
 
         tagged_txt.extend(["\n", []])
         return tagged_txt
@@ -435,16 +440,25 @@ class Test_log_widget(object):
 
 
     def __matches_filter(self, log):
-        return ( ((not self.var_opt_filter_pass.get()) or (log[3] >= 2)) and
-                 ((not self.var_opt_filter_exe.get()) or (log[2] >= self.opt_filter_exe_ts)) and
-                 ((not self.var_opt_filter_tc_name.get()) or (log[0] in self.opt_filter_tc_names)) )
+        return ( ((not self.var_opt_filter_pass.get()) or
+                    (log[3] >= 2)) and
+                 ((not self.var_opt_filter_exe_name.get()) or
+                    (log[1] == test_db.test_exe_name)) and
+                 ((not self.var_opt_filter_exe_ts.get()) or
+                    ((log[2] >= self.opt_filter_exe_ts) and (log[1] == test_db.test_exe_name))) and
+                 ((not self.var_opt_filter_tc_name.get()) or
+                    (log[0] in self.opt_filter_tc_names)) )
 
 
     def __toggle_verdict_filter(self):
         self.__refill_log(restore_selection=True)
 
 
-    def __toggle_exe_filter(self, exe_ts = None):
+    def __toggle_exe_name_filter(self):
+        self.__refill_log(restore_selection=True)
+
+
+    def __toggle_exe_ts_filter(self, exe_ts = None):
         if not exe_ts:
             exe_ts = test_db.test_exe_ts
 
@@ -507,10 +521,10 @@ class Test_log_widget(object):
         if not self.sel_obj.text_sel_get_selection():
             self.clear_trace_preview()
 
-        del test_db.test_results[self.log_idx_map[log_idx]]
+        del test_db.test_results[idx]
 
         new_list = self.log_idx_map[:log_idx]
-        if log_idx + 1 < len(test_db.test_results):
+        if log_idx + 1 < len(self.log_idx_map):
             new_list.extend([x - 1 for x in self.log_idx_map[log_idx + 1:]])
         self.log_idx_map = new_list
 
@@ -524,6 +538,7 @@ class Test_log_widget(object):
         sel = self.__get_mapped_selection()
         if sel:
             plural_s = "" if len(sel) == 1 else "s"
+            all_tc_names = set(test_db.test_case_names)
             sel_tc_names = []
             any_with_trace = False
             any_rep_req = False
@@ -539,14 +554,15 @@ class Test_log_widget(object):
                 sel_tc_names.append(tc_name)
                 if log[4]:
                     any_with_trace = True
-                if test_db.repeat_requests.get(tc_name) is not None:
-                    any_rep_req = True
-                else:
-                    no_rep_req = True
-                if expr.can_select_test(tc_name):
-                    any_can_select = True
-                elif expr.can_deselect_test(tc_name):
-                    any_can_deselect = True
+                if tc_name in all_tc_names:
+                    if test_db.repeat_requests.get(tc_name) is not None:
+                        any_rep_req = True
+                    else:
+                        no_rep_req = True
+                    if expr.can_select_test(tc_name):
+                        any_can_select = True
+                    elif expr.can_deselect_test(tc_name):
+                        any_can_deselect = True
 
             if len(sel) == 1:
                 log = test_db.test_results[sel[0]]
@@ -585,7 +601,7 @@ class Test_log_widget(object):
                 need_sep = True
 
             if len(sel) == 1:
-                wid_men.add_command(label="Do not show result logs from this executable",
+                wid_men.add_command(label="Do not show result logs from this exe. version",
                                     command=self.do_filter_exe_ts)
                 need_sep = True
 
@@ -609,7 +625,8 @@ class Test_log_widget(object):
             post_menu = True
 
         for log in test_db.test_results:
-            if (log[3] <= 1) and (log[2] < test_db.test_exe_ts):
+            if ((log[3] == 0) and
+                    ((log[1] != test_db.test_exe_name) or (log[2] < test_db.test_exe_ts))):
                 if need_sep: wid_men.add_separator()
                 wid_men.add_command(label="Remove results of passed tests from old exe.",
                                     command=self.do_remove_old_pass_results)
@@ -632,7 +649,8 @@ class Test_log_widget(object):
         idx_list = []
         for idx in range(len(test_db.test_results)):
             log = test_db.test_results[idx]
-            if (log[3] <= 1) and (log[2] < test_db.test_exe_ts):
+            if ((log[3] == 0) and
+                    ((log[1] != test_db.test_exe_name) or (log[2] < test_db.test_exe_ts))):
                 idx_list.append(idx)
 
         if idx_list:
@@ -678,7 +696,8 @@ class Test_log_widget(object):
                     used_files.add(log[4])
                 if log[7]:
                     used_files.add(log[7])
-                    used_exe.add((log[1], log[2]))
+                    if log[1]:
+                        used_exe.add((log[1], log[2]))
 
         rm_files -= used_files
         rm_files -= gtest.gtest_ctrl.get_out_file_names()
@@ -708,17 +727,40 @@ class Test_log_widget(object):
             gtest.remove_trace_or_core_files(rm_files, rm_exe)
 
 
+    def check_tc_names_in_exe(self, sel):
+        for idx in sel:
+            log = test_db.test_results[idx]
+            if log[1] and (log[1] != test_db.test_exe_name):
+                msg = 'Test case "%s" is from a different executable file "%s".' % (log[0], log[1])
+                tk_messagebox.showerror(parent=self.tk, message=msg)
+                return False
+            elif test_db.test_case_stats.get(log[0], None) is None:
+                msg = 'Test case "%s" no longer exists in current executable' % log[0]
+                if log[1] is None:
+                    msg += " or may be from a different executable"
+                tk_messagebox.showerror(parent=self.tk, message=msg + ".")
+                return False
+
+        return True
+
+
     def do_request_repetition(self, enable_rep):
         sel = self.__get_mapped_selection()
 
         if not sel:
             if test_db.repeat_requests:
-                return
+                return True
 
             for idx in self.log_idx_map:
                 log = test_db.test_results[idx]
                 if log[3] == 2 or log[3] == 3:
-                    sel.append(idx)
+                    # Silently skip results from other executables or removed test cases
+                    if ((not log[1] or (log[1] == test_db.test_exe_name)) and
+                            (test_db.test_case_stats.get(log[0], None) is not None)):
+                        sel.append(idx)
+
+        if not self.check_tc_names_in_exe(sel):
+            return False
 
         for tc_name in {test_db.test_results[x][0] for x in sel}:
             if enable_rep:
@@ -728,14 +770,16 @@ class Test_log_widget(object):
 
             self.update_repetition_status(tc_name)
 
+        return True
+
 
     def do_filter_exe_ts(self):
         sel = self.__get_mapped_selection()
         if len(sel) == 1:
             log = test_db.test_results[sel[0]]
 
-            self.var_opt_filter_exe.set(True)
-            self.__toggle_exe_filter(log[2] + 1)
+            self.var_opt_filter_exe_ts.set(True)
+            self.__toggle_exe_ts_filter(log[2] + 1)
 
 
     def do_export_trace(self):

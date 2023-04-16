@@ -307,17 +307,17 @@ def check_pattern(pat_str, run_disabled, suppressions=None):
                 # Search for match again, but this time against the full list of tests
                 if (not run_disabled and
                         any([match_name(x, expr) for x in test_db.test_case_names])):
-                    msg = ('Pattern "%s" only matches disabled tests. '
+                    msg = ('Test filter pattern "%s" only matches disabled tests. '
                            'Please enable option "Run disabled tests" for running these.'
                            % expr)
                 elif any([expr in x for x in test_db.test_case_names]):
-                    msg = ('Pattern "%s" does not match any test case names. '
+                    msg = ('Test filter pattern "%s" does not match any test case names. '
                            'Use wildcard "*" for matching on names containing this text.' % expr)
                 elif any([match_name_nocase(x, expr) for x in test_db.test_case_names]):
-                    msg = ('Pattern "%s" does not match any test case names. '
+                    msg = ('Test filter pattern "%s" does not match any test case names. '
                            'Note patterns are case sensitive.' % expr)
                 else:
-                    msg = 'Pattern "%s" does not match any test case names.' % expr
+                    msg = 'Test filter pattern "%s" does not match any test case names.' % expr
 
                 if suppressions is not None:
                     suppressions.append(expr)

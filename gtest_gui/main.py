@@ -45,6 +45,7 @@ def parse_argv_error(tk_top, msg, with_usage=True):
 
 
 def parse_argv(tk_top):
+    exe_name = ""
     trace_files = []
     next_is_trace = False
     for file_name in sys.argv[1:]:
@@ -66,16 +67,15 @@ def parse_argv(tk_top):
             is_exe = os.path.splitext(file_name)[1] == ".exe"
 
         if is_exe and not next_is_trace:
-            if test_db.test_exe_name:
+            if exe_name:
                 parse_argv_error(tk_top, "More than one executable on the command line: %s" % file_name)
-            test_db.test_exe_name = file_name
-            test_db.test_exe_ts = int(st.st_mtime)  # cast away sub-second fraction
+            exe_name = file_name
         else:
             trace_files.append(file_name)
 
         next_is_trace = False
 
-    return trace_files
+    return (exe_name, trace_files)
 
 
 # ----------------------------------------------------------------------------
@@ -89,7 +89,7 @@ def main():
         print("Tk initialization failed: " + str(e), file=sys.stderr)
         sys.exit(1)
 
-    trace_files = parse_argv(tk_top)
+    exe_name, trace_files = parse_argv(tk_top)
 
     tk_utils.initialize(tk_top)
     gtest.initialize()
@@ -115,7 +115,7 @@ def main():
             sys.exit(1)
 
     global wid_main
-    wid_main = dlg_main.Main_window(tk_top)
+    wid_main = dlg_main.Main_window(tk_top, exe_name)
 
     tk_top.wm_deiconify()
 

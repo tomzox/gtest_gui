@@ -6,6 +6,9 @@ General:
 
 gtest:
 - import of trace with core: executable not linked & not cleaned upon trace removal
+- import of trace: executable file & ts is unknown:
+  Add "info" file to directory, or encode name in sub-directory path (hash);
+  prerequisite: allow only one exe per directory even if timestamp equal
 - handle I/O error in trace writing
 - after crash: check if core dump is enabled, add warning to trace file
 - if /proc/sys/kernel/core_pattern pipes to apport: copy core from /var/lib/apport/coredump/
@@ -30,6 +33,8 @@ wid_test_log:
 - menu for result mgmt: remove selected, all old passed, all filtered;
 - when removing traces: rewrite trace files to actually remove text?
   OR: new command for "compressing" trace files
+- add key binding for toggling repetition mark on selected test cases
+- allow adding bookmark / attaching note to result log entries
 
 dlg_browser:
 -! trowser command argv: use shell only if contains space or special chars; check if escape needed
@@ -58,6 +63,6 @@ dlg_tc_list:
 - entry field for filtering by name
 
 dlg_job_list:
-- use ttk TreeView
+- use mclistbox (multi-column listbox, available in Tcl/Tk)
 - allow sending KILL signal to job
 - show %CPU read via /proc (Linux only)

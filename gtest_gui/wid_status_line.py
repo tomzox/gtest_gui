@@ -95,7 +95,7 @@ class Status_line_widget(object):
 
 
     def __handle_timer(self):
-        self.fade_val += 0.03
+        self.fade_val += 0.015
         if self.fade_val < 1:
             self.wid_message.config(foreground=self.__get_color())
             self.timer_id = self.tk.after(50, self.__handle_timer)

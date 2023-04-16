@@ -43,7 +43,7 @@ wid_test_ctrl_ = None
 wid_test_log_ = None
 
 class Main_window(object):
-    def __init__(self, tk_top):
+    def __init__(self, tk_top, exe_name):
         self.tk = tk_top
 
         global wid_test_ctrl_
@@ -61,8 +61,8 @@ class Main_window(object):
 
         self.__create_menubar()
 
-        if test_db.test_exe_name:
-            self.__update_executable(test_db.test_exe_name)
+        if exe_name:
+            self.__update_executable(exe_name)
 
         wid_test_log_.populate_log()
 
@@ -303,18 +303,11 @@ class Main_window(object):
 
 
     def reload_exe(self):
+        if self.__check_tests_active():
+            return
+
         if test_db.test_exe_name:
-            if self.__check_tests_active():
-                return
-
-            prev_names = test_db.test_case_names
             self.__update_executable(test_db.test_exe_name)
-
-            if test_db.test_case_names:
-                if prev_names == test_db.test_case_names:
-                    wid_status_line.show_message("warning", "Test case list is unchanged.")
-                else:
-                    wid_status_line.show_message("info", "New test case list loaded.")
         else:
             self.select_exe()
 
@@ -333,15 +326,27 @@ class Main_window(object):
                                     message="Failed to access executable: " + str(e))
             return
 
+        prev_exe = test_db.test_exe_name
+        prev_names = test_db.test_case_names
+
         tc_names = gtest.gtest_list_tests(exe_file=filename)
         if tc_names is None:
             return
 
-        self.tk.wm_title("GtestGui: " + os.path.basename(filename))
-        gtest.release_exe_file_copy()
-        test_db.update_executable(filename, exe_ts, tc_names)
+        if filename != test_db.test_exe_name:
+            self.tk.wm_title("GtestGui: " + os.path.basename(filename))
+            gtest.release_exe_file_copy()
+            test_db.update_executable(filename, exe_ts, tc_names)
 
-        config_db.update_prev_exe_file_list(filename)
+            config_db.update_prev_exe_file_list(filename)
+
+        if prev_exe: # no message during startup
+            if prev_exe != filename:
+                wid_status_line.show_message("info", "Switched to new executable.")
+            elif prev_names != test_db.test_case_names:
+                wid_status_line.show_message("info", "New test case list loaded.")
+            else:
+                wid_status_line.show_message("warning", "Test case list is unchanged.")
 
 
     def show_about_dialog(self):

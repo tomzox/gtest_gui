@@ -480,7 +480,8 @@ def clean_all_trace_files(clean_failed=False):
 
         if clean_failed and log[7]:
             rm_files.add(log[7])
-            rm_exe.add((log[1], log[2]))
+            if log[1]:
+                rm_exe.add((log[1], log[2]))
 
     if not clean_failed:
         for name in contains_fail:

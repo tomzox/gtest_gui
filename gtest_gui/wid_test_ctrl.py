@@ -610,7 +610,8 @@ class Test_control_widget(object):
             return
 
         # Mark selected tests for repetiton, if none marked yet
-        self.wid_test_log.do_request_repetition(True)
+        if not self.wid_test_log.do_request_repetition(True):
+            return
 
         tc_names = test_db.repeat_requests.keys()
 

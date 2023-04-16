@@ -72,8 +72,10 @@ class Test_db_slots(object):
 
 
 def update_executable(filename, exe_ts, tc_names):
-    global test_exe_name, test_exe_ts, test_case_names, test_case_stats
+    global test_exe_name, test_exe_ts, test_case_names, test_case_stats, repeat_requests
+
     tc_names_update = (test_case_names != tc_names)
+    tc_exe_update = (test_exe_name != filename)
 
     test_exe_name = filename
     test_exe_ts = exe_ts
@@ -81,6 +83,9 @@ def update_executable(filename, exe_ts, tc_names):
 
     for tc_name in tc_names:
         test_case_stats.setdefault(tc_name, [0, 0, 0, 0, 0])
+
+    if tc_exe_update:
+        repeat_requests = {}
 
     if Test_db_slots.executable_update:
         Test_db_slots.executable_update()
