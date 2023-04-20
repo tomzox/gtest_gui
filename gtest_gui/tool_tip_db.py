@@ -202,7 +202,11 @@ When unchecked, tool-tips like this one are globally disabled.
 'config.trowser':
 '''
 Defines which application to use for opening trace snippets and complete trace
-files. The file name will be appended to the given command line.
+files. The file name will be appended to the given command line. The PATH
+configured in environment will be used to search for the comment, so that
+normally the full path need not be specified. (Note for the Windows platform,
+you may need to add the Python interpreter in front of "trowser.py", depending
+on your Python installation.)
 ''',
 
 'config.trowser_stdin':

@@ -550,11 +550,11 @@ class Test_log_widget(object):
 
             for log_idx in sel:
                 log = test_db.test_results[log_idx]
-                tc_name = log[0]
-                sel_tc_names.append(tc_name)
                 if log[4]:
                     any_with_trace = True
+                tc_name = log[0]
                 if tc_name in all_tc_names:
+                    sel_tc_names.append(tc_name)
                     if test_db.repeat_requests.get(tc_name) is not None:
                         any_rep_req = True
                     else:
@@ -762,13 +762,15 @@ class Test_log_widget(object):
         if not self.check_tc_names_in_exe(sel):
             return False
 
-        for tc_name in {test_db.test_results[x][0] for x in sel}:
-            if enable_rep:
-                test_db.repeat_requests[tc_name] = test_db.test_case_stats[tc_name][4]
-            else:
-                test_db.repeat_requests.pop(tc_name, None)
+        for log in {test_db.test_results[x] for x in sel}:
+            if log[3] <= 3: # exclude valgrind summary error
+                tc_name = log[0]
+                if enable_rep:
+                    test_db.repeat_requests[tc_name] = test_db.test_case_stats[tc_name][4]
+                else:
+                    test_db.repeat_requests.pop(tc_name, None)
 
-            self.update_repetition_status(tc_name)
+                self.update_repetition_status(tc_name)
 
         return True
 
@@ -800,7 +802,7 @@ class Test_log_widget(object):
                 if complete_trace:
                     dlg_browser.show_trace(self.tk, log[4])
                 else:
-                    dlg_browser.show_trace_snippet(self.tk, log[4], log[5], log[6])
+                    dlg_browser.show_trace_snippet(self.tk, log[4], log[5], log[6], log[13]==2)
             else:
                 wid_status_line.show_message("warning", "No trace available for this result")
 

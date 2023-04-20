@@ -46,7 +46,7 @@ def __get_temp_dir_name():
     return temp_dir.name
 
 
-def show_trace_snippet(tk_top, file_name, file_off, length):
+def show_trace_snippet(tk_top, file_name, file_off, length, is_extern_import):
     browser_exe = config_db.options["browser"]
     if not browser_exe:
         wid_status_line.show_message("error", "No trace browser app is configured")
@@ -64,7 +64,7 @@ def show_trace_snippet(tk_top, file_name, file_off, length):
 
     else:
         tmp_name = gtest.extract_trace_to_temp_file(__get_temp_dir_name(),
-                                                    file_name, file_off, length)
+                                                    file_name, file_off, length, is_extern_import)
         if not tmp_name:
             return
         cmd = browser_exe + " " + tmp_name

@@ -20,7 +20,7 @@
 # Plain list of test case names, in order returned by test executable
 test_case_names = []
 
-# [ 0] test case name
+# [ 0] test case name, or "" if valgrind error
 # [ 1] executable name, or None if imported
 # [ 2] executable timestamp, or 0 if imported
 # [ 3] verdict (0: pass, 1: skipped, 2: fail, 3: crash, 4: valgrind summary error, 5:error)
@@ -50,7 +50,8 @@ test_case_stats = {}
 # [3] running count
 # [4] expected count
 # [5] completed count, not including results from background jobs
-campaign_stats = [0, 0, 0, 0, 0]
+# [6] meta error count (i.e. valgrind)
+campaign_stats = [0, 0, 0, 0, 0, 0, 0]
 
 # key: tc_name
 # value: exe_ts of the result for which repetition was requested
@@ -120,8 +121,10 @@ def add_result(log, from_bg_job):
         campaign_stats[2] += 1
     elif (verdict == 2) or (verdict == 3): # fail or crash
         campaign_stats[1] += 1
+    else:
+        campaign_stats[6] += 1
 
-    if not from_bg_job:
+    if not from_bg_job and (verdict <= 3):
         campaign_stats[5] += 1
 
     if Test_db_slots.campaign_stats_update:
@@ -147,7 +150,7 @@ def reset_run_stats(exp_result_cnt, is_resume):
     global campaign_stats, test_case_stats
 
     if not is_resume:
-        campaign_stats = [0, 0, 0, 0, exp_result_cnt, 0]
+        campaign_stats = [0, 0, 0, 0, exp_result_cnt, 0, 0]
         for stat in test_case_stats.values():
             stat[0] = 0
             stat[1] = 0

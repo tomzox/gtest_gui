@@ -360,30 +360,35 @@ class Main_window(object):
         wid_about.wm_group(self.tk)
         wid_about.wm_title("About Gtest GUI")
 
-        wid_lab1 = tk.Label(wid_about, text="Yet another GUI for GoogleTest")
-        wid_lab1.pack(side=tk.TOP, pady=8)
+        wid_lab1 = tk.Label(wid_about, text="Module tester's GoogleTest GUI",
+                            font=tk_utils.font_bold)
+        wid_lab1.pack(side=tk.TOP, pady=5)
 
-        wid_lab2 = tk.Label(wid_about, text="Copyright (C) 2023 Th. Zoerner",
-                            font=tk_utils.font_normal)
+        wid_lab2 = tk.Label(wid_about, text="Version 0.8\n"
+                                            "Copyright (C) 2023 T. Zoerner")
         wid_lab2.pack(side=tk.TOP)
 
-        msg ="""
-Homepage & Documentation: https://github.com/tomzox/gtest_gui
+        url = "https://github.com/tomzox/gtest_gui"
+        wid_lab3 = tk.Label(wid_about, text=url, fg="blue",
+                            cursor="top_left_arrow")
+        wid_lab3.pack(side=tk.TOP, pady=5)
 
+        msg ="""
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-        wid_lab3 = tk.Message(wid_about, font=tk_utils.font_normal, text=msg)
-        wid_lab3.pack(side=tk.TOP)
+        wid_lab4 = tk.Message(wid_about, font=tk_utils.font_normal, text=msg)
+        wid_lab4.pack(side=tk.TOP)
 
         wid_but = tk.Button(wid_about, text="Close", command=wid_about.destroy)
         wid_but.pack(pady=10)
 
         wid_but.bind("<Return>", lambda e: e.widget.event_generate("<Key-space>"))
         wid_but.bind("<Escape>", lambda e: e.widget.event_generate("<Key-space>"))
+        wid_lab3.bind("<ButtonRelease-1>", lambda e: tk_utils.xselection_export(url, True))
         wid_but.focus_set()
 
 

@@ -34,7 +34,7 @@ def parse_argv_error(tk_top, msg, with_usage=True):
     if msg[-1] != "\n":
         msg += "\n"
     if with_usage:
-        msg += "Usage: %s {[-trace] file}* [executable]\n" % sys.argv[0]
+        msg += "Usage: %s {[-trace] file}* [executable]" % sys.argv[0]
 
     if (os.name == "posix"):
         print(msg, file=sys.stderr)

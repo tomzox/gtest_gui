@@ -193,7 +193,6 @@ def rc_file_load():
         if font_content_opt:
             try:
                 tk_utils.init_font_content(font_content_opt)
-                tk_utils.init_font_trace(font_trace_opt)
             except Exception as e:
                 print("Error configuring content font:", str(e), file=sys.stderr)
 

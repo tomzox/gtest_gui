@@ -49,88 +49,103 @@ def ReplaceEntity(match):
       print("Unknown entity E<%s>" % tag, file=sys.stderr)
       sys.exit(1)
 
+def Escape(txt):
+    if txt.endswith("'"):
+        return txt[:-1] + r"\'"
+    else:
+        return txt
 
 def PrintParagraph(astr, indent, bullet=False):
+    global rstOutput
+
+    if indent:
+        rstOutput += "  "
 
     re.sub(r"E<([a-z]+)>", ReplaceEntity, astr)
 
-    # Pre-process POD formatting expressions, e.g. I<some text>: replace pair
-    # of opening and closing bracket with uniform separation character '#' and
-    # appended format mode, which will be replaced with a tag later
-    astr = re.sub(r'S<([^>]*)>', r'\1', astr)
-    astr = re.sub(r'T<([^>]*)>', r'##\1##T##', astr)
-    astr = re.sub(r'H<([^>]*)>', r'##\1##H##', astr)  # non-POD, internal format
-    astr = re.sub(r'[IF]<([^>]*)>', r'##\1##I##', astr)
-    astr = re.sub(r'C<([^>]*)>', r'##\1##C##', astr)
-    astr = re.sub(r'L<"([^>]*)">', r'##\1##L##', astr)
-    astr = re.sub(r'L<([^>]*)>', r'##\1##L##', astr)
-    astr = re.sub(r'B<([^>]*)>', r'##\1##B##', astr)
-    astr = re.sub(r'P<"([\x00-\xff]*?)">', r'##\1##P##', astr)
-    astr += '####'
-    astr = re.sub(r'^#+', r'', astr)
+    prev_end = 0
+    for match in re.finditer(r'([STHIFCLBP])<("([\x00-\xff]*?)"|[^">][^>]*?)>', astr):
+        if prev_end < match.start():
+            txt = astr[prev_end : match.start()]
+            helpTexts[sectIndex] += "('''%s''', '%s'), " % (Escape(txt), "indent" if indent else "")
+            rstOutput += txt
+        prev_end = match.end()
 
-    # replace preprocessed format description with pairs of text and tags
-    # - e.g. [list "text" underlined] to be inserted into a text widget
-    # - note to hyperlinks: sections names are converted to lowercase;
-    #   character ':' is a sub-section separator; see proc PopupHelp
-    for match in re.finditer(r'([\x00-\xff]*?)##+(([IBCTHLP])#+)?', astr):
-        chunk = match.group(1)
-        tag   = match.group(3)
+        tag = match.group(1)
+        chunk = match.group(2)
 
-        if chunk:
-            txt = chunk
+        if chunk[0] == '"':
+            chunk = chunk.strip('"')
 
-            if tag == "B":
-                fmt = "bold"
-            elif tag == "I":
-                fmt = "underlined"
-            elif tag == "C":
-                fmt = "fixed"
-            elif tag == "P":
-                fmt = "pfixed"
-            elif tag == "T":
-                fmt = "title1"
-            elif tag == "H":
-                fmt = "title2"
-            elif tag == "L":
-                fmt = "href"
-                txt = chunk[0].upper() + chunk[1:].lower()
+        txt = chunk
+
+        if tag == "B":
+            fmt = "bold"
+        elif tag == "I" or tag == "F":
+            fmt = "underlined"
+        elif tag == "C":
+            fmt = "fixed"
+        elif tag == "P":
+            fmt = "pfixed"
+        elif tag == "T":
+            fmt = "title1"
+        elif tag == "H":
+            fmt = "title2"
+        elif tag == "L":
+            fmt = "href"
+            match = re.match(r"(.*?)/(.*)", chunk)
+            if match:
+                txt = "%s: %s" % (match.group(1).capitalize(), match.group(2).capitalize())
             else:
-                fmt = ""
+                txt = chunk.capitalize()
+        elif tag == "S":
+            fmt = ""
+        else:
+            raise BaseException("tag error:" + tag)
 
         if indent:
             fmt = ("('%s', 'indent')" % fmt) if fmt else "'indent'"
         else:
             fmt = "'%s'" % fmt
 
-        helpTexts[sectIndex] += "('''%s''', %s), " % (txt, fmt)
+        helpTexts[sectIndex] += "('''%s''', %s), " % (Escape(txt), fmt)
 
         # ----------------------------
 
-        if chunk:
-            if tag == "B":
-                txt = "**" + chunk + "**"
-            elif tag == "I":
-                txt = "*" + chunk + "*"
-            elif tag == "C":
-                txt = "``" + chunk + "``"
-            elif tag == "P":
-                txt = "::\n\n" + chunk
-            elif tag == "T":
-                txt = chunk + "\n" + ("-" * len(chunk))
-            elif tag == "H":
-                txt = chunk + "\n" + ("~" * len(chunk))
-            elif tag == "L":
-                txt = "`" + (chunk[0].upper() + chunk[1:].lower()) + "`_"
+        if tag != "S":
+            if rstOutput and not rstOutput[-1].isspace():
+                rstOutput += "\\ "
+
+        if tag == "B":
+            rstOutput += "**" + chunk + "**"
+        elif tag == "I":
+            rstOutput += "*" + chunk + "*"
+        elif tag == "C" or tag == "F":
+            rstOutput += "``" + chunk + "``"
+        elif tag == "P":
+            rstOutput += "::\n\n" + chunk
+        elif tag == "T":
+            rstOutput += chunk + "\n" + ("-" * len(chunk))
+        elif tag == "H":
+            rstOutput += chunk + "\n" + ("~" * len(chunk))
+        elif tag == "L":
+            if re.match(r"^\S+\([1-8][a-z]*\)$", chunk):  # UNIX man page
+                rstOutput += "*" + chunk + "*"
             else:
-                txt = chunk
+                match = re.match(r"(.*?)/(.*)", chunk)
+                if match:
+                    link = match.group(2)
+                else:
+                    link = chunk
+                rstOutput += "`" + link.capitalize() + "`_"
+        elif tag == "S":
+            rstOutput += chunk
         else:
-            txt = ""
+            raise BaseException("tag error:" + tag)
 
-        if indent:
-            txt = "  " + txt
-
-        global rstOutput
+    if prev_end < len(astr):
+        txt = astr[prev_end:]
+        helpTexts[sectIndex] += "('''%s''', '%s'), " % (Escape(txt), "indent" if indent else "")
         rstOutput += txt
 
     if not bullet:
@@ -192,12 +207,12 @@ while True:
                 sectIndex += 1
 
             # skip the last chapters
-            if title == "AUTHOR":
+            if (title == "AUTHOR") or (title == "SEE ALSO"):
                 break
 
             # initialize new chapter
             started = True
-            title = title[0].upper() + title[1:].lower()
+            title = title.capitalize()
             subIndex = 0
 
             # build array of chapter names for access from help buttons in popups

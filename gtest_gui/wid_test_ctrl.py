@@ -348,7 +348,7 @@ class Test_control_widget(object):
         # Update counters in status frame
         totals = test_db.campaign_stats
         self.wid_stats_pass_cnt.configure(text="%d" % totals[0])
-        self.wid_stats_fail_cnt.configure(text="%d" % totals[1])
+        self.wid_stats_fail_cnt.configure(text="%d" % (totals[1] + totals[6]))
         self.wid_stats_exec_cnt.configure(text="%d" % totals[3])
 
         # Update progress bar

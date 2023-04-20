@@ -65,3 +65,6 @@ dlg_job_list:
 - use mclistbox (multi-column listbox, available in Tcl/Tk)
 - allow sending KILL signal to job
 - show %CPU read via /proc (Linux only)
+
+dlg_help:
+- text search

@@ -1,7 +1,11 @@
 # ---------------------------------------------------------------------------
 # gtest_gui manual page (in Perl's "plain old documentation" format)
 #
-# UNIX man page and HTML formats can be derived via pod2man and pod2html.
+# HTML and other formats can be derived, e.g. via pod2html and pod2rst.
+# Use the following command to generate the trowser.1 UNIX manual page:
+#
+# pod2man -section 1 -center "Trace Browser" -release x.y trowser.pod \
+#   > trowser.1
 #
 # ------------------------------------------------------------------------ #
 # Copyright (C) 2023 Th. Zoerner
@@ -60,8 +64,9 @@ Trowser in principle is just a text browser with syntax highlighting and search,
 but its search capabilities are designed especially to facilitate analysis of
 complex debug logs, essentially by allowing to build a condensed (filtered) view
 of the trace file in the search result window via incremental searches and
-manual manipulations. But if not needed, GtestGui can also be configured to use
-any other GUI application for opening trace snippets.
+manual manipulations. By default, GtestGui is configured to user I<trowser.py>,
+but there is also a more modern-looking Qt5 variant. GtestGui can also be
+configured to use any other GUI application for opening trace snippets.
 
 =head1 TEST CONTROL
 
@@ -162,38 +167,94 @@ binding.
 
 =head2 Test control options
 
-The repetition, shuffle, "run disabled", "break on failure" and "break on
-exception" directly translate to the respective gtest command line options.
+=over 4
 
-The fail limit is not mapped to the respective gtest option, as it would not
-work when using multiple CPUs. Instead the handling is implemented in result
-handling in GtestGui, namely by stopping all tests after the configured limit of
-test case failures is reached. Due to concurrency and delays in reading the
-trace output streams, the limit may be exceeded.
+=item I<Repetitions>:
 
-When option I<Clean traces of passed tests> is enabled, trace output of passed
-test case runs is not written to the trace output file. If all test cases of a
-test campaign passed, the complete output file is removed automatically when
-tests are stopped. This feature is intended for long test campaigns to reduce
-consumption of disk space.
+If a value larger than 1 is entered here, it is passed via the
+"C<--gtest_repeat=NNN>" option on the executable's command line. This causes
+each test case to be repeated the given number of times.
 
-Equivalently, option I<Clean core files> will automatically delete core files in
-pattern "C<core.PID>" found after a test case crashed. (See chapter
-L<"RESULT LOG"> for more details on core files.) Note GtestGui can only clean
-core files from processes it controls directly. It is not able to clean core
-dumps created by death tests that are child processes of the main test process.
+=item I<CPUs>:
 
-The I<CPUs> option is described in the preceding option. When more than one CPU
-is configured, the I<Ignore filter> option can be used to schedule different
-sets of test cases on different CPUs: The first set of CPUs runs only test cases
-matching the test case filter. The second set of CPUs runs all test cases. The
-size of the second set is determined by the number configured for
-I<Ignore filter>. This feature is useful when running a long test campaign after
-modifying a test case as it allows effectively increasing the repetition count
-of the modified test case. It is also useful when running test cases that aim to
-find race conditions, as the additional concurrent execution of all test cases
-serves to generate a background load that increases randomness of thread
-scheduling.
+This option is described in L<"TEST CONTROL/Test campaign control buttons">.
+
+=item I<Ignore filter>:
+
+When more than one CPU is configured, this option can be used for scheduling
+different sets of test cases on different CPUs: The first set of CPUs runs only
+test cases matching the test case filter. The second set of CPUs runs all test
+cases. The size of the second set is determined by the given number.
+
+This feature is useful when running a long test campaign after modifying a test
+case as it allows effectively increasing the repetition count of the modified
+test case. It is also useful when running test cases that aim to find race
+conditions, as the additional concurrent execution of all test cases serves to
+generate a background load that increases randomness of thread scheduling.
+
+=item I<Fail limit>:
+
+When set to a non-zero value, the test campaign is stopped after the given
+number of failed test cases was reached. Note for the limit the total of
+failures is counted across all test cases and all CPUs.
+
+This option is B<not> using the respective Gtest option, as that option would
+not work as expected when using multiple CPUs (as it would work independently
+for tests on each CPU). Instead, the handling is implemented in result handling
+in GtestGui. As there is a delay resulting from buffering in the pipeline
+between test application and GtestGui, more test cases may have failed in the
+mean time, so that the actual number of failures after the actual end of all
+test processes may be higher than the limit.
+
+=item I<Clean traces of passed tests>:
+
+When enabled, trace output of passed test case runs is not written to the trace
+output file. If all test cases of a test campaign passed, the complete output
+file is removed automatically when tests are stopped. This feature is intended
+for long test campaigns to reduce consumption of disk space.
+
+=item I<Clean core files>:
+
+When enabled, core files with pattern "C<core.PID>" are deleted automatically
+after a test case crashed. (See chapter L<"RESULT LOG"> for more details on
+core files.) Note GtestGui can only clean core files from processes it controls
+directly. It is not able to clean core dumps created by death tests that are
+child processes of the main test process.
+
+=item I<Shuffle execution order>:
+
+When enabled, "C<--gtest_shuffle>" option is set via the executable's command
+line. This option randomizes the order of test execution.
+
+=item I<Run disabled tests>:
+
+When enabled, "C<--gtest_also_run_disabled_tests>" option is set via the
+executable's command line. The option enables execution of test suites and
+individual test cases whose name starts with "C<DISABLED>".
+
+The option also affects test case filter and test case selection menus within
+GtestGui: When the option is not set, entering filter pattern "C<*DISABLED*>"
+would raise a warning that it matches no test cases (even if there are some with
+that name). The drop-down menu below the entry field would no show such names.
+
+=item I<Break on failure>:
+
+When enabled, "C<--gtest_break_on_failure>" option is set via the executable's
+command line. This will cause SIGTRAP to be sent to the test process upon the
+first failure. As no debugger is attached, this will cause the process to crash.
+
+When core dumps are enabled in the kernel, the core will be save by GtestGui and
+can be analyzed via the I<Extract stack trace from core dump> command in the
+result log's context menu. When core dumps are not enabled, this option is
+probably not very useful.
+
+=item I<Break on exception>:
+
+When enabled, "C<--gtest_catch_exceptions=0>" option is set via the executable's
+command line. This will disable catching of exceptions by the Gtest framework,
+which means the exception causes the process to terminate.
+
+=item I<Valgrind> and I<Valgrind - 2nd option set>:
 
 The two valgrind options serve to run each execution of the test executable
 under valgrind using the configured command line. Notably, valgrind checks are
@@ -207,6 +268,8 @@ position of the error report in the output stream. Note however that the
 position may not exactly reflect the timing of occurrence due to possible
 buffering in output streams within the test executable.) See L<"RESULT LOG"> and
 L<"CONFIGURATION"> for more details.
+
+=back
 
 
 =head1 RESULT LOG
@@ -352,6 +415,11 @@ application file name, or its full path if it is not found via C<PATH>
 configured in environment. The path of the trace file to be displayed will be
 appended to the given command line.
 
+Note for the Windows platform: When using the default of C<trowser.py>, you may
+need to insert the Python interpreter in front of "trowser.py", depending on
+your Python installation. In that case you need to add the full path to where
+C<trowser.py> is installed.
+
 Enable option I<Browser supports reading from STDIN> if the selected trace
 browser supports reading text from "standard input" via a pipeline. In this case
 filename "C<->" is passed on the command line instead of a file name.  The
@@ -444,29 +512,31 @@ design choices.
 
 =item Concurrent scheduling
 
-Gtest's "sharding feature is used for concurrent scheduling of test cases via
-the I<CPUs> option. Unfortunately, Gtest only supports static case test
-partitioning, which means for example when using two CPUs, the set of test cases
-is split in two parts, of which the first is executed in one test process and
-the second in the second process.
+Concurrent scheduling requested via option I<CPUs> is based on the "sharding"
+feature provided by Gtest framework. Unfortunately, Gtest only supports static
+case test partitioning, which means for example when using two CPUs, the set of
+test cases is split in two parts, of which the first is executed in one test
+process and the second in the second process.
 
 One problem arises when the number of test cases is smaller than the number of
 CPUs. This typically occurs, when trying to run a single test case many times.
 Sharding would then only use a single CPU, as it does not consider repetitions in
-its sharding algorithm. GtestGui works around that by calculating if it is more
-efficient to partition test cases by repetition than by sharing, or if a
-combination of both is even better. In the above example, it would not use
-sharding, but instead run half the number of repetitions in one process, and the
-second half in the second. For more complex configurations such as 10
-repetitions of 9 test cases on 8 CPUs, a combination will be used.
+its "sharding" algorithm. GtestGui works around that by calculating if it is more
+efficient to partition test cases by repetition than by sharding, or if a
+combination of both is even better. In the mentioned example, it would not use
+sharding, but instead run half the number of repetitions in one process, and
+the second half in the second. For more complex configurations such as 10
+repetitions of 9 test cases on 8 CPUs, a combination of both methods will be
+used.
 
 A second problem that GtestGui cannot work around occurs when test cases have
-non-uniform execution time. As the sharing algorithm uses static partitioning
-solely based on the number of test cases, differences in execution times are not
-considered. For example, when test case A takes 1 millisecond and test case B 1
-second, Gtest will still schedule all runs of A in the first process and all
-runs of B in the second when using two CPUs. Thus, the first process will sit
-idle for 99.9% of the execution time, even when running both 100 times.
+non-uniform execution time. As the "sharding" algorithm uses static
+partitioning solely based on the number of test cases per process, differences
+in execution times are not considered. For example, when two tests are
+scheduled for 100 times and test case A takes 1 second, but test case B only 1
+millisecond, Gtest will still schedule all runs of A in the first process and
+all runs of B in the second process. Thus, the second process will sit idle for
+99.9% of the total test execution time.
 
 =item Test case crashes
 

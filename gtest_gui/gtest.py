@@ -397,9 +397,12 @@ def gtest_control_get_trace_file_name(exe_ts, idx):
     return os.path.join(gtest_control_get_trace_dir(exe_ts), "trace.%d" % idx)
 
 
-def gtest_control_get_temp_name_for_trace(file_name, file_off):
-    trace_dir, trace_name = os.path.split(file_name)
-    return "%s.%s.%d" % (os.path.basename(trace_dir), trace_name, file_off)
+def gtest_control_get_temp_name_for_trace(file_name, file_off, is_extern_import):
+    if is_extern_import:
+        return "imported!" + file_name.replace(os.path.sep, "!") + "." + str(file_off)
+    else:
+        trace_path, trace_name = os.path.split(file_name)
+        return "%s.%s.%d" % (os.path.basename(trace_path), trace_name, file_off)
 
 
 def gtest_control_get_core_file_name(trace_name, is_valgrind):
@@ -777,11 +780,11 @@ class Gtest_job(object):
                     self.__process_trace(b"unknown", 3, 0, core_file)
             elif valgrind_error:
                 # this is a special case as we don't know which test case caused the error
-                self.__process_trace(b"valgrind", 4, 0, None)
+                self.__process_trace(b"", 4, 0, None)
             elif not self.__failed_cnt:
                 self.__snippet_data += self.__buf_data
                 self.__snippet_data += (b"\n[----------] Exit code: %d\n" % retval)
-                self.__process_trace(b"error", 5, 0, None)
+                self.__process_trace(b"", 5, 0, None)
 
         else:
             self.__trace_to_file(self.__buf_data)
@@ -937,8 +940,10 @@ def extract_trace(file_name, file_offs, length):
     return None
 
 
-def extract_trace_to_temp_file(tmp_dir, trace_name, file_offs, length):
-    tmp_name = os.path.join(tmp_dir, gtest_control_get_temp_name_for_trace(trace_name, file_offs))
+def extract_trace_to_temp_file(tmp_dir, trace_name, file_offs, length, is_extern_import):
+    tmp_name = os.path.join(
+                    tmp_dir,
+                    gtest_control_get_temp_name_for_trace(trace_name, file_offs, is_extern_import))
     if not os.path.exists(tmp_name):
         try:
             with open(trace_name, "rb") as fread:
