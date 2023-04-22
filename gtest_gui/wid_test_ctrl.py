@@ -787,7 +787,7 @@ class Test_control_widget(object):
             resume_rep_cnt != 0,
             self.var_opt_run_disabled.get(),
             self.var_opt_shuffle.get(),
-            valgrind_cmd.split(" ") if valgrind_cmd else None,
+            valgrind_cmd,
             self.var_opt_fail_max.get(),
             clean_trace,
             self.var_opt_clean_core.get(),

@@ -202,11 +202,12 @@ When unchecked, tool-tips like this one are globally disabled.
 'config.trowser':
 '''
 Defines which application to use for opening trace snippets and complete trace
-files. The file name will be appended to the given command line. The PATH
-configured in environment will be used to search for the comment, so that
-normally the full path need not be specified. (Note for the Windows platform,
-you may need to add the Python interpreter in front of "trowser.py", depending
-on your Python installation.)
+files. The file name will be appended to the given command line. The
+application path or parameters must not contain spaces. The PATH configured in
+environment will be used to search for the comment, so that normally the full
+path need not be specified. (Note for the Windows platform, you may need to add
+the Python interpreter in front of "trowser.py", depending on your Python
+installation.)
 ''',
 
 'config.trowser_stdin':
@@ -275,7 +276,8 @@ files for security reasons.
 '''
 Command line to use for running test executables when the "Valgrind" option in
 the main window is enabled. The executable name and gtest options will be
-appended to the given command line.
+appended to the given command line. (Note command line parameters must not
+contain spaces, as space is assumed to be separator character.)
 ''',
 
 'config.valgrind2':

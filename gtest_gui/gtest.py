@@ -56,7 +56,6 @@ class Gtest_control(object):
               run_disabled, shuffle, valgrind_cmd, maxfail, clean_trace, clean_core,
               break_on_fail, break_on_except):
         self.__max_fail = maxfail
-        self.__is_valgrind = bool(valgrind_cmd)
         self.__exe_ts = test_db.test_exe_ts
 
         trace_dir_path = gtest_control_get_trace_dir(self.__exe_ts)
@@ -566,7 +565,7 @@ class Gtest_job(object):
 
         cmd = []
         if valgrind_cmd:
-            cmd.extend(valgrind_cmd)
+            cmd.extend(re.split(r"\s+", valgrind_cmd))
         if valgrind_cmd and config_db.options["valgrind_exit"]:
             self.__valgrind_exit = 125
             cmd.append("--error-exitcode=125")

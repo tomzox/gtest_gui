@@ -47,8 +47,8 @@ def __get_temp_dir_name():
 
 
 def show_trace_snippet(tk_top, file_name, file_off, length, is_extern_import):
-    browser_exe = config_db.options["browser"]
-    if not browser_exe:
+    browser_cmd = config_db.options["browser"]
+    if not browser_cmd:
         wid_status_line.show_message("error", "No trace browser app is configured")
         return
 
@@ -60,46 +60,26 @@ def show_trace_snippet(tk_top, file_name, file_off, length, is_extern_import):
         elif txt == "":
             wid_status_line.show_message("error", "Trace empty for this result")
             return
-        cmd = browser_exe + " -"
+        file_name = "-"
+        shared_file = None
 
     else:
-        tmp_name = gtest.extract_trace_to_temp_file(__get_temp_dir_name(),
-                                                    file_name, file_off, length, is_extern_import)
-        if not tmp_name:
+        file_name = gtest.extract_trace_to_temp_file(__get_temp_dir_name(),
+                                                     file_name, file_off, length, is_extern_import)
+        if not file_name:
             return
-        cmd = browser_exe + " " + tmp_name
+        shared_file = file_name
         txt = ""
 
-    try:
-        proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, text=True, shell=True)
-        threading.Thread(target=lambda:__thread_browser(proc, txt), daemon=True).start()
-    except Exception as e:
-        tk_messagebox.showerror(parent=tk_top, message="Failed to start external trace browser: " + str(e))
+    Proc_monitor.create(re.split(r"\s+", browser_cmd) + [file_name], txt, shared_file)
 
 
 def show_trace(tk_top, file_name):
-    browser_exe = config_db.options["browser"]
-    if browser_exe:
-        try:
-            proc = subprocess.Popen([browser_exe, file_name])
-            threading.Thread(target=lambda:__thread_browser(proc, None),
-                             daemon=True).start()
-        except Exception as e:
-            tk_messagebox.showerror(parent=tk_top,
-                                    message="Failed to start external trace browser: " + str(e))
+    browser_cmd = config_db.options["browser"]
+    if browser_cmd:
+        Proc_monitor.create(re.split(r"\s+", browser_cmd) + [file_name], "", None)
     else:
         wid_status_line.show_message("error", "No trace browser app is configured")
-
-
-def __thread_browser(proc, txt):
-    if txt:
-        proc.communicate(input=txt)
-    else:
-        proc.wait()
-
-    if proc.returncode != 0:
-        # Report errors to STDERR as Tk is inaccessible from other threads
-        print("External trace browser exited with code %d" % proc.returncode, file=sys.stderr)
 
 
 def show_stack_trace(tk_top, tc_name, exe_name, exe_ts, core_name):
@@ -273,3 +253,102 @@ class Log_browser(object):
         if self.proc:
             self.proc.terminate()
             self.proc = None
+
+
+# ----------------------------------------------------------------------------
+#
+# Helper class for monitoring external application
+# - catching error messages
+# - cleaning up temporary input file after exit
+
+class Proc_monitor(object):
+    procs = []
+    shared_files = {}
+    tid = None
+
+    @staticmethod
+    def create(cmd, txt, file_name):
+        try:
+            proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+            if file_name:
+                Proc_monitor.alloc_shared_file(file_name)
+
+            Proc_monitor.procs.append(Proc_monitor(proc, txt, file_name))
+
+            if Proc_monitor.tid is None:
+                Proc_monitor.tid = tk_utils.tk_top.after(1000, Proc_monitor.proc_monitor)
+
+        except Exception as e:
+            tk_messagebox.showerror(parent=tk_utils.tk_top,
+                                    message="Failed to start external trace browser: " + str(e))
+
+
+    @staticmethod
+    def alloc_shared_file(name):
+        if Proc_monitor.shared_files.get(name, None):
+            Proc_monitor.shared_files[name] += 1
+        else:
+            Proc_monitor.shared_files[name] = 1
+
+
+    @staticmethod
+    def release_shared_file(name):
+        reg = Proc_monitor.shared_files.get(name, None)
+        if reg is not None:
+            if reg > 1:
+                Proc_monitor.shared_files[name] -= 1
+            else:
+                del Proc_monitor.shared_files[name]
+                try:
+                    os.unlink(name)
+                except OSError:
+                    pass
+
+
+    @staticmethod
+    def remove(proc):
+        Proc_monitor.procs = [x for x in Proc_monitor.procs if x is not proc]
+        if not Proc_monitor.procs and Proc_monitor.tid:
+            tk_utils.tk_top.after_cancel(Proc_monitor.tid)
+            Proc_monitor.tid = None
+
+
+    @staticmethod
+    def proc_monitor():
+        for proc in Proc_monitor.procs:
+            proc.monitor()
+
+        if Proc_monitor.procs:
+            Proc_monitor.tid = tk_utils.tk_top.after(1000, Proc_monitor.proc_monitor)
+        else:
+            Proc_monitor.tid = None
+
+
+    def __init__(self, proc, txt, file_name):
+        self.file_name = file_name
+        self.done = False
+        self.stderr = None
+        self.proc = proc
+        self.thr = threading.Thread(target=lambda:self.__thread_browser(txt), daemon=True)
+        self.thr.start()
+
+
+    def __thread_browser(self, txt):
+        output = self.proc.communicate(input=txt)
+
+        self.stderr = output[1]
+        self.done = True
+
+
+    def monitor(self):
+        if self.done:
+            if self.proc.returncode != 0:
+                msg = "External trace browser reported error code %d: %s" % \
+                        (self.proc.returncode, self.stderr)
+                tk_messagebox.showerror(parent=tk_utils.tk_top, message=msg)
+            if self.file_name:
+                Proc_monitor.release_shared_file(self.file_name)
+            Proc_monitor.remove(self)
+
+

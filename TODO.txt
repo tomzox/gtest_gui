@@ -36,9 +36,8 @@ wid_test_log:
 - allow adding bookmark / attaching note to result log entries
 
 dlg_browser:
--! trowser command argv: use shell only if contains space or special chars; check if escape needed
-- clean up browser temporary input files
-- errors from trowser subprocess are not visible (trowser)
+- trowser command argv: use shell if cmd contains space or special chars; check if escape needed
+  or add config option
 - export trace files in other archive formats, or uncompressed to directory
 
 dlg_config:

@@ -415,6 +415,9 @@ application file name, or its full path if it is not found via C<PATH>
 configured in environment. The path of the trace file to be displayed will be
 appended to the given command line.
 
+Currently the application path name or parameters cannot contain space
+characters, as these are assumed be be separators.
+
 Note for the Windows platform: When using the default of C<trowser.py>, you may
 need to insert the Python interpreter in front of "trowser.py", depending on
 your Python installation. In that case you need to add the full path to where
@@ -489,6 +492,9 @@ By default, the command will perform check for memory leaks (notably at end of
 all test cases, not for individual test cases in a run of multiple tests) and
 for use of uninitialized memory. The second command line has additional options
 for tracking the origin of uninitialized memory.
+
+Currently the path or parameters cannot contain space characters, as these are
+assumed be be separators.
 
 =item I<Valgrind supports --exit-code>
 
