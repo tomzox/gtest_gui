@@ -1,7 +1,6 @@
 General:
 - code comments
 - test suite at least for filter_expr & gtest parser
-- python package
 
 gtest:
 - import of trace with core: executable not linked & not cleaned upon trace removal

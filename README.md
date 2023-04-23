@@ -60,7 +60,10 @@ complete set of tests and which kind of failures occur.  And it supports final
 quality checking in long-running, high-repetition test campaigns, optionally
 using valgrind or sanitizer builds.
 
-## Prerequisites
+## Installation
+
+GtestGui is available as package "mote-gtest-gui" ("Module tester's Gtest GUI")
+on [PyPi](https://pypi.org/project/mote-gtest-gui/)
 
 Python3 and the Python "tkinter" module are required. (The latter usually is
 part of default Python installation.)

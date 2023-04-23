@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!pythonw
 
 # ------------------------------------------------------------------------ #
 # Copyright (C) 2023 Th. Zoerner
@@ -19,15 +19,13 @@
 
 import os
 
-# Wrapper for use during development: Assume trowser repository is
-# located next to gtest_gui repository.
-
-trowser_path = os.path.join(os.path.dirname(__file__), "..", "trowser")
+# Add directory containing script to path in case trowser.py is at same location
+script_path = os.path.dirname(__file__)
 os_path = os.environ.get("PATH", None)
 if os_path:
-    if not trowser_path in os_path.split(os.pathsep):
-        os.environ["PATH"] = os_path + os.pathsep + trowser_path
+    if not script_path in os_path.split(os.pathsep):
+        os.environ["PATH"] = os_path + os.pathsep + script_path
 else:
-    os.environ["PATH"] = trowser_path
+    os.environ["PATH"] = script_path
 
 import gtest_gui.__main__

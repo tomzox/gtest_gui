@@ -1,0 +1,6 @@
+include gtest_gui/*
+include bin/gtest_gui
+include setup.py
+include LICENSE
+include TODO.txt
+include README.md
