@@ -336,10 +336,10 @@ class Test_control_widget(object):
                 else:
                     return ("%d of %d test case runs\n%d..%d of %d repetitions" %
                             (totals[5], totals[4], min_cnt, max_cnt, rep_cnt))
-            elif len(tc_list) > 1:
-                return "%d of %d test case runs" % (totals[5], totals[4])
-            else:
+            elif rep_cnt > 1:
                 return "%d of %d repetitions" % (min_cnt, rep_cnt)
+            else:
+                return "%d of %d test case runs" % (totals[5], totals[4])
         else:
             return ""
 

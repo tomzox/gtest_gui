@@ -34,7 +34,7 @@ B<gtest_gui> [[-trace] trace_file | executable] ...
 
 =head1 DESCRIPTION
 
-Module-tester's GtestGui is a full-featured graphical user-interface to C++
+B<Module-tester's GtestGui> is a full-featured graphical user-interface to C++
 test applications using the GoogleTest framework.
 
 The tool will work with any application with Gtest command line interface,
@@ -66,7 +66,7 @@ complex debug logs, essentially by allowing to build a condensed (filtered) view
 of the trace file in the search result window via incremental searches and
 manual manipulations. By default, GtestGui is configured to user I<trowser.py>,
 but there is also a more modern-looking Qt5 variant. GtestGui can also be
-configured to use any other GUI application for opening trace snippets.
+configured to use any other GUI application for opening traces.
 
 =head1 TEST CONTROL
 
@@ -76,7 +76,7 @@ preview. This chapter describes the top-most frame with the test controls.
 
 =head2 Test campaign control buttons
 
-Most prominent in the test control frame are the green buttons which directly
+Most prominent in the test control frame are the green buttons, which directly
 control execution of the configured executable file:
 
 =over 4
@@ -116,9 +116,9 @@ button is clicked a second time, a KILL signal is sent.
 Restarts test case execution using the same test case filter setting and
 executable version as previously used, without resetting the test result
 statistics. Other options, such as repetition or CPU count may be modified.
-This operation is useful in particular when a long test run has to be paused
-temporarily as the CPUs are needed otherwise, or for changing options such as
-the number of used CPUs.
+This operation is useful when a long test run has to be paused temporarily as
+the CPUs are needed otherwise, or for changing options such as the number of
+used CPUs.
 
 This command will also use the same version of the test executable as used
 previously if option I<Create copy of executable file> is enabled, see
@@ -127,7 +127,7 @@ the configured path no longer exists, for example due to a failed build.
 
 When resuming, scheduling cannot restart exactly where it was stopped due to
 limitations in gtest. If repetition count is 1, all test cases will be
-rescheduled. For higher repetition count, the the lowest number of remaining
+rescheduled. For higher repetition count, the lowest number of remaining
 repetitions across all selected test cases is rescheduled.
 
 =item I<Repeat>:
@@ -243,16 +243,22 @@ When enabled, "C<--gtest_break_on_failure>" option is set via the executable's
 command line. This will cause SIGTRAP to be sent to the test process upon the
 first failure. As no debugger is attached, this will cause the process to crash.
 
-When core dumps are enabled in the kernel, the core will be save by GtestGui and
-can be analyzed via the I<Extract stack trace from core dump> command in the
-result log's context menu. When core dumps are not enabled, this option is
-probably not very useful.
+When core dumps are enabled in the kernel, the core will be saved by GtestGui
+and can be analyzed via the I<Extract stack trace from core dump> command in
+the result log's context menu. When core dumps are not enabled, this option is
+probably not useful.
 
 =item I<Break on exception>:
 
 When enabled, "C<--gtest_catch_exceptions=0>" option is set via the executable's
 command line. This will disable catching of exceptions by the Gtest framework,
-which means the exception causes the process to terminate.
+which means any exception not caught by the test case itself causes the test
+process to crash due to an unhandled exception.
+
+When core dumps are enabled in the kernel, the core will be saved by GtestGui
+and can be analyzed via the I<Extract stack trace from core dump> command in
+the result log's context menu. When core dumps are not enabled, this option is
+probably not useful.
 
 =item I<Valgrind> and I<Valgrind - 2nd option set>:
 
@@ -416,7 +422,7 @@ configured in environment. The path of the trace file to be displayed will be
 appended to the given command line.
 
 Currently the application path name or parameters cannot contain space
-characters, as these are assumed be be separators.
+characters, as these are assumed to be separators.
 
 Note for the Windows platform: When using the default of C<trowser.py>, you may
 need to insert the Python interpreter in front of "trowser.py", depending on
@@ -494,7 +500,7 @@ for use of uninitialized memory. The second command line has additional options
 for tracking the origin of uninitialized memory.
 
 Currently the path or parameters cannot contain space characters, as these are
-assumed be be separators.
+assumed to be separators.
 
 =item I<Valgrind supports --exit-code>
 

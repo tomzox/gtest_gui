@@ -15,7 +15,7 @@ else:
 
 setup(
     name='mote-gtest-gui',
-    version='0.8.0',
+    version='0.8.1',
     packages=['gtest_gui'],
     scripts=['bin/gtest_gui'],
 

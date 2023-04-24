@@ -1068,5 +1068,10 @@ def gtest_import_result_file(file_name, is_auto):
 
 
 def gtest_automatic_import():
-    for file_name in gtest_control_search_trace_dirs():
-        gtest_import_result_file(file_name, True)
+    try:
+        for file_name in gtest_control_search_trace_dirs():
+            gtest_import_result_file(file_name, True)
+    except OSError as e:
+        tk_messagebox.showerror(parent=tk_utils.tk_top,
+                                message="Error during automatic import of trace files: " + str(e))
+        return

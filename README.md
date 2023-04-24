@@ -63,7 +63,11 @@ using valgrind or sanitizer builds.
 ## Installation
 
 GtestGui is available as package "mote-gtest-gui" ("Module tester's Gtest GUI")
-on [PyPi](https://pypi.org/project/mote-gtest-gui/)
+on [PyPi](https://pypi.org/project/mote-gtest-gui/). It can be installed using
+pip3:
+```console
+   pip3 install mote-gtest-gui
+```
 
 Python3 and the Python "tkinter" module are required. (The latter usually is
 part of default Python installation.)
