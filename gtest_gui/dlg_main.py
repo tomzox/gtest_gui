@@ -339,9 +339,9 @@ class Main_window(object):
         if filename != test_db.test_exe_name:
             self.tk.wm_title("GtestGui: " + os.path.basename(filename))
             gtest.release_exe_file_copy()
-            test_db.update_executable(filename, exe_ts, tc_names)
-
             config_db.update_prev_exe_file_list(filename)
+
+        test_db.update_executable(filename, exe_ts, tc_names)
 
         if prev_exe: # no message during startup
             if prev_exe != filename:
