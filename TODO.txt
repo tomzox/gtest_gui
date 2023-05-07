@@ -4,7 +4,7 @@ General:
 
 gtest:
 - import of trace with core: executable not linked & not cleaned upon trace removal
-- import of trace: executable file & ts is unknown:
+- import of trace: executable file & timestamp is unknown:
   Add "info" file to directory, or encode name in sub-directory path (hash);
   prerequisite: allow only one exe per directory even if timestamp equal
 - handle I/O error in trace writing
@@ -25,6 +25,7 @@ main:
 wid_test_ctrl:
 - enhance popup_test_list for case that there's single test suite
 - option to make tc filter-string case-independent? (problem: gtest compatibility)
+- remote control for campaign start/stop for use in IDE build
 - win32: hide core & valgrind options
 
 wid_test_log:
@@ -45,6 +46,7 @@ dlg_config:
 - add option: Reg.exp. for extracting failure line
   requires to parse all traces after changing expression to update file/line of exception
 - upon window close: ask for saving pending changes
+- win32: move configuration file to proper config tree (instead of using working directory)
 
 filter_expr:
 - use wildcard at front or middle to minimize name length
@@ -60,6 +62,7 @@ dlg_tc_list:
 - entry field for filtering by name
 
 dlg_job_list:
+- keep completed processes during the active campaign to see if done or crashed
 - use mclistbox (multi-column listbox, available in Tcl/Tk)
 - allow sending KILL signal to job
 - show %CPU read via /proc (Linux only)

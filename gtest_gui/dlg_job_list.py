@@ -54,7 +54,7 @@ def create_dialog(tk_top):
 class Job_list_dialog(object):
     def __init__(self, tk_top):
         self.tk = tk_top
-        self.table_header_txt = ("PID", "Traced", "#Results", "Current test case")
+        self.table_header_txt = ("PID", "BgJob", "Traced", "#Results", "Done", "Current test case")
 
         self.__create_dialog_window()
         self.__populate_table()
@@ -85,8 +85,7 @@ class Job_list_dialog(object):
         self.wid_top.bind("<Configure>", lambda e: self.__handle_window_resize(e.widget))
         self.wid_top.bind("<Destroy>", lambda e: self.__destroy_window())
 
-        self.wid_header.tag_configure("head", font=tk_utils.font_content_bold,
-                                      spacing1=2, spacing3=5, lmargin1=5)
+        self.wid_header.tag_configure("head", font=tk_utils.font_content_bold, lmargin1=5)
         self.wid_table.tag_configure("body", lmargin1=5)
         self.wid_table.tag_configure("bold", font=tk_utils.font_content_bold)
 
@@ -141,21 +140,27 @@ class Job_list_dialog(object):
             tab_widths[0] = max_width
 
         max_width = tk_utils.font_content.measure("99999999") + 2*char_w
-        if max_width > tab_widths[1]:
-            tab_widths[1] = max_width
+        if max_width > tab_widths[2]:
+            tab_widths[2] = max_width
+
+        max_width = tk_utils.font_content.measure("100%") + 2*char_w
+        if max_width > tab_widths[4]:
+            tab_widths[4] = max_width
 
         max_width = max([tk_utils.font_content.measure(x)
                             for x in test_db.test_case_names]) + 2*char_w
-        if max_width > tab_widths[3]:
-            tab_widths[3] = max_width
+        if max_width > tab_widths[5]:
+            tab_widths[5] = max_width
 
         off = char_w + tab_widths[0]
-        tabs = [off + tab_widths[1]/2, "center",
-                off + tab_widths[1] + tab_widths[2]/2, "center",
-                off + tab_widths[1] + tab_widths[2] + char_w, "left"]
+        tabs = []
+        for width in tab_widths[1:5]:
+            tabs.extend([off + width/2, "center"])
+            off += width
+        tabs.extend([off + char_w, "left"])
 
         self.wid_header.tag_configure("head", font=tk_utils.font_content_bold, tabs=tabs,
-                                      spacing1=2, spacing3=5, lmargin1=5)
+                                      lmargin1=5)
         self.wid_table.tag_configure("body", tabs=tabs, lmargin1=5)
 
         # Convert pixel width to a character count (assuming "0" has average char width)
@@ -174,7 +179,10 @@ class Job_list_dialog(object):
 
 
     def __format_table_row(self, stats):
-        msg = "%d\t%d\t%d\t%s\n" % (stats[0], stats[2], stats[3], stats[4])
+        perc_done = (100 * stats[4]) // stats[5] if stats[5] else 100
+        is_bg_job = "yes" if stats[2] else "no"
+        msg = ("%d\t%s\t%d\t%d\t%d%%\t%s\n" %
+                (stats[0], is_bg_job, stats[3], stats[4], perc_done, stats[6]))
         return [msg, "body"]
 
 
@@ -184,8 +192,8 @@ class Job_list_dialog(object):
 
         self.job_stats = gtest.gtest_ctrl.get_job_stats()
         if self.job_stats:
-            for idx in range(len(self.job_stats)):
-                msg = self.__format_table_row(self.job_stats[idx])
+            for stat in self.job_stats:
+                msg = self.__format_table_row(stat)
                 self.wid_table.insert("end", *msg)
         else:
             self.wid_table.insert("end", "\nCurrently, no jobs are running\n")

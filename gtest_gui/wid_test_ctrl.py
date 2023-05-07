@@ -331,15 +331,34 @@ class Test_control_widget(object):
 
             if len(tc_list) > 1 and (rep_cnt > 1):
                 if max_cnt < min_cnt + 2:
-                    return ("%d of %d test case runs\n%d of %d repetitions" %
+                    txt = ("%d of %d test case runs\n%d of %d repetitions" %
                             (totals[5], totals[4], min_cnt, rep_cnt))
                 else:
-                    return ("%d of %d test case runs\n%d..%d of %d repetitions" %
+                    txt = ("%d of %d test case runs\n%d..%d of %d repetitions" %
                             (totals[5], totals[4], min_cnt, max_cnt, rep_cnt))
             elif rep_cnt > 1:
-                return "%d of %d repetitions" % (min_cnt, rep_cnt)
+                txt = "%d of %d repetitions" % (min_cnt, rep_cnt)
             else:
-                return "%d of %d test case runs" % (totals[5], totals[4])
+                txt = "%d of %d test case runs" % (totals[5], totals[4])
+
+            # get stats, but ignore background jobs
+            job_stats = [x for x in gtest.gtest_ctrl.get_job_stats() if not x[2]]
+            if job_stats:
+                min_job_done = min([x[4] / x[5] if x[5] else 100 for x in job_stats])
+                if min_job_done:
+                    time_delta = time.time() - totals[7]
+                    time_remain = time_delta / min_job_done - time_delta
+
+                    if time_remain < 2*60:
+                        txt += "\n%d seconds remaining" % time_remain
+                    elif time_remain < 90*60:
+                        txt += "\n%.1f minutes remaining" % (time_remain / 60)
+                    elif time_remain < 24*60*60:
+                        txt += "\n%.1f hours remaining" % (time_remain / (60*60))
+                    else:
+                        txt += "\n%.1f days remaining" % (time_remain / (24*60*60))
+
+            return txt
         else:
             return ""
 

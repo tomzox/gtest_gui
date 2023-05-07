@@ -51,7 +51,8 @@ test_case_stats = {}
 # [4] expected count
 # [5] completed count, not including results from background jobs
 # [6] meta error count (i.e. valgrind)
-campaign_stats = [0, 0, 0, 0, 0, 0, 0]
+# [7] campaign start timestamp
+campaign_stats = [0, 0, 0, 0, 0, 0, 0, 0]
 
 # key: tc_name
 # value: exe_ts of the result for which repetition was requested
@@ -150,7 +151,7 @@ def reset_run_stats(exp_result_cnt, is_resume):
     global campaign_stats, test_case_stats
 
     if not is_resume:
-        campaign_stats = [0, 0, 0, 0, exp_result_cnt, 0, 0]
+        campaign_stats = [0, 0, 0, 0, exp_result_cnt, 0, 0, 0]
         for stat in test_case_stats.values():
             stat[0] = 0
             stat[1] = 0
@@ -165,7 +166,10 @@ def reset_run_stats(exp_result_cnt, is_resume):
         Test_db_slots.campaign_stats_reset()
 
 
-def set_job_status(job_count):
+def set_job_status(job_count, start_time=0):
     campaign_stats[3] = job_count
+    if start_time:
+        campaign_stats[7] = start_time
+
     if Test_db_slots.campaign_stats_update:
         Test_db_slots.campaign_stats_update()

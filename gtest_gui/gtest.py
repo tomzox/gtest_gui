@@ -92,12 +92,16 @@ class Gtest_control(object):
         for idx in range(job_cnt):
             if idx >= job_cnt - job_runall_cnt:
                 filter_str = ""
+            shard_tc_cnt = get_tc_count_per_shard(len(tc_list), shard_reps[part_idx],
+                                                  shard_parts[part_idx], shard_idx)
+
             try:
                 self.__jobs.append(Gtest_job(self, exe_name, self.__exe_ts,
                                              gtest_control_get_trace_file_name(self.__exe_ts, trace_idx),
                                              filter_str, run_disabled, shuffle, valgrind_cmd,
                                              clean_trace, clean_core, break_on_fail, break_on_except,
                                              shard_reps[part_idx], shard_parts[part_idx], shard_idx,
+                                             shard_tc_cnt,
                                              idx >= job_cnt - job_runall_cnt,
                                              self.__result_queue))
             except OSError as e:
@@ -120,7 +124,7 @@ class Gtest_control(object):
         self.__thr_inst.start()
 
         test_db.reset_run_stats(len(tc_list) * rep_cnt, is_resume)
-        test_db.set_job_status(len(self.__jobs))
+        test_db.set_job_status(len(self.__jobs), time.time())
 
 
     def __thread_main(self):
@@ -346,6 +350,12 @@ def calc_sharding_partitioning(tc_cnt, rep_cnt, job_cnt):
         return ([job_cnt], [rep_cnt])
 
 
+def get_tc_count_per_shard(tc_cnt, rep_cnt, shard_size, shard_idx):
+    div = tc_cnt // shard_size
+    rem = tc_cnt % shard_size
+    return rep_cnt * (div if shard_idx >= rem else div + 1)
+
+
 def gtest_control_first_free_trace_file_idx(exe_ts):
     free_idx = 0
     for entry in os.scandir(gtest_control_get_trace_dir(exe_ts)):
@@ -541,7 +551,8 @@ class Gtest_job(object):
     def __init__(self, parent, exe_name, exe_ts, out_file_name,
                  filter_str, run_disabled, shuffle, valgrind_cmd,
                  clean_trace, clean_core, break_on_fail, break_on_except,
-                 rep_cnt, shard_cnt, shard_idx, is_bg_job, result_queue):
+                 rep_cnt, shard_cnt, shard_idx, expexted_result_cnt,
+                 is_bg_job, result_queue):
         self.__parent = parent
         self.__exe_name = test_db.test_exe_name
         self.__exe_ts = exe_ts
@@ -559,6 +570,7 @@ class Gtest_job(object):
         self.__clean_trace_file = clean_trace
         self.__sum_input_trace = 0
         self.__failed_cnt = 0
+        self.__expected_result_cnt = expexted_result_cnt
         self.__result_cnt = 0
         self.__terminated = False
         self.log = ""
@@ -658,8 +670,10 @@ class Gtest_job(object):
     def get_stats(self):
         return [self.__proc.pid if self.__proc else 0,
                 self.__out_file_name,
+                self.__is_bg_job,
                 self.__sum_input_trace,
                 self.__result_cnt,
+                self.__expected_result_cnt,
                 self.__snippet_name.decode(errors="backslashreplace")]
 
 
