@@ -5,16 +5,20 @@ helpIndex = {}
 helpIndex['Description'] = 0
 helpIndex['Test control'] = 1
 helpIndex['Result log'] = 2
-helpIndex['Configuration'] = 3
-helpIndex['Caveats'] = 4
-helpIndex['Files'] = 5
+helpIndex['Test case list dialog'] = 3
+helpIndex['Job list dialog'] = 4
+helpIndex['Configuration'] = 5
+helpIndex['Caveats'] = 6
+helpIndex['Files'] = 7
 
 helpSections = {}
-helpSections[(1,1)] = '''Test campaign control buttons'''
-helpSections[(1,2)] = '''Test case filter'''
-helpSections[(1,3)] = '''Test control options'''
-helpSections[(3,1)] = '''User-interface options'''
-helpSections[(3,2)] = '''Test management options'''
+helpSections[(1,1)] = '''Executable selection'''
+helpSections[(1,2)] = '''Test campaign control buttons'''
+helpSections[(1,3)] = '''Test case filter'''
+helpSections[(1,4)] = '''Test control options'''
+helpSections[(1,5)] = '''Status and progress monitoring'''
+helpSections[(5,1)] = '''User-interface options'''
+helpSections[(5,2)] = '''Test management options'''
 
 helpTexts = {}
 helpTexts[0] = (('''Description''', 'title1'), ('''
@@ -26,13 +30,19 @@ helpTexts[0] = (('''Description''', 'title1'), ('''
 
 helpTexts[1] = (('''Test control''', 'title1'), ('''
 ''', ''), ('''The application main window consists of a menu bar, a frame containing test controls, a frame containing the test result log, and a text frame for trace preview. This chapter describes the top-most frame with the test controls.
+''', ''), ('''Executable selection''', 'title2'), ('''
+''', ''), ('''Before tests can be started or a test filter be defined, a target executable has to be selected. If the executable file was not already specified on the command line, then this is done via ''', ''), ('''Select executable file...''', 'underlined'), (''' in the ''', ''), ('''Control''', 'underlined'), (''' menu. Either select a file via the file selector dialog, or choose one from the list of previously used executables. (Note when hovering the mouse over enries in this list, the full path and timestamp of the file is displayed as tool-tip. The entry is grayed out if the file no longer exists.)
+''', ''), ('''Upon selecting an executable file, the test case list is read automatocally by running it with the "''', ''), ('''--gtest_list_tests''', 'fixed'), ('''" command line option. If that fails with an error, or if the list is empty, executable selection is aborted.
+''', ''), ('''Whenever starting a new test campaign, GtestGui will automatically check if a new executable version is available by checking the file timestamp. If a change is detected, the test case list is read again. The ''', ''), ('''Refresh test case list''', 'underlined'), (''' command in the menu allows performing the same steps independently. That command is useful if you want to specify newly added test case names in the test case filter string before starting a new test campaign (maybe to only run the new test cases.)
+''', ''), ('''Results of the previous executable are kept in the result log window, but the log entries are updated to include the executable name. Repeating test cases of other executables via the ''', ''), ('''Repeat''', 'underlined'), (''' button is not possible; You have to manually switch back to the respective executable to allow that.
+''', ''), ('''The executable cannot be "refreshed" or switched while a test campaign is running.
 ''', ''), ('''Test campaign control buttons''', 'title2'), ('''
-''', ''), ('''Most prominent in the test control frame are the green buttons, which directly control execution of the configured executable file:
+''', ''), ('''Most prominent in the test control frame are the green buttons, which directly control execution of the configured executable file. The same commands are also in the "Control" menu:
 ''', ''), ('''Run''', 'underlined'), (''':
 ''', ''), ('''Starts the text executable in a separate process, with its output redirected into a pipe which is read by GtestGui for progress monitoring. The output is also saved into a file.
-''', 'indent'), ('''Note when the timestamp of the executable file on disk has changed, GtestGui automatically reads the test case list to check for changes. An error will be reported if the current test case filter contains pattern that no longer match any test case. Note after adding a new test case, use the ''', 'indent'), ('''Refresh test case list''', ('underlined', 'indent')), (''' command in the ''', 'indent'), ('''Control''', ('underlined', 'indent')), (''' menu to read the test case list, for allowing to use the new test case name in a filter pattern.
+''', 'indent'), ('''Note when the timestamp of the executable file on disk has changed, GtestGui automatically reads the test case list to check for changes. An error will be reported if the current test case filter contains pattern that no longer match any test case. If the timestamp has not changed, the age of the file is shown in a status message below the buttons, to warn you about this in case you forget to build the executable after making changes.
 ''', 'indent'), ('''Multiple processes are started if the ''', 'indent'), ('''CPUs''', ('underlined', 'indent')), (''' value is larger than 1. Most of the time, GtestGui will use gtest's "sharding" feature, which assigns a static sub-set of tests to each process. However, if repetition count is larger than one and the number of configured CPUs is larger than the number of test cases, or if the remainder of division of test cases by CPUs is large, GtestGui may instead or additionally partition by repetitions.
-''', 'indent'), ('''Note when a test process crashes, it is currently not restarted. That is because gtest's static sharding does not allow disabling the instable test case without influencing test case partitioning.
+''', 'indent'), ('''Note when a test process crashes during a campaign, it is currently not restarted. That is because gtest's static sharding does not allow disabling the instable test case without influencing test case partitioning.
 ''', 'indent'), ('''Stop''', 'underlined'), (''':
 ''', ''), ('''Sends a TERM signal to the test processes and waits for them to finish. When termination takes a long time (possibly because the executable is hung) and the button is clicked a second time, a KILL signal is sent.
 ''', 'indent'), ('''Resume''', 'underlined'), (''':
@@ -45,6 +55,7 @@ helpTexts[1] = (('''Test control''', 'title1'), ('''
 ''', ''), ('''The entry field at the top of the test control frame allows specifying a test case filter, so that only a matching sub-set of test cases is run. The filter can be entered manually using the same syntax as the "''', ''), ('''--gtest-filter''', 'fixed'), ('''" command line option: The format of a filter expression is a ":"-separated list of test case names of wildcard patterns (positive patterns), optionally followed by a "-" and another ":"-separated pattern list (negative patterns). A test matches the filter if and only if it matches any of the positive patterns, but none of the negative ones. Wildcard characters are "*" (matching any sub-string) and "?" (matching any single character). As a special case, when no positive pattern is specified, all test cases are considered matching.
 ''', ''), ('''Alternatively, the test case filter can be modified via the drop-down menu below the entry field (which can be opened by the Cursor-Down key or a click on the drop-down button next to the entry field). The menu has entries for selecting and deselecting entries test suites as well as individual test cases. When modifying the filter this way, GtestGui will update the entry field with the shortest filter expression it can find using trailing wild card and negative patterns.
 ''', ''), ('''Yet another alternative for modifying test case filters is the test case list dialog, either via its context menu or the "Return" and "Delete" key bindings. Finally note any modification to the test case filter can be undone using "Control-Z" key binding in the entry field, or redone using "Control-Y" key binding.
+''', ''), ('''After renaming a test case or adding a new test case, use the ''', ''), ('''Refresh test case list''', 'underlined'), (''' command in the ''', ''), ('''Control''', 'underlined'), (''' menu to read the test case list from the executable file. Afterward the new test case names can be used in the filter string.
 ''', ''), ('''Test control options''', 'title2'), ('''
 ''', ''), ('''Repetitions''', 'underlined'), (''':
 ''', ''), ('''If a value larger than 1 is entered here, it is passed via the "''', 'indent'), ('''--gtest_repeat=NNN''', ('fixed', 'indent')), ('''" option on the executable's command line. This causes each test case to be repeated the given number of times.
@@ -73,7 +84,18 @@ helpTexts[1] = (('''Test control''', 'title1'), ('''
 ''', 'indent'), ('''When core dumps are enabled in the kernel, the core will be saved by GtestGui and can be analyzed via the ''', 'indent'), ('''Extract stack trace from core dump''', ('underlined', 'indent')), (''' command in the result log's context menu. When core dumps are not enabled, this option is probably not useful.
 ''', 'indent'), ('''Valgrind''', 'underlined'), (''' and ''', ''), ('''Valgrind - 2nd option set''', 'underlined'), (''':
 ''', ''), ('''The two valgrind options serve to run each execution of the test executable under valgrind using the configured command line. Notably, valgrind checks are performed across the complete lifetime of the test process, thus spanning all test cases or test repetitions. Therefore, if for example a memory leak is reported at the end, it cannot be determined which test case caused it (or it may even be caused by interaction of the test sequence.) Therefore valgrind errors are reported with a special entry in the result log. Some kind of errors such as invalid memory accesses can be mapped to test cases based on the position of the error report in the output stream. Note however that the position may not exactly reflect the timing of occurrence due to possible buffering in output streams within the test executable.) See ''', 'indent'), ('''Result log''', ('href', 'indent')), (''' and ''', 'indent'), ('''Configuration''', ('href', 'indent')), (''' for more details.
-''', 'indent'), )
+''', 'indent'), ('''Status and progress monitoring''', 'title2'), ('''
+''', ''), ('''The lower left part of the test control frame shows the status of the latest test campaign. The left box with label "Status" shows three numbers with the following meaning:
+''', ''), ('''Running''', 'underlined'), (''':
+''', ''), ('''Shows the number of test processes currently executing test cases. (See ''', 'indent'), ('''Caveats''', ('href', 'indent')), (''' for an explanation why this number may be lower than the number of requested "CPUs".)
+''', 'indent'), ('''Passed''', 'underlined'), (''':
+''', ''), ('''Shows the number of test cases that were passed or skipped.
+''', 'indent'), ('''Failed''', 'underlined'), (''':
+''', ''), ('''Shows the number of test cases that failed or crashed. The number also includes a possible additional fail verdict by valgrind at the end of a test process.
+''', 'indent'), ('''The left box with label "Progress" shows the completion ratio in form of a progress bar. The ratio is calculated as the number of received results (i.e. passed, skipped, failed, or crashed) divided by the number of expected results. The number of expected results is the number of test cases selected by the test case filter, multiplied with the repetition count.
+''', ''), ('''In case the ''', ''), ('''Ignore filter''', 'underlined'), (''' option in ''', ''), ('''Test control: Test control options''', 'href'), (''' is set to a non-zero value, completion ratio of the respective test jobs is disregarded for the progress display, as these jobs are terminated automatically once the regular test jobs have completed. Note the "Status" frame however does include results received from these jobs, so that the numbers shown there may exceed the configured repetition count for tests matching the test case filter.
+''', ''), ('''When hovering the mouse over the progress bar, a tool-tip text shows additional details about the progress, namely the ratio of completed test cases and repetitions and estimated remaining run time.
+''', ''), )
 
 helpTexts[2] = (('''Result log''', 'title1'), ('''
 ''', ''), ('''The result log frame is located in the middle of the main window. When started for the first time, the log is usually empty. However, results can also be imported via the command line, for example from a file that contains output from a test executable that was redirected into a file. The result log may also show results from a previous run of GtestGui, if auto-import is enabled in ''', ''), ('''Configuration''', 'href'), ('''.
@@ -94,7 +116,27 @@ helpTexts[2] = (('''Result log''', 'title1'), ('''
 ''', ''), ('''On UNIX platform, the context menu additionally supports extracting a thread overview and stack-trace (backtrace) of each thread from a core dump in case of a crash during execution of a test case. To allow this, ''', ''), ('''/proc/sys/kernel/core_pattern''', 'underlined'), (''' needs to be configured as "''', ''), ('''core.%p''', 'fixed'), ('''", or alternatively as "''', ''), ('''core''', 'fixed'), ('''", when additionally ''', ''), ('''/proc/sys/kernel/core_uses_pid''', 'underlined'), (''' is set to "1". If GtestGui thus finds a file named "core.PID" with PID matching that of the test executable process after a process crashed, it will automatically preserve that core file for analysis by renaming it and moving it into the directory where trace text output files are stored. It will also preserve the executable file version by keeping a hard link to the same executable.
 ''', ''), )
 
-helpTexts[3] = (('''Configuration''', 'title1'), ('''
+helpTexts[3] = (('''Test case list dialog''', 'title1'), ('''
+''', ''), ('''A dialog showing the list of test cases read from the selected executable file can be opened via the control menu.
+''', ''), ('''For each test case, the list shows in the first column if the test case is currently enabled for execution, the test case name, the number of times it has passed and failed in the current campaign and its accumulated execution time.
+''', ''), ('''By default, test cases in the list are in the order as received. The list can be sorted in different ways using the context menu: The list can be sorted alpabetically, by execution or failure count within the current test campaign, or by test case execution duration.
+''', ''), ('''By default, all test cases defined in the executable are listed. You can filter the list via the context menu to show only test cases enabled via test case filter in the main window, or only test cases that failed in the current test campaign, or only test cases whose name or test suite namedoesn't start with "''', ''), ('''DISABLED_''', 'fixed'), ('''".
+''', ''), ('''The "Run" column is updated to reflect changes in the "Test filter" entry field in the main window. Updates occur when you press the "Return" key, or when keyboard focus is moved out of the entry field. When the "Show only tests enabled to run" filter is active in the test case list dialog, the test case sub-set shown in the list is also updated to match the current filter string. This feature can be used for testing the manually entered filter string against the list, as you'll see exactly which test cases it selects.
+''', ''), ('''Inversely, you can use the list for modifying the test case filter in the main window: This can be done via the ''', ''), ('''Add/Remove selected test case''', 'underlined'), (''' and ''', ''), ('''Add/Remove selected test suite''', 'underlined'), (''' commands in the list's context menu. The latter works on all test cases in the test suite of the selected test case. The same can be achive via key bindings: ''', ''), ('''Return''', 'underlined'), (''' adds selected test cases and ''', ''), ('''Del''', 'underlined'), (''' removes selected test cases. Note for selecting multiple lines in the list via keyboard, hold the ''', ''), ('''Shift''', 'underlined'), (''' button while moving the cursor via the Up/Down keys.
+''', ''), ('''Test cases named "''', ''), ('''DISABLED_''', 'fixed'), ('''" can only be enabled via the test case list commands when option ''', ''), ('''Run disabled tests''', 'underlined'), (''' in the main window is checked.
+''', ''), ('''Note while the filter string is empty, all test cases are considered as enabled.  Nevertheless, the context menu will offer adding selected test cases. If you do so, then implictly all test cases except for the one added by the command get disabled.
+''', ''), ('''After making changes to the test case filter via the dialog, the filter string in the main window is updated automatically to reflect the selection. The filter uses wildcards to minimize the filter string length.
+''', ''), )
+
+helpTexts[4] = (('''Job list dialog''', 'title1'), ('''
+''', ''), ('''A dialog window showing the status of test processes in a currently ongoing test campaign can be opened via the ''', ''), ('''Open job list''', 'underlined'), (''' command in the control menu. If no test campaign is active, it will only show a message informing that currently no processes are running.
+''', ''), ('''During an ongoing test campaign, the list shows for each process its ID assigned by the operating system ("PID"), if it is a background job ("BgJob"), the number of bytes of trace output received from it ("Traced"), the number of test case results found in received trace ("Results"), the percentage of completed results from expected results ("Done"), and finally the name of the current test case reported via "''', ''), ('''[ RUN ]''', 'fixed'), ('''" in received trace.
+''', ''), ('''Note a "background job" is one for which the test case filter is ignored as per ''', ''), ('''Ignore filter''', 'underlined'), (''' option in ''', ''), ('''Test control: Test control options''', 'href'), ('''. These jobs are special as they are terminated automatically when the last regular job is completed. For this reason their completion ratio (i.e. "Done" column) is disregarded for progress display in the main window.
+''', ''), ('''The dialog is useful in case you suspect that a test campaign may be hung (for example when a test case ran into a deadlock or busy loop.) You could notice that firstly by the number of results not increasing and if that's the case, by the number of received bytes received as trace output not increasing. (The latter will however not if your test cases generate few or no trace output.)
+''', ''), ('''The context menu allows sending an ''', ''), ('''ABORT''', 'underlined'), (''' signal to the process, which will terminate it and cause a core image to be dumped on UNIX. The test case will be reported as crashed in the result log. This can be used for debugging a hung process: You can find where it was hung by using the ''', ''), ('''Extract stack trace from core dump''', 'underlined'), (''' command in context menu of the result log entry. Alternatively, you could use the PID for attaching a debugger to the live process (e.g. "''', ''), ('''gdb -p PID exe_file''', 'fixed'), ('''").
+''', ''), )
+
+helpTexts[5] = (('''Configuration''', 'title1'), ('''
 ''', ''), ('''User-interface options''', 'title2'), ('''
 ''', ''), ('''A few simple options for the user interface are available directly in the ''', ''), ('''Configure''', 'underlined'), (''' menu:
 ''', ''), ('''Select font for result log''', 'underlined'), (''':
@@ -130,12 +172,12 @@ helpTexts[3] = (('''Configuration''', 'title1'), ('''
 ''', 'indent'), ('''The debugger used for extracting stack traces from core files (POSIX only) is currently not configurable; It is hard-coded to "''', ''), ('''gdb''', 'fixed'), ('''", which should be somewhere in the ''', ''), ('''PATH''', 'fixed'), (''' configured in environment.
 ''', ''), )
 
-helpTexts[4] = (('''Caveats''', 'title1'), ('''
+helpTexts[6] = (('''Caveats''', 'title1'), ('''
 ''', ''), ('''This chapter lists notable limitations that are not easy to overcome due to design choices.
 ''', ''), ('''Concurrent scheduling
-''', ''), ('''Concurrent scheduling requested via option ''', 'indent'), ('''CPUs''', ('underlined', 'indent')), (''' is based on the "sharding" feature provided by Gtest framework. Unfortunately, Gtest only supports static case test partitioning, which means for example when using two CPUs, the set of test cases is split in two parts, of which the first is executed in one test process and the second in the second process.
-''', 'indent'), ('''One problem arises when the number of test cases is smaller than the number of CPUs. This typically occurs, when trying to run a single test case many times. Sharding would then only use a single CPU, as it does not consider repetitions in its "sharding" algorithm. GtestGui works around that by calculating if it is more efficient to partition test cases by repetition than by sharding, or if a combination of both is even better. In the mentioned example, it would not use sharding, but instead run half the number of repetitions in one process, and the second half in the second. For more complex configurations such as 10 repetitions of 9 test cases on 8 CPUs, a combination of both methods will be used.
-''', 'indent'), ('''A second problem that GtestGui cannot work around occurs when test cases have non-uniform execution time. As the "sharding" algorithm uses static partitioning solely based on the number of test cases per process, differences in execution times are not considered. For example, when two tests are scheduled for 100 times and test case A takes 1 second, but test case B only 1 millisecond, Gtest will still schedule all runs of A in the first process and all runs of B in the second process. Thus, the second process will sit idle for 99.9% of the total test execution time.
+''', ''), ('''Concurrent scheduling requested via option ''', 'indent'), ('''CPUs''', ('underlined', 'indent')), (''' is based on the "sharding" feature provided by Gtest framework. Unfortunately, Gtest only supports static case test partitioning, which means for example when using two CPUs, the set of test cases is split in two parts, of which the first is executed in one test process and the second in the other process.
+''', 'indent'), ('''One problem arises when the number of test cases is smaller than the number of requested CPUs. This typically occurs when trying to run a single test case many times.  Sharding would then only use a single CPU, as it does not consider repetitions in its "sharding" algorithm. GtestGui works around that by calculating if it is more efficient to partition test cases by repetition than by sharding, or if a combination of both is even better. In the mentioned example, it would not use sharding, but instead run half the number of repetitions in one process, and the second half in the second. For more complex configurations such as 10 repetitions of 9 test cases on 8 CPUs, a combination of both methods will be used.
+''', 'indent'), ('''A second problem, that GtestGui cannot work around, occurs when test cases have non-uniform execution time. As the "sharding" algorithm uses static partitioning solely based on the number of test cases per process, differences in execution times are not considered. For example, when two tests are scheduled for 100 times and test case A takes 1 second, but test case B only 1 millisecond, Gtest will still schedule all runs of A in the first process and all runs of B in the second process. Thus, the second process will sit idle for 99.9% of the total test execution time.
 ''', 'indent'), ('''Test case crashes
 ''', ''), ('''In a well-behaved test application, failures are normally reported via Gtest macros or exceptions. Thus, the failure is recorded and the next test case is executed. Sometimes however, a test case may have a bug that leads to a crash of the complete process. In this case all following test cases or test case repetitions are no longer executed.
 ''', 'indent'), ('''Currently GtestGui will not attempt to restart tests after a crash, because it expects that the same test case will crash again and thus keep blocking following tests. It is not possible to disable the instable test, as this would interfere with partitioning by Gtest "sharding", i.e. the set of test cases run by that test case would be altered. The only way around is for the use to manually disable the instable test case and then restart the test campaign.
@@ -144,7 +186,7 @@ helpTexts[4] = (('''Caveats''', 'title1'), ('''
 ''', 'indent'), ('''For more minor constraints and ideas for enhancements see file ''', ''), ('''TODO.txt''', 'fixed'), (''', which is part of the package.
 ''', ''), )
 
-helpTexts[5] = (('''Files''', 'title1'), ('''
+helpTexts[7] = (('''Files''', 'title1'), ('''
 ''', ''), ('''$HOME/.config/gtest_gui/gtest_gui.rc''', 'bold'), ('''
 ''', ''), ('''This file stores parameters that are configured via the ''', 'indent'), ('''Configuration''', ('href', 'indent')), (''' dialog. Additional it contains persistent state such as the list of previously loaded executable files and the size and position of resizable dialog windows.
 ''', 'indent'), ('''trace.NNNN/trace.NNNN''', 'bold'), ('''
