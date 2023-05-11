@@ -518,30 +518,30 @@ def __add_passed_section(pass_parts, name, start, end):
 
 
 def __compress_trace_file(name, parts):
-    if sys.platform == "win32":
-        fd = os.open(name, os.O_RDWR | os.O_BINARY)
-    else:
-        fd = os.open(name, os.O_RDWR)
-    size = os.stat(name).st_size
-    off = parts[0][0]
-    for idx in range(len(parts)):
-        if idx + 1 < len(parts):
-            next_start = parts[idx + 1][0]
-        else:
-            next_start = size
-        cur_end = parts[idx][0] + parts[idx][1]
+    try:
+        with open(name, "r+b") as fd:
+            size = os.stat(name).st_size
+            off = parts[0][0]
+            for idx in range(len(parts)):
+                if idx + 1 < len(parts):
+                    next_start = parts[idx + 1][0]
+                else:
+                    next_start = size
+                cur_end = parts[idx][0] + parts[idx][1]
 
-        os.lseek(fd, cur_end, os.SEEK_SET)
-        data = os.read(fd, next_start - cur_end)
+                fd.seek(cur_end)
+                data = fd.read(next_start - cur_end)
 
-        os.lseek(fd, off, os.SEEK_SET)
-        os.write(fd, data)
+                fd.seek(off)
+                fd.write(data)
 
-        off += len(data)
-        idx += 1
+                off += len(data)
+                idx += 1
 
-    os.close(fd)
-    os.truncate(name, off)
+            fd.truncate(off)
+
+    except OSError as e:
+        pass
 
 
 
