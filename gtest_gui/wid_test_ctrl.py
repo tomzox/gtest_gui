@@ -29,13 +29,13 @@ import time
 import tkinter as tk
 from tkinter import messagebox as tk_messagebox
 
+from gtest_gui.dlg_config import ConfigDialog
+from gtest_gui.wid_status_line import StatusLineWidget
 import gtest_gui.config_db as config_db
-import gtest_gui.dlg_config as dlg_config
 import gtest_gui.filter_expr as filter_expr
 import gtest_gui.gtest as gtest
 import gtest_gui.test_db as test_db
 import gtest_gui.tk_utils as tk_utils
-import gtest_gui.wid_status_line as wid_status_line
 import gtest_gui.wid_tool_tip as wid_tool_tip
 
 
@@ -602,7 +602,7 @@ class TestControlWidget:
             return
 
         if self.prev_campaign_options is None:
-            wid_status_line.show_message("warn", "Campaign cannot be resumed.")
+            StatusLineWidget.get().show_message("warn", "Campaign cannot be resumed.")
             return
 
         if ((self.prev_campaign_options["filter_str"] != self.var_opt_filter.get()) or
@@ -695,7 +695,7 @@ class TestControlWidget:
                 msg = datetime.fromtimestamp(test_db.test_exe_ts).strftime("%a %d.%m %H:%M")
 
             if msg:
-                wid_status_line.show_message("info", "Executable compiled " + msg)
+                StatusLineWidget.get().show_message("info", "Executable compiled " + msg)
 
         else:
             tc_names = gtest.gtest_list_tests()
@@ -781,12 +781,13 @@ class TestControlWidget:
             if tk_messagebox.askokcancel(
                     parent=self.tk_top,
                     message="Valgrind command line is unknown. Configure now?"):
-                dlg_config.create_dialog(self.tk_top)
+                ConfigDialog.create_dialog(self.tk_top)
             return
 
         clean_trace = self.var_opt_clean_trace.get()
         if clean_trace and valgrind_cmd:
-            wid_status_line.show_message("warning", "Ignoring clean-trace option with valgrind")
+            StatusLineWidget.get().show_message("warning",
+                                                "Ignoring clean-trace option with valgrind")
             clean_trace = False
 
         if not resume_rep_cnt:

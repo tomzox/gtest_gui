@@ -25,22 +25,26 @@ import tkinter as tk
 
 import gtest_gui.tk_utils as tk_utils
 
-stline = None
-
-def create_widget(tk_top, parent):
-    global stline
-    stline = StatusLineWidget(tk_top, parent)
-
-
-def show_message(msg_type, msg_txt):
-    stline.show_message(msg_type, msg_txt)
-
-
-def clear_message():
-    stline.clear()
-
-
 class StatusLineWidget:
+    """
+    Status line widget class (singleton). Instances of this class exist
+    temporarily while a status or warning message is to be displayed. The
+    widget is placed as an overlay into the main window.
+    """
+    __stline = None
+
+    @classmethod
+    def create_widget(cls, tk_top, parent):
+        """ Initializes the class."""
+        cls.__stline = StatusLineWidget(tk_top, parent)
+
+
+    @classmethod
+    def get(cls):
+        """ Returns the status line widget (singleton)."""
+        return cls.__stline
+
+
     def __init__(self, tk_top, parent):
         self.tk_top = tk_top
         self.wid_parent = parent
@@ -51,6 +55,8 @@ class StatusLineWidget:
 
 
     def show_message(self, msg_type, msg_txt):
+        """ Displays the overlay widget with the given text within the main window."""
+
         self.msg_type = msg_type
         self.fade_val = 0.0
         color = self.__get_color()
@@ -105,10 +111,11 @@ class StatusLineWidget:
 
         else:
             self.timer_id = None
-            self.clear()
+            self.clear_message()
 
 
-    def clear(self):
+    def clear_message(self):
+        """ Clears the status message and hides the overlay widget."""
         if self.timer_id:
             self.tk_top.after_cancel(self.timer_id)
             self.timer_id = None

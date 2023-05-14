@@ -20,7 +20,7 @@
 # This code is derived from Trace Browser (trowser.py)
 
 """
-Implements a font selection dialog class.
+Implements the font selection dialog class.
 """
 
 import tkinter as tk
@@ -28,18 +28,24 @@ import tkinter.font as tkf
 
 import gtest_gui.tk_utils as tk_utils
 
-prev_dialog_wid = {}
-
-def create_dialog(tk_top, ftype, font, callback):
-    global prev_dialog_wid
-
-    if prev_dialog_wid.get(ftype, None) and tk_utils.wid_exists(prev_dialog_wid[ftype].wid_top):
-        prev_dialog_wid[ftype].raise_window()
-    else:
-        prev_dialog_wid[ftype] = FontSelectionDialog(tk_top, ftype, font, callback)
-
 
 class FontSelectionDialog:
+    __prev_dialog_wid = {}
+
+    @classmethod
+    def create_dialog(cls, tk_top, ftype, font, callback):
+        if (cls.__prev_dialog_wid.get(ftype, None) and
+                tk_utils.wid_exists(cls.__prev_dialog_wid[ftype].wid_top)):
+            cls.__prev_dialog_wid[ftype].raise_window()
+        else:
+            cls.__prev_dialog_wid[ftype] = FontSelectionDialog(tk_top, ftype, font, callback)
+
+
+    @classmethod
+    def __destroyed_dialog(cls, ftype):
+        cls.__prev_dialog_wid.pop(ftype, None)
+
+
     def __init__(self, tk_top, ftype, font, callback):
         self.tk_top = tk_top
         self.ftype = ftype
@@ -126,6 +132,7 @@ class FontSelectionDialog:
 
 
     def raise_window(self):
+        """ Raises the dialog window above all other windows."""
         self.wid_top.wm_deiconify()
         self.wid_top.lift()
         self.wid_font_list.focus_set()
@@ -135,8 +142,8 @@ class FontSelectionDialog:
         # remove duplicates, then sort alphabetically
         self.font_families = sorted(set(tkf.families(displayof=self.tk_top)))
 
-        for f in self.font_families:
-            self.wid_font_list.insert("end", f)
+        for family in self.font_families:
+            self.wid_font_list.insert("end", family)
 
 
     def __handle_selection_change(self):
@@ -152,7 +159,7 @@ class FontSelectionDialog:
 
     def __quit(self):
         tk_utils.safe_destroy(self.wid_top)
-        prev_dialog_wid.pop(self.ftype, None)
+        FontSelectionDialog.__destroyed_dialog(self.ftype)
 
 
     def __apply_config(self):

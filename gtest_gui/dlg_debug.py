@@ -18,7 +18,7 @@
 # ------------------------------------------------------------------------ #
 
 """
-This class implements the debug dialog.
+Implements the debug dialog window class.
 """
 
 import re
@@ -27,20 +27,31 @@ import tkinter as tk
 import gtest_gui.tk_utils as tk_utils
 import gtest_gui.wid_tool_tip as wid_tool_tip
 
-prev_dialog_wid = None
-
-def create_dialog(tk_top, main_globals, raise_if_exists=True):
-    global prev_dialog_wid
-
-    if (raise_if_exists
-            and prev_dialog_wid
-            and tk_utils.wid_exists(prev_dialog_wid.get_toplevel())):
-        prev_dialog_wid.raise_window()
-    else:
-        prev_dialog_wid = DebugDialog(tk_top, main_globals)
-
 
 class DebugDialog:
+    """
+    Debug dialog window class. Any number of instances of this dialog can be
+    created. The dialog presents a text entry field that allows entering and
+    evaluating arbitrary commands in the Python interpreter. For convenience,
+    it also has an entry field for variable name look-up.
+    """
+    __prev_dialog_wid = None
+
+    @classmethod
+    def create_dialog(cls, tk_top, main_globals, raise_if_exists=True):
+        """
+        Opens or creates a debug dialog window. If parameter "raise_if_exists"
+        is True, then the last created dialog window is raised if it still
+        exists, else an instance is created.
+        """
+        if (raise_if_exists
+                and cls.__prev_dialog_wid
+                and tk_utils.wid_exists(cls.__prev_dialog_wid.get_toplevel())):
+            cls.__prev_dialog_wid.raise_window()
+        else:
+            cls.__prev_dialog_wid = DebugDialog(tk_top, main_globals)
+
+
     def __init__(self, tk_top, main_globals):
         self.tk_top = tk_top
         self.globals = main_globals
@@ -133,7 +144,8 @@ class DebugDialog:
         wid_but_clear = tk.Button(wid_frm, text="Clear", width=5, pady=1,
                                   command=lambda: self.wid_output.delete("1.0", "end"))
         wid_but_new = tk.Button(wid_frm, text="New window", pady=1,
-                                command=lambda: create_dialog(self.tk_top, self.globals, False))
+                                command=lambda: DebugDialog.create_dialog(self.tk_top,
+                                                                          self.globals, False))
         wid_but_eval.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=1)
         wid_but_exec.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=1)
         wid_but_clear.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=1)

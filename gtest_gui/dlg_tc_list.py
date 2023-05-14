@@ -33,11 +33,8 @@ import gtest_gui.filter_expr as filter_expr
 import gtest_gui.gtest as gtest
 import gtest_gui.test_db as test_db
 import gtest_gui.tk_utils as tk_utils
-import gtest_gui.wid_text_sel as wid_text_sel
+from gtest_gui.wid_text_sel import TextSelWidget
 
-
-prev_dialog_wid = None
-prev_export_filename = ""
 
 class SortMode(Enum):
     by_name = 0
@@ -46,23 +43,37 @@ class SortMode(Enum):
     by_duration = 3
 
 
-def create_dialog(tk_top, test_ctrl):
-    global prev_dialog_wid
-
-    if not test_db.test_case_names:
-        tk_messagebox.showerror(parent=tk_top, message="Test case list is empty.")
-        return
-
-    if not test_ctrl.check_filter_expression():
-        return
-
-    if prev_dialog_wid and tk_utils.wid_exists(prev_dialog_wid.wid_top):
-        prev_dialog_wid.raise_window()
-    else:
-        prev_dialog_wid = TcListDialog(tk_top, test_ctrl)
-
-
 class TcListDialog:
+    """
+    Test case list dialog window class (singleton)
+    """
+    __prev_dialog_wid = None
+    __prev_export_filename = ""
+
+    @classmethod
+    def create_dialog(cls, tk_top, test_ctrl):
+        """
+        Open the configuration dialog window. If an instance of the dialog
+        already exists, the window is raised, else an instance is created.
+        """
+        if not test_db.test_case_names:
+            tk_messagebox.showerror(parent=tk_top, message="Test case list is empty.")
+            return
+
+        if not test_ctrl.check_filter_expression():
+            return
+
+        if cls.__prev_dialog_wid and tk_utils.wid_exists(cls.__prev_dialog_wid.wid_top):
+            cls.__prev_dialog_wid.raise_window()
+        else:
+            cls.__prev_dialog_wid = TcListDialog(tk_top, test_ctrl)
+
+
+    @classmethod
+    def __destroyed_dialog(cls):
+        cls.__prev_dialog_wid = None
+
+
     def __init__(self, tk_top, test_ctrl):
         self.tk_top = tk_top
         self.test_ctrl = test_ctrl
@@ -79,7 +90,6 @@ class TcListDialog:
 
 
     def __destroy_window(self):
-        global prev_dialog_wid
         test_db.TestDbSlots.tc_stats_update = None
         test_db.TestDbSlots.tc_names_update = None
         test_db.TestDbSlots.campaign_stats_reset = None
@@ -87,10 +97,11 @@ class TcListDialog:
         self.test_ctrl.register_filter_change_slot(None)
 
         tk_utils.safe_destroy(self.wid_top)
-        prev_dialog_wid = None
+        TcListDialog.__destroyed_dialog()
 
 
     def raise_window(self):
+        """ Raises the dialog window above all other windows."""
         self.wid_top.wm_deiconify()
         self.wid_top.lift()
 
@@ -128,8 +139,7 @@ class TcListDialog:
         self.wid_header.insert("0.0", "\t".join(self.table_header_txt), "head", "\n", [])
         self.__update_column_widths()
 
-        self.sel_obj = wid_text_sel.TextSelWidget(self.wid_table,
-                                                  self.__handle_selection_change, self.__get_len)
+        self.sel_obj = TextSelWidget(self.wid_table, self.__handle_selection_change, self.__get_len)
 
         if config_db.tc_list_geometry:
             self.wid_top.wm_geometry(config_db.tc_list_geometry)
@@ -488,15 +498,14 @@ class TcListDialog:
 
 
     def __do_export_pass_fail(self):
-        global prev_export_filename
         filename = tk_filedialog.asksaveasfilename(
                         parent=self.wid_top,
                         filetypes=[("all", "*"), ("Text", "*.txt")],
                         title="Select output file",
-                        initialfile=os.path.basename(prev_export_filename),
-                        initialdir=os.path.dirname(prev_export_filename))
+                        initialfile=os.path.basename(TcListDialog.__prev_export_filename),
+                        initialdir=os.path.dirname(TcListDialog.__prev_export_filename))
         if filename:
-            prev_export_filename = filename
+            TcListDialog.__prev_export_filename = filename
             try:
                 with open(filename, "w") as file_obj:
                     for tc_name in self.tc_list_sorted:

@@ -25,7 +25,7 @@ import re
 import tkinter as tk
 
 import gtest_gui.tk_utils as tk_utils
-import gtest_gui.tool_tip_db as tool_tip_db
+from gtest_gui.tool_tip_db import TOOL_TIP_DB
 
 
 def enable_tips(enable):
@@ -36,7 +36,7 @@ def tool_tip_add(wid, key):
     if callable(key):
         msg = key
     else:
-        msg = re.sub(r"\n", " ", tool_tip_db.tips[key].strip())
+        msg = re.sub(r"\n", " ", TOOL_TIP_DB[key].strip())
 
     wid.bind("<Leave>", lambda e: handle_leave())
     wid.bind("<Motion>", lambda e: handle_motion(wid, e.x, e.y, e.x_root, e.y_root, msg))
@@ -174,7 +174,7 @@ class Menu(tk.Menu):
         if callable(key):
             return key()
 
-        return re.sub(r"\n", " ", tool_tip_db.tips[key].strip())
+        return re.sub(r"\n", " ", TOOL_TIP_DB[key].strip())
 
 
     def __install_tool_tip(self, kwargs, tooltip):

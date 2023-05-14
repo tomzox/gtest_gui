@@ -21,7 +21,7 @@
 This module stores help texts to be displayed as tool tips.
 """
 
-tips = {
+TOOL_TIP_DB = {
 
     # Main window: Control menu
     'test_ctrl.cmd_start_campaign':

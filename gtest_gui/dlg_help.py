@@ -18,7 +18,7 @@
 # ------------------------------------------------------------------------ #
 
 """
-This class implements the help dialog.
+Implements the help dialog window class.
 """
 
 import re
@@ -29,55 +29,67 @@ import gtest_gui.tk_utils as tk_utils
 import gtest_gui.config_db as config_db
 import gtest_gui.help_db as help_db
 
-prev_dialog_wid = None
-
-help_titles = []
-help_fg = "black"
-help_bg = "#FFFFA0"
-help_font_normal = None
-help_font_fixed = None
-help_font_bold = None
-help_font_title1 = None
-help_font_title2 = None
-
-
-def create_dialog(tk_top, index, subheading="", subrange=""):
-    global prev_dialog_wid
-
-    if not help_font_normal:
-        define_fonts()
-
-    if prev_dialog_wid and tk_utils.wid_exists(prev_dialog_wid.wid_top):
-        prev_dialog_wid.raise_window(index, subheading, subrange)
-    else:
-        prev_dialog_wid = HelpDialog(tk_top, index, subheading, subrange)
-
-
-def define_fonts():
-    global help_font_normal, help_font_fixed, help_font_title1, help_font_title2, help_font_bold
-
-    help_font_fixed = "TkFixedFont"
-    help_font_normal = tkf.Font(font="TkTextFont")
-
-    opt = help_font_normal.configure()
-    opt["weight"] = tkf.BOLD
-    help_font_bold = tkf.Font(**opt)
-    opt["size"] += 2
-    help_font_title2 = tkf.Font(**opt)
-    opt["size"] += 2
-    help_font_title1 = tkf.Font(**opt)
-
-
-def add_menu_commands(tk_top, wid_men):
-    global help_titles
-
-    for title in help_db.helpIndex.keys():
-        help_titles.append(title)
-
-    HelpDialog.fill_menu(tk_top, wid_men)
-
 
 class HelpDialog:
+    """
+    Help dialog window class (singleton): The dialog displays documentation
+    text and a few basic command buttons for navigation.
+    """
+    __prev_dialog_wid = None
+
+    __help_titles = []
+    __help_fg = "black"
+    __help_bg = "#FFFFA0"
+    __help_font_normal = None
+    __help_font_fixed = None
+    __help_font_bold = None
+    __help_font_title1 = None
+    __help_font_title2 = None
+
+
+    @classmethod
+    def create_dialog(cls, tk_top, index, subheading="", subrange=""):
+        """
+        Open the help dialog window. If an instance of the dialog already
+        exists, the window is raised, else an instance is created.
+        """
+        if not cls.__help_font_normal:
+            cls.__define_fonts()
+
+        if cls.__prev_dialog_wid and tk_utils.wid_exists(cls.__prev_dialog_wid.wid_top):
+            cls.__prev_dialog_wid.raise_window(index, subheading, subrange)
+        else:
+            cls.__prev_dialog_wid = HelpDialog(tk_top, index, subheading, subrange)
+
+
+    @classmethod
+    def __destroyed_dialog(cls):
+        cls.__prev_dialog_wid = None
+
+
+    @classmethod
+    def __define_fonts(cls):
+        cls.__help_font_fixed = "TkFixedFont"
+        cls.__help_font_normal = tkf.Font(font="TkTextFont")
+
+        opt = cls.__help_font_normal.configure()
+        opt["weight"] = tkf.BOLD
+        cls.__help_font_bold = tkf.Font(**opt)
+        opt["size"] += 2
+        cls.__help_font_title2 = tkf.Font(**opt)
+        opt["size"] += 2
+        cls.__help_font_title1 = tkf.Font(**opt)
+
+
+    @staticmethod
+    def add_menu_commands(tk_top, wid_men):
+        for title in help_db.helpIndex.keys():
+            HelpDialog.__help_titles.append(title)
+
+        HelpDialog.fill_menu(tk_top, wid_men)
+
+    # -------------------------------------------------------------------------
+
     def __init__(self, tk_top, index, subheading, subrange):
         self.tk_top = tk_top
         self.chapter_idx = -1
@@ -124,20 +136,21 @@ class HelpDialog:
 
     @staticmethod
     def fill_menu(tk_top, wid_men):
-        for idx in range(len(help_titles)):
-            wid_men.add_command(label=help_titles[idx],
-                                command=lambda idx=idx: create_dialog(tk_top, idx))
+        for idx in range(len(HelpDialog.__help_titles)):
+            wid_men.add_command(label=HelpDialog.__help_titles[idx],
+                                command=lambda idx=idx: HelpDialog.create_dialog(tk_top, idx))
             for sub in sorted([x[1] for x in help_db.helpSections.keys() if x[0] == idx]):
                 title = help_db.helpSections[(idx, sub)]
                 wid_men.add_command(label="- " + title,
                                     command=lambda idx=idx, title=title:
-                                    create_dialog(tk_top, idx, title))
+                                    HelpDialog.create_dialog(tk_top, idx, title))
 
 
     def __create_text_widget(self):
         wid_frm = tk.Frame(self.wid_top)
         wid_txt = tk.Text(wid_frm, width=80, wrap=tk.WORD,
-                          foreground=help_fg, background=help_bg, font=help_font_normal,
+                          foreground=HelpDialog.__help_fg, background=HelpDialog.__help_bg,
+                          font=HelpDialog.__help_font_normal,
                           spacing3=6, cursor="circle", takefocus=1)
         wid_txt.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
         wid_sb = tk.Scrollbar(wid_frm, orient=tk.VERTICAL, command=wid_txt.yview, takefocus=0)
@@ -146,13 +159,15 @@ class HelpDialog:
         wid_frm.pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
         # define tags for various nroff text formats
-        wid_txt.tag_configure("title1", font=help_font_title1, spacing3=10)
-        wid_txt.tag_configure("title2", font=help_font_title2, spacing1=20, spacing3=10)
+        wid_txt.tag_configure("title1", font=HelpDialog.__help_font_title1, spacing3=10)
+        wid_txt.tag_configure("title2", font=HelpDialog.__help_font_title2,
+                              spacing1=20, spacing3=10)
         wid_txt.tag_configure("indent", lmargin1=30, lmargin2=30)
-        wid_txt.tag_configure("bold", font=help_font_bold)
+        wid_txt.tag_configure("bold", font=HelpDialog.__help_font_bold)
         wid_txt.tag_configure("underlined", underline=1)
-        wid_txt.tag_configure("fixed", font=help_font_fixed)
-        wid_txt.tag_configure("pfixed", font=help_font_fixed, spacing1=0, spacing2=0, spacing3=0)
+        wid_txt.tag_configure("fixed", font=HelpDialog.__help_font_fixed)
+        wid_txt.tag_configure("pfixed", font=HelpDialog.__help_font_fixed,
+                              spacing1=0, spacing2=0, spacing3=0)
         wid_txt.tag_configure("href", underline=1, foreground="blue")
         wid_txt.tag_bind("href", "<ButtonRelease-1>", lambda e: self.__follow_help_hyperlink())
         wid_txt.tag_bind("href", "<Enter>",
@@ -183,6 +198,7 @@ class HelpDialog:
 
 
     def raise_window(self, index, subheading="", subrange=""):
+        """ Raises the dialog window above all other windows."""
         self.wid_top.lift()
         self.__fill_help_text(index, subheading, subrange)
 
@@ -234,9 +250,8 @@ class HelpDialog:
 
 
     def __destroy_window(self):
-        global prev_dialog_wid
         tk_utils.safe_destroy(self.wid_top)
-        prev_dialog_wid = None
+        HelpDialog.__destroyed_dialog()
 
 
     def __follow_help_hyperlink(self):

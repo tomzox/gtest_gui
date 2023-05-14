@@ -18,9 +18,9 @@
 # ------------------------------------------------------------------------ #
 
 """
-This class implements the main entry point which starts-up Tk, parses the
-command line and then creates the main window. Finally, control is passed to
-the Tk event handler.
+This module implements the main entry point which starts-up Tk, parses the
+command line and processes command line arguments and then creates the main
+window. Finally, control is passed to the Tk event handler.
 """
 
 import os
@@ -28,13 +28,13 @@ import sys
 from tkinter import messagebox as tk_messagebox
 import tkinter as tk
 
+from gtest_gui.dlg_main import MainWindow
+from gtest_gui.dlg_config import ConfigDialog
+
 import gtest_gui.config_db as config_db
-import gtest_gui.dlg_main as dlg_main
-import gtest_gui.dlg_config as dlg_config
 import gtest_gui.gtest as gtest
 import gtest_gui.tk_utils as tk_utils
 
-wid_main = None
 
 def parse_argv_error(tk_top, msg, with_usage=True):
     if msg[-1] != "\n":
@@ -107,7 +107,7 @@ def main():
                 message="Warning: Configured trace directory does not exist. " \
                         "Please check configuration.")
             if answer == "ok":
-                dlg_config.create_dialog(tk_top)
+                ConfigDialog.create_dialog(tk_top)
         else:
             gtest.gtest_automatic_import()
 
@@ -119,8 +119,7 @@ def main():
             tk_messagebox.showerror(parent=tk_top, message=msg)
             sys.exit(1)
 
-    global wid_main
-    wid_main = dlg_main.MainWindow(tk_top, exe_name)
+    wid_main = MainWindow(tk_top, exe_name)
 
     tk_top.wm_deiconify()
 

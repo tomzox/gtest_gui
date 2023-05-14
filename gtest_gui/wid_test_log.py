@@ -36,8 +36,8 @@ import gtest_gui.dlg_browser as dlg_browser
 import gtest_gui.gtest as gtest
 import gtest_gui.test_db as test_db
 import gtest_gui.tk_utils as tk_utils
-import gtest_gui.wid_status_line as wid_status_line
-import gtest_gui.wid_text_sel as wid_text_sel
+from gtest_gui.wid_status_line import StatusLineWidget
+from gtest_gui.wid_text_sel import TextSelWidget
 
 
 class SortMode(Enum):
@@ -92,8 +92,7 @@ class TestLogWidget:
         wid_txt.bind("<Key-Return>", lambda e: self.do_open_trace_browser())
         wid_txt.bind("<Key-Delete>", lambda e: self.do_remove_selected_results())
 
-        self.sel_obj = wid_text_sel.TextSelWidget(wid_txt,
-                                                  self.__handle_selection_change, self.__get_len)
+        self.sel_obj = TextSelWidget(wid_txt, self.__handle_selection_change, self.__get_len)
 
         if config_db.log_pane_height:
             wid_pane.add(wid_frm, sticky="news", height=config_db.log_pane_height)
@@ -657,7 +656,8 @@ class TestLogWidget:
         if sel:
             self.__remove_trace_files(sel)
         else:
-            wid_status_line.show_message("warning", "Selection is empty - nothing to remove.")
+            StatusLineWidget.get().show_message("warning",
+                                                "Selection is empty - nothing to remove.")
 
 
     def do_remove_old_pass_results(self):
@@ -822,7 +822,7 @@ class TestLogWidget:
                     dlg_browser.show_trace_snippet(self.tk_top,
                                                    log[4], log[5], log[6], log[13] == 2)
             else:
-                wid_status_line.show_message("warning", "No trace available for this result")
+                StatusLineWidget.get().show_message("warning", "No trace available for this result")
 
 
     def show_trace_preview(self, log_idx):

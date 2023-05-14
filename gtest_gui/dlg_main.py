@@ -18,7 +18,7 @@
 # ------------------------------------------------------------------------ #
 
 """
-Implements the MainWindow class.
+Implements the main window class.
 """
 
 import os
@@ -28,19 +28,21 @@ import tkinter as tk
 from tkinter import messagebox as tk_messagebox
 from tkinter import filedialog as tk_filedialog
 
-import gtest_gui.config_db as config_db
-import gtest_gui.dlg_config as dlg_config
-import gtest_gui.dlg_debug as dlg_debug
-import gtest_gui.dlg_font_sel as dlg_font_sel
-import gtest_gui.dlg_job_list as dlg_job_list
-import gtest_gui.dlg_tc_list as dlg_tc_list
-import gtest_gui.dlg_help as dlg_help
+from gtest_gui.dlg_config import ConfigDialog
+from gtest_gui.dlg_debug import DebugDialog
+from gtest_gui.dlg_font_sel import FontSelectionDialog
+from gtest_gui.dlg_job_list import JobListDialog
+from gtest_gui.dlg_tc_list import TcListDialog
+from gtest_gui.dlg_help import HelpDialog
+
+from gtest_gui.wid_test_ctrl import TestControlWidget
+from gtest_gui.wid_test_log import TestLogWidget
+from gtest_gui.wid_status_line import StatusLineWidget
+
 import gtest_gui.gtest as gtest
+import gtest_gui.config_db as config_db
 import gtest_gui.test_db as test_db
 import gtest_gui.tk_utils as tk_utils
-import gtest_gui.wid_status_line as wid_status_line
-import gtest_gui.wid_test_ctrl as wid_test_ctrl
-import gtest_gui.wid_test_log as wid_test_log
 import gtest_gui.wid_tool_tip as wid_tool_tip
 
 
@@ -48,22 +50,23 @@ wid_test_ctrl_ = None
 wid_test_log_ = None
 
 class MainWindow:
-    """ This class implements the main window, which manages the main menubar and
-        its commands. It also is a container for the test control and test result
-        log widgets, which it creates at start-up.
+    """
+    Main window class (singleton): This class manages the main menubar and its
+    commands. It also is a container for the test control and test result log
+    widgets, which it creates at start-up.
     """
 
     def __init__(self, tk_top, exe_name):
         self.tk_top = tk_top
 
         global wid_test_ctrl_
-        wid_test_ctrl_ = wid_test_ctrl.TestControlWidget(tk_top, tk_top)
+        wid_test_ctrl_ = TestControlWidget(tk_top, tk_top)
         wid_test_ctrl_.get_widget().pack(side=tk.TOP, fill=tk.BOTH)
 
-        wid_status_line.create_widget(tk_top, wid_test_ctrl_.get_widget())
+        StatusLineWidget.create_widget(tk_top, wid_test_ctrl_.get_widget())
 
         global wid_test_log_
-        wid_test_log_ = wid_test_log.TestLogWidget(tk_top, tk_top)
+        wid_test_log_ = TestLogWidget(tk_top, tk_top)
         wid_test_log_.get_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
         wid_test_log_.set_wid_test_ctrl(wid_test_ctrl_)
@@ -105,10 +108,10 @@ class MainWindow:
                                  command=wid_test_ctrl_.start_repetition, accelerator="Ctrl-t")
         wid_men_ctrl.add_separator()
         wid_men_ctrl.add_command(label="Open test case list...", tooltip="test_ctrl.cmd_tc_list",
-                                 command=lambda: dlg_tc_list.create_dialog(
+                                 command=lambda: TcListDialog.create_dialog(
                                      self.tk_top, wid_test_ctrl_))
         wid_men_ctrl.add_command(label="Open job list...", tooltip="test_ctrl.cmd_job_list",
-                                 command=lambda: dlg_job_list.create_dialog(self.tk_top))
+                                 command=lambda: JobListDialog.create_dialog(self.tk_top))
         wid_men_ctrl.add_separator()
         wid_men_ctrl.add_command(label="Refresh test case list", tooltip="test_ctrl.cmd_refresh",
                                  command=self.reload_exe)
@@ -122,16 +125,16 @@ class MainWindow:
         wid_men_cfg = wid_tool_tip.Menu(wid_men, tearoff=0)
         wid_men.add_cascade(menu=wid_men_cfg, label="Configure", underline=1)
         wid_men_cfg.add_command(label="Options...",
-                                command=lambda: dlg_config.create_dialog(self.tk_top))
+                                command=lambda: ConfigDialog.create_dialog(self.tk_top))
         wid_men_cfg.add_separator()
         wid_men_cfg.add_command(label="Select font for result log...",
                                 tooltip="config.select_font_content",
-                                command=lambda: dlg_font_sel.create_dialog(
+                                command=lambda: FontSelectionDialog.create_dialog(
                                     self.tk_top, "content",
                                     tk_utils.font_content, MainWindow.__change_font))
         wid_men_cfg.add_command(label="Select font for trace preview...",
                                 tooltip="config.select_font_trace",
-                                command=lambda: dlg_font_sel.create_dialog(
+                                command=lambda: FontSelectionDialog.create_dialog(
                                     self.tk_top, "trace",
                                     tk_utils.font_trace, MainWindow.__change_font))
         wid_men_cfg.add_separator()
@@ -147,10 +150,10 @@ class MainWindow:
         self.tk_top.eval("option add *Menu.useMotifHelp true")
         wid_men_help = tk.Menu(wid_men, name="help", tearoff=0)
         wid_men.add_cascade(menu=wid_men_help, label="Help", underline=0)
-        dlg_help.add_menu_commands(self.tk_top, wid_men_help)
+        HelpDialog.add_menu_commands(self.tk_top, wid_men_help)
         wid_men_help.add_separator()
         wid_men_help.add_command(label="Debug console",
-                                 command=lambda: dlg_debug.create_dialog(self.tk_top, globals()))
+                                 command=lambda: DebugDialog.create_dialog(self.tk_top, globals()))
         wid_men_help.add_command(label="About", command=self.__show_about_dialog)
 
         self.var_prev_exe_name = tk.StringVar(self.tk_top, "")
@@ -362,11 +365,11 @@ class MainWindow:
 
         if prev_exe: # no message during startup
             if prev_exe != filename:
-                wid_status_line.show_message("info", "Switched to new executable.")
+                StatusLineWidget.get().show_message("info", "Switched to new executable.")
             elif prev_names != test_db.test_case_names:
-                wid_status_line.show_message("info", "New test case list loaded.")
+                StatusLineWidget.get().show_message("info", "New test case list loaded.")
             else:
-                wid_status_line.show_message("warning", "Test case list is unchanged.")
+                StatusLineWidget.get().show_message("warning", "Test case list is unchanged.")
 
 
     def __show_about_dialog(self):

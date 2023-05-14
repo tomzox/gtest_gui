@@ -36,7 +36,7 @@ import gtest_gui.config_db as config_db
 import gtest_gui.gtest as gtest
 import gtest_gui.test_db as test_db
 import gtest_gui.tk_utils as tk_utils
-import gtest_gui.wid_status_line as wid_status_line
+from gtest_gui.wid_status_line import StatusLineWidget
 
 if os.name == "posix":
     import fcntl
@@ -55,16 +55,16 @@ def __get_temp_dir_name():
 def show_trace_snippet(tk_top, file_name, file_off, length, is_extern_import):
     browser_cmd = config_db.options["browser"]
     if not browser_cmd:
-        wid_status_line.show_message("error", "No trace browser app is configured")
+        StatusLineWidget.get().show_message("error", "No trace browser app is configured")
         return
 
     if config_db.options["browser_stdin"]:
         txt = gtest.extract_trace(file_name, file_off, length)
         if txt is None:
-            wid_status_line.show_message("error", "Failed to read trace file")
+            StatusLineWidget.get().show_message("error", "Failed to read trace file")
             return
         if txt == "":
-            wid_status_line.show_message("error", "Trace empty for this result")
+            StatusLineWidget.get().show_message("error", "Trace empty for this result")
             return
 
         file_name = "-"
@@ -86,7 +86,7 @@ def show_trace(tk_top, file_name):
     if browser_cmd:
         ProcMonitor.create(re.split(r"\s+", browser_cmd) + [file_name], "", None)
     else:
-        wid_status_line.show_message("error", "No trace browser app is configured")
+        StatusLineWidget.get().show_message("error", "No trace browser app is configured")
 
 
 def show_stack_trace(tk_top, tc_name, exe_name, exe_ts, core_name):

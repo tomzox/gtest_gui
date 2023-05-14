@@ -18,7 +18,7 @@
 # ------------------------------------------------------------------------ #
 
 """
-This class implements the configuration parameter dialog.
+Implements the configuration parameter dialog class.
 """
 
 import os
@@ -32,18 +32,31 @@ import gtest_gui.gtest as gtest
 import gtest_gui.tk_utils as tk_utils
 import gtest_gui.wid_tool_tip as wid_tool_tip
 
-prev_dialog_wid = None
-
-def create_dialog(tk_top):
-    global prev_dialog_wid
-
-    if prev_dialog_wid and tk_utils.wid_exists(prev_dialog_wid.wid_top):
-        prev_dialog_wid.raise_window()
-    else:
-        prev_dialog_wid = ConfigDialog(tk_top)
-
 
 class ConfigDialog:
+    """
+    Configuration parameter dialog window class (singleton).
+    """
+    __prev_dialog_wid = None
+
+    @classmethod
+    def create_dialog(cls, tk_top):
+        """
+        Open the configuration dialog window. If an instance of the dialog
+        already exists, the window is raised, else an instance is created.
+        """
+        if (cls.__prev_dialog_wid and
+                tk_utils.wid_exists(cls.__prev_dialog_wid.wid_top)):
+            cls.__prev_dialog_wid.raise_window()
+        else:
+            cls.__prev_dialog_wid = cls(tk_top)
+
+
+    @classmethod
+    def __destroyed_dialog(cls):
+        cls.__prev_dialog_wid = None
+
+
     def __init__(self, tk_top):
         self.tk_top = tk_top
         self.var_cfg_browser = tk.StringVar(tk_top, config_db.options["browser"])
@@ -140,14 +153,14 @@ class ConfigDialog:
 
 
     def raise_window(self):
+        """ Raises the dialog window above all other windows."""
         self.wid_top.wm_deiconify()
         self.wid_top.lift()
 
 
     def __quit(self):
-        global prev_dialog_wid
         tk_utils.safe_destroy(self.wid_top)
-        prev_dialog_wid = None
+        ConfigDialog.__destroyed_dialog()
 
 
     def __open_trace_dir_file_browser(self):

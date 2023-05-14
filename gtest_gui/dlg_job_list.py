@@ -18,7 +18,7 @@
 # ------------------------------------------------------------------------ #
 
 """
-This class implements the job list dialog.
+Implements the job list dialog window class.
 """
 
 import tkinter as tk
@@ -29,26 +29,37 @@ import gtest_gui.dlg_browser as dlg_browser
 import gtest_gui.gtest as gtest
 import gtest_gui.test_db as test_db
 import gtest_gui.tk_utils as tk_utils
-import gtest_gui.wid_text_sel as wid_text_sel
-
-
-prev_dialog_wid = None
-
-
-def create_dialog(tk_top):
-    global prev_dialog_wid
-
-    if not test_db.test_case_names:
-        tk_messagebox.showerror(parent=tk_top, message="Test case list is empty, no tests can run.")
-        return
-
-    if prev_dialog_wid and tk_utils.wid_exists(prev_dialog_wid.wid_top):
-        prev_dialog_wid.raise_window()
-    else:
-        prev_dialog_wid = JobListDialog(tk_top)
+from gtest_gui.wid_text_sel import TextSelWidget
 
 
 class JobListDialog:
+    """
+    Job list dialog window class (singleton)
+    """
+    __prev_dialog_wid = None
+
+    @classmethod
+    def create_dialog(cls, tk_top):
+        """
+        Open the configuration dialog window. If an instance of the dialog
+        already exists, the window is raised, else an instance is created.
+        """
+        if not test_db.test_case_names:
+            msg = "Test case list is empty, no tests can run."
+            tk_messagebox.showerror(parent=tk_top, message=msg)
+            return
+
+        if cls.__prev_dialog_wid and tk_utils.wid_exists(cls.__prev_dialog_wid.wid_top):
+            cls.__prev_dialog_wid.raise_window()
+        else:
+            cls.__prev_dialog_wid = JobListDialog(tk_top)
+
+
+    @classmethod
+    def __destroyed_dialog(cls):
+        cls.__prev_dialog_wid = None
+
+
     def __init__(self, tk_top):
         self.tk_top = tk_top
         self.table_header_txt = ("PID", "BgJob", "Traced", "#Results", "Done", "Current test case")
@@ -59,13 +70,13 @@ class JobListDialog:
 
 
     def __destroy_window(self):
-        global prev_dialog_wid
         tk_utils.safe_destroy(self.wid_top)
         self.tk_top.after_cancel(self.timer_id)
-        prev_dialog_wid = None
+        JobListDialog.__destroyed_dialog()
 
 
     def raise_window(self):
+        """ Raises the dialog window above all other windows."""
         self.wid_top.wm_deiconify()
         self.wid_top.lift()
 
@@ -89,8 +100,7 @@ class JobListDialog:
         self.wid_header.insert("0.0", "\t".join(self.table_header_txt), "head", "\n", [])
         self.__update_column_widths()
 
-        self.sel_obj = wid_text_sel.TextSelWidget(self.wid_table,
-                                                  self.__handle_selection_change, self.__get_len)
+        self.sel_obj = TextSelWidget(self.wid_table, self.__handle_selection_change, self.__get_len)
 
         if config_db.job_list_geometry:
             self.wid_top.wm_geometry(config_db.job_list_geometry)
