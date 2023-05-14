@@ -83,7 +83,7 @@ class HelpDialog:
 
     @staticmethod
     def add_menu_commands(tk_top, wid_men):
-        for title in help_db.helpIndex.keys():
+        for title in help_db.HELP_INDEX:
             HelpDialog.__help_titles.append(title)
 
         HelpDialog.fill_menu(tk_top, wid_men)
@@ -139,8 +139,8 @@ class HelpDialog:
         for idx in range(len(HelpDialog.__help_titles)):
             wid_men.add_command(label=HelpDialog.__help_titles[idx],
                                 command=lambda idx=idx: HelpDialog.create_dialog(tk_top, idx))
-            for sub in sorted([x[1] for x in help_db.helpSections.keys() if x[0] == idx]):
-                title = help_db.helpSections[(idx, sub)]
+            for sub in sorted([x[1] for x in help_db.HELP_SECTIONS.keys() if x[0] == idx]):
+                title = help_db.HELP_SECTIONS[(idx, sub)]
                 wid_men.add_command(label="- " + title,
                                     command=lambda idx=idx, title=title:
                                     HelpDialog.create_dialog(tk_top, idx, title))
@@ -209,7 +209,7 @@ class HelpDialog:
         self.wid_txt.yview(tk.MOVETO, 0.0)
 
         # fill the widget with the formatted text
-        for htext, tlabel in help_db.helpTexts[index]:
+        for htext, tlabel in help_db.HELP_TEXTS[index]:
             self.wid_txt.insert("end", htext, tlabel)
 
         self.wid_txt.configure(state=tk.DISABLED)
@@ -234,13 +234,13 @@ class HelpDialog:
                     self.wid_txt.see(pos)
 
         # define/update bindings for left/right command buttons
-        if help_db.helpTexts.get(index - 1, None):
+        if index > 0:
             self.but_cmd_prev.configure(command=lambda:
                                         self.raise_window(index - 1), state=tk.NORMAL)
         else:
             self.but_cmd_prev.configure(command=lambda: None, state=tk.DISABLED)
 
-        if help_db.helpTexts.get(index + 1, None):
+        if index + 1 < len(help_db.HELP_TEXTS):
             self.but_cmd_next.configure(command=lambda:
                                         self.raise_window(index + 1), state=tk.NORMAL)
         else:
@@ -272,8 +272,11 @@ class HelpDialog:
         else:
             subsect = ""
 
-        if help_db.helpIndex.get(hlink, None):
-            self.raise_window(help_db.helpIndex[hlink], subsect)
+        try:
+            idx = help_db.HELP_INDEX.index(hlink)
+            self.raise_window(idx, subsect)
+        except ValueError:
+            pass
 
 
     # callback for Configure (aka resize) event on the toplevel window
