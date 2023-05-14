@@ -17,6 +17,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # ------------------------------------------------------------------------ #
 
+"""
+Implements the MainWindow class.
+"""
+
 import os
 from datetime import datetime
 
@@ -43,18 +47,23 @@ import gtest_gui.wid_tool_tip as wid_tool_tip
 wid_test_ctrl_ = None
 wid_test_log_ = None
 
-class Main_window(object):
+class MainWindow:
+    """ This class implements the main window, which manages the main menubar and
+        its commands. It also is a container for the test control and test result
+        log widgets, which it creates at start-up.
+    """
+
     def __init__(self, tk_top, exe_name):
-        self.tk = tk_top
+        self.tk_top = tk_top
 
         global wid_test_ctrl_
-        wid_test_ctrl_ = wid_test_ctrl.Test_control_widget(tk_top, tk_top)
+        wid_test_ctrl_ = wid_test_ctrl.TestControlWidget(tk_top, tk_top)
         wid_test_ctrl_.get_widget().pack(side=tk.TOP, fill=tk.BOTH)
 
         wid_status_line.create_widget(tk_top, wid_test_ctrl_.get_widget())
 
         global wid_test_log_
-        wid_test_log_ = wid_test_log.Test_log_widget(tk_top, tk_top)
+        wid_test_log_ = wid_test_log.TestLogWidget(tk_top, tk_top)
         wid_test_log_.get_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
         wid_test_log_.set_wid_test_ctrl(wid_test_ctrl_)
@@ -73,13 +82,13 @@ class Main_window(object):
         tk_top.bind("<Control-Key-q>", lambda e: wid_test_ctrl_.resume_campaign())
         tk_top.bind("<Control-Key-t>", lambda e: wid_test_ctrl_.start_repetition())
 
-        tk_top.protocol(name="WM_DELETE_WINDOW", func=self.quit)
+        tk_top.protocol(name="WM_DELETE_WINDOW", func=self.__quit)
 
 
     def __create_menubar(self):
-        wid_men = tk.Menu(self.tk, name="menubar", tearoff=0)
-        self.var_opt_test_ctrl = tk.BooleanVar(self.tk, True)
-        self.var_opt_tool_tips = tk.BooleanVar(self.tk, config_db.options["enable_tool_tips"])
+        wid_men = tk.Menu(self.tk_top, name="menubar", tearoff=0)
+        self.var_opt_test_ctrl = tk.BooleanVar(self.tk_top, True)
+        self.var_opt_tool_tips = tk.BooleanVar(self.tk_top, config_db.options["enable_tool_tips"])
 
         wid_tool_tip.enable_tips(config_db.options["enable_tool_tips"])
 
@@ -96,9 +105,10 @@ class Main_window(object):
                                  command=wid_test_ctrl_.start_repetition, accelerator="Ctrl-t")
         wid_men_ctrl.add_separator()
         wid_men_ctrl.add_command(label="Open test case list...", tooltip="test_ctrl.cmd_tc_list",
-                                 command=lambda: dlg_tc_list.create_dialog(self.tk, wid_test_ctrl_))
+                                 command=lambda: dlg_tc_list.create_dialog(
+                                     self.tk_top, wid_test_ctrl_))
         wid_men_ctrl.add_command(label="Open job list...", tooltip="test_ctrl.cmd_job_list",
-                                 command=lambda: dlg_job_list.create_dialog(self.tk))
+                                 command=lambda: dlg_job_list.create_dialog(self.tk_top))
         wid_men_ctrl.add_separator()
         wid_men_ctrl.add_command(label="Refresh test case list", tooltip="test_ctrl.cmd_refresh",
                                  command=self.reload_exe)
@@ -107,23 +117,23 @@ class Main_window(object):
         wid_men_ctrl.add_cascade(menu=wid_men_set_exe, label="Select test executable")
         wid_men_set_exe.add_command(label="Select executable file...", command=self.select_exe)
         wid_men_ctrl.add_separator()
-        wid_men_ctrl.add_command(label="Quit", command=self.quit)
+        wid_men_ctrl.add_command(label="Quit", command=self.__quit)
 
         wid_men_cfg = wid_tool_tip.Menu(wid_men, tearoff=0)
         wid_men.add_cascade(menu=wid_men_cfg, label="Configure", underline=1)
         wid_men_cfg.add_command(label="Options...",
-                                command=lambda: dlg_config.create_dialog(self.tk))
+                                command=lambda: dlg_config.create_dialog(self.tk_top))
         wid_men_cfg.add_separator()
         wid_men_cfg.add_command(label="Select font for result log...",
                                 tooltip="config.select_font_content",
                                 command=lambda: dlg_font_sel.create_dialog(
-                                            self.tk, "content",
-                                            tk_utils.font_content, self.__change_font))
+                                    self.tk_top, "content",
+                                    tk_utils.font_content, MainWindow.__change_font))
         wid_men_cfg.add_command(label="Select font for trace preview...",
                                 tooltip="config.select_font_trace",
                                 command=lambda: dlg_font_sel.create_dialog(
-                                            self.tk, "trace",
-                                            tk_utils.font_trace, self.__change_font))
+                                    self.tk_top, "trace",
+                                    tk_utils.font_trace, MainWindow.__change_font))
         wid_men_cfg.add_separator()
         wid_men_cfg.add_checkbutton(label="Show test controls", tooltip="config.show_controls",
                                     command=self.show_test_ctrl, variable=self.var_opt_test_ctrl)
@@ -134,25 +144,25 @@ class Main_window(object):
         wid_men.add_cascade(menu=wid_men_log, label="Result log", underline=0)
         wid_test_log_.add_menu_commands(wid_men_log)
 
-        self.tk.eval("option add *Menu.useMotifHelp true")
+        self.tk_top.eval("option add *Menu.useMotifHelp true")
         wid_men_help = tk.Menu(wid_men, name="help", tearoff=0)
         wid_men.add_cascade(menu=wid_men_help, label="Help", underline=0)
-        dlg_help.add_menu_commands(self.tk, wid_men_help)
+        dlg_help.add_menu_commands(self.tk_top, wid_men_help)
         wid_men_help.add_separator()
         wid_men_help.add_command(label="Debug console",
-                                 command=lambda: dlg_debug.create_dialog(self.tk, globals()))
-        wid_men_help.add_command(label="About",
-                                 command=self.show_about_dialog)
+                                 command=lambda: dlg_debug.create_dialog(self.tk_top, globals()))
+        wid_men_help.add_command(label="About", command=self.__show_about_dialog)
 
-        self.var_prev_exe_name = tk.StringVar(self.tk, "")
+        self.var_prev_exe_name = tk.StringVar(self.tk_top, "")
         self.wid_men_set_exe = wid_men_set_exe
-        self.tk.config(menu=wid_men)
+        self.tk_top.config(menu=wid_men)
 
 
-    def quit(self):
+    def __quit(self):
         if gtest.gtest_ctrl.is_active():
-            if not tk_messagebox.askokcancel(parent=self.tk, message="Really stop tests and quit?"):
-                return
+            msg = "Really stop tests and quit?"
+            if not tk_messagebox.askokcancel(parent=self.tk_top, message=msg):
+                return False
 
         config_db.rc_file_update_upon_exit()
         gtest.gtest_ctrl.stop(kill=True)
@@ -160,20 +170,21 @@ class Main_window(object):
         if config_db.options["exit_clean_trace"]:
             gtest.clean_all_trace_files()
 
-        tk_utils.safe_destroy(self.tk)
+        tk_utils.safe_destroy(self.tk_top)
         return True
 
 
     def __check_tests_active(self):
         if gtest.gtest_ctrl.is_active():
             msg = "This operation requires stopping ongoing tests."
-            if not tk_messagebox.askokcancel(parent=self.tk, message=msg):
-                return True
+            if not tk_messagebox.askokcancel(parent=self.tk_top, message=msg):
+                return False
             gtest.gtest_ctrl.stop(kill=True)
-        return False
+        return True
 
 
-    def __change_font(self, foo):
+    @staticmethod
+    def __change_font(_font):
         tk_utils.update_derived_fonts()
         config_db.rc_file_update()
 
@@ -186,12 +197,12 @@ class Main_window(object):
         for path in input_paths:
             path_list = []
             while path:
-                p1, p2 = os.path.split(path)
-                if not p2 or p1 == os.path.sep:
+                part1, part2 = os.path.split(path)
+                if not part2 or part1 == os.path.sep:
                     path_list.append(path)
                     break
-                path_list.append(p2)
-                path = p1
+                path_list.append(part2)
+                path = part1
 
             path_lists.append(path_list)
 
@@ -205,7 +216,7 @@ class Main_window(object):
                     if idx >= len(prev_path_list):
                         delta_sets[idx2].add(idx)
                         break
-                    elif path_list[idx] != prev_path_list[idx]:
+                    if path_list[idx] != prev_path_list[idx]:
                         delta_sets[idx1].add(idx)
                         delta_sets[idx2].add(idx)
                         break
@@ -243,9 +254,9 @@ class Main_window(object):
                 base_names[os.path.basename(exe_name)].append(exe_name)
 
         mapped = {}
-        for base_name, paths in base_names.items():
+        for paths in base_names.values():
             if len(paths) > 1:
-                Main_window.__get_unique_prev_exe_name(paths, mapped)
+                MainWindow.__get_unique_prev_exe_name(paths, mapped)
             else:
                 mapped[paths[0]] = os.path.basename(paths[0])
 
@@ -259,7 +270,7 @@ class Main_window(object):
 
         self.var_prev_exe_name.set(test_db.test_exe_name)
 
-        mapped = Main_window.__get_prev_exe_names(config_db.prev_exe_file_list)
+        mapped = MainWindow.__get_prev_exe_names(config_db.prev_exe_file_list)
         need_sep = True
         for exe_name in reversed(config_db.prev_exe_file_list):
             if need_sep:
@@ -272,7 +283,7 @@ class Main_window(object):
                 # RFC 2822-compliant date format
                 tip_text += datetime.fromtimestamp(exe_ts).strftime("Timestamp: %a, %d %b %Y %T %z")
                 state = tk.NORMAL
-            except OSError as e:
+            except OSError:
                 tip_text += "File not found"
                 state = tk.DISABLED
 
@@ -284,20 +295,22 @@ class Main_window(object):
 
 
     def select_exe(self):
-        if self.__check_tests_active():
+        """ Opens a file selection dialog for selecting the test executable."""
+
+        if not self.__check_tests_active():
             return
 
         def_name = test_db.test_exe_name
         if not os.path.isfile(def_name):
             def_name = ""
 
-        if (os.name == "posix"):
+        if os.name == "posix":
             filetypes = [("all", "*"), ("Executable", "*.exe")]
         else:
             filetypes = [("Executable", "*.exe"), ("all", "*")]
 
         filename = tk_filedialog.askopenfilename(
-                        parent=self.tk, filetypes=filetypes,
+                        parent=self.tk_top, filetypes=filetypes,
                         title="Select test executable",
                         initialfile=os.path.basename(def_name),
                         initialdir=os.path.dirname(def_name))
@@ -306,7 +319,11 @@ class Main_window(object):
 
 
     def reload_exe(self):
-        if self.__check_tests_active():
+        """ Checks for a change of the current executable file and if changed,
+            reads the test case list from it if changed.
+        """
+
+        if not self.__check_tests_active():
             return
 
         if test_db.test_exe_name:
@@ -316,7 +333,7 @@ class Main_window(object):
 
 
     def __select_prev_exe(self, filename):
-        if self.__check_tests_active():
+        if not self.__check_tests_active():
             return
         self.__update_executable(filename)
 
@@ -324,9 +341,9 @@ class Main_window(object):
     def __update_executable(self, filename):
         try:
             exe_ts = int(os.stat(filename).st_mtime)  # cast away sub-second fraction
-        except OSError as e:
-            tk_messagebox.showerror(parent=self.tk,
-                                    message="Failed to access executable: " + str(e))
+        except OSError as exp:
+            tk_messagebox.showerror(parent=self.tk_top,
+                                    message="Failed to access executable: " + str(exp))
             return
 
         prev_exe = test_db.test_exe_name
@@ -337,7 +354,7 @@ class Main_window(object):
             return
 
         if filename != test_db.test_exe_name:
-            self.tk.wm_title("GtestGui: " + os.path.basename(filename))
+            self.tk_top.wm_title("GtestGui: " + os.path.basename(filename))
             gtest.release_exe_file_copy()
             config_db.update_prev_exe_file_list(filename)
 
@@ -352,12 +369,12 @@ class Main_window(object):
                 wid_status_line.show_message("warning", "Test case list is unchanged.")
 
 
-    def show_about_dialog(self):
-        wid_about = tk.Toplevel(self.tk, name="dlg_about")
+    def __show_about_dialog(self):
+        wid_about = tk.Toplevel(self.tk_top, name="dlg_about")
 
-        wid_about.wm_transient(self.tk)
+        wid_about.wm_transient(self.tk_top)
         wid_about.wm_resizable(1, 1)
-        wid_about.wm_group(self.tk)
+        wid_about.wm_group(self.tk_top)
         wid_about.wm_title("About Gtest GUI")
 
         wid_lab1 = tk.Label(wid_about, text="Module tester's GoogleTest GUI",
@@ -373,7 +390,7 @@ class Main_window(object):
                             cursor="top_left_arrow")
         wid_lab3.pack(side=tk.TOP, pady=5)
 
-        msg ="""
+        msg = """
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
 This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
@@ -393,8 +410,9 @@ You should have received a copy of the GNU General Public License along with thi
 
 
     def show_test_ctrl(self):
-        geom = self.tk.wm_geometry()
-        self.tk.wm_geometry(geom)
+        """ Show or hide of the test control frame in the main window after config changes."""
+        geom = self.tk_top.wm_geometry()
+        self.tk_top.wm_geometry(geom)
 
         if self.var_opt_test_ctrl.get():
             wid_test_log_.toggle_test_ctrl_visible(True)
@@ -406,6 +424,8 @@ You should have received a copy of the GNU General Public License along with thi
 
 
     def toggle_tool_tips(self):
+        """ Reconfigure tool-tip widget to show or hide tool-tips after config changes."""
+
         config_db.options["enable_tool_tips"] = self.var_opt_tool_tips.get()
         config_db.rc_file_update_after_idle()
 

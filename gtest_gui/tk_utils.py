@@ -17,6 +17,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # ------------------------------------------------------------------------ #
 
+"""
+Misc. helper functions for Tk
+"""
+
 import tkinter as tk
 import tkinter.font as tkf
 
@@ -28,6 +32,8 @@ font_content_bold = None
 font_trace = None
 wid_ctx_men = None
 
+xselection_wid = None
+xselection_txt = ""
 
 def initialize(tk_arg):
     global tk_top
@@ -36,7 +42,7 @@ def initialize(tk_arg):
     bind_classes()
     create_images()
     define_fonts()
-    xselection_init(tk_top)
+    xselection_init()
 
 
 def wid_exists(obj):
@@ -79,90 +85,90 @@ def post_context_menu(parent, xoff, yoff):
 
 def create_images():
     tk_top.call('image', 'create', 'bitmap', 'img_run', '-data',
-      '#define img_width 12\n'
-      '#define img_height 9\n'
-      'static unsigned char img_bits[] = {\n'
-        '0x1b, 0x00,'
-        '0x3b, 0x00,'
-        '0x7b, 0x00,'
-        '0xfb, 0x00,'
-        '0xfb, 0x01,'
-        '0xfb, 0x00,'
-        '0x7b, 0x00,'
-        '0x3b, 0x00,'
-        '0x1b, 0x00};')
+                '#define img_width 12\n'
+                '#define img_height 9\n'
+                'static unsigned char img_bits[] = {\n'
+                ' 0x1b, 0x00,'
+                ' 0x3b, 0x00,'
+                ' 0x7b, 0x00,'
+                ' 0xfb, 0x00,'
+                ' 0xfb, 0x01,'
+                ' 0xfb, 0x00,'
+                ' 0x7b, 0x00,'
+                ' 0x3b, 0x00,'
+                ' 0x1b, 0x00};')
 
     tk_top.call('image', 'create', 'bitmap', 'img_resume', '-data',
-      '#define img_width 12\n'
-      '#define img_height 9\n'
-      'static unsigned char img_bits[] = {\n'
-        '0x18, 0x00,'
-        '0x38, 0x00,'
-        '0x78, 0x00,'
-        '0xf8, 0x00,'
-        '0xf8, 0x01,'
-        '0xf8, 0x00,'
-        '0x78, 0x00,'
-        '0x38, 0x00,'
-        '0x18, 0x00};')
+                '#define img_width 12\n'
+                '#define img_height 9\n'
+                'static unsigned char img_bits[] = {\n'
+                ' 0x18, 0x00,'
+                ' 0x38, 0x00,'
+                ' 0x78, 0x00,'
+                ' 0xf8, 0x00,'
+                ' 0xf8, 0x01,'
+                ' 0xf8, 0x00,'
+                ' 0x78, 0x00,'
+                ' 0x38, 0x00,'
+                ' 0x18, 0x00};')
 
     tk_top.call('image', 'create', 'bitmap', 'img_stop', '-data',
-      '#define img_width 12\n'
-      '#define img_height 9\n'
-      'static unsigned char img_bits[] = {\n'
-        '0x00, 0x00,'
-        '0xfe, 0x10,'
-        '0xfe, 0x10,'
-        '0xfe, 0x10,'
-        '0xfe, 0x10,'
-        '0xfe, 0x10,'
-        '0xfe, 0x10,'
-        '0xfe, 0x10,'
-        '0x00, 0x00};')
+                '#define img_width 12\n'
+                '#define img_height 9\n'
+                'static unsigned char img_bits[] = {\n'
+                ' 0x00, 0x00,'
+                ' 0xfe, 0x10,'
+                ' 0xfe, 0x10,'
+                ' 0xfe, 0x10,'
+                ' 0xfe, 0x10,'
+                ' 0xfe, 0x10,'
+                ' 0xfe, 0x10,'
+                ' 0xfe, 0x10,'
+                ' 0x00, 0x00};')
 
     tk_top.call('image', 'create', 'bitmap', 'img_repeat', '-data',
-      '#define img_width 12\n'
-      '#define img_height 9\n'
-      'static unsigned char img_bits[] = {\n'
-        '0xfe, 0x01,'
-        '0x01, 0x00,'
-        '0x21, 0x00,'
-        '0x61, 0x00,'
-        '0xe1, 0x00,'
-        '0xfe, 0x01,'
-        '0xe0, 0x00,'
-        '0x60, 0x00,'
-        '0x20, 0x00};')
+                '#define img_width 12\n'
+                '#define img_height 9\n'
+                'static unsigned char img_bits[] = {\n'
+                ' 0xfe, 0x01,'
+                ' 0x01, 0x00,'
+                ' 0x21, 0x00,'
+                ' 0x61, 0x00,'
+                ' 0xe1, 0x00,'
+                ' 0xfe, 0x01,'
+                ' 0xe0, 0x00,'
+                ' 0x60, 0x00,'
+                ' 0x20, 0x00};')
 
     tk_top.call('image', 'create', 'bitmap', 'img_drop_down', '-data',
-      '#define img_width 15\n'
-      '#define img_height 15\n'
-      'static unsigned char img_bits[] = {\n'
-        '0x00, 0x00,'
-        '0x00, 0x00,'
-        '0x00, 0x00,'
-        '0x00, 0x00,'
-        '0x00, 0x00,'
-        '0xf8, 0x0f,'
-        '0xf0, 0x07,'
-        '0xe0, 0x03,'
-        '0xc0, 0x01,'
-        '0x80, 0x00,'
-        '0x00, 0x00,'
-        '0x00, 0x00,'
-        '0x00, 0x00,'
-        '0x00, 0x00,'
-        '0x00, 0x00};')
+                '#define img_width 15\n'
+                '#define img_height 15\n'
+                'static unsigned char img_bits[] = {\n'
+                ' 0x00, 0x00,'
+                ' 0x00, 0x00,'
+                ' 0x00, 0x00,'
+                ' 0x00, 0x00,'
+                ' 0x00, 0x00,'
+                ' 0xf8, 0x0f,'
+                ' 0xf0, 0x07,'
+                ' 0xe0, 0x03,'
+                ' 0xc0, 0x01,'
+                ' 0x80, 0x00,'
+                ' 0x00, 0x00,'
+                ' 0x00, 0x00,'
+                ' 0x00, 0x00,'
+                ' 0x00, 0x00,'
+                ' 0x00, 0x00};')
 
     tk_top.call('image', 'create', 'bitmap', 'img_folder', '-data',
-      '#define img_width 14\n'
-      '#define img_height 5\n'
-      'static unsigned char img_bits[] = {\n'
-        '0x00, 0x00,'
-        '0x00, 0x00,'
-        '0x00, 0x00,'
-        '0xd8, 0x06,'
-        '0xd8, 0x06};')
+                '#define img_width 14\n'
+                '#define img_height 5\n'
+                'static unsigned char img_bits[] = {\n'
+                ' 0x00, 0x00,'
+                ' 0x00, 0x00,'
+                ' 0x00, 0x00,'
+                ' 0xd8, 0x06,'
+                ' 0xd8, 0x06};')
 
 
 def bind_classes():
@@ -173,16 +179,17 @@ def bind_classes():
         # Not modifiers, but events are overridden below
         "<Key-Tab>", "<Control-Key-a>")
 
+    # Define Read-Only Text key binding class:
+    # Copy all event bindings of the Text widget, except for those that allow modifying content.
     for event in set(tk_top.bind_class("Text")) - set(text_modifier_events):
         tk_top.bind_class("TextReadOnly", event, tk_top.bind_class("Text", event))
 
-    tk_top.bind_class("TextReadOnly", "<Key-Tab>", tk_top.bind_class("Text", "<Control-Key-Tab>"))
-    tk_top.bind_class("TextSel", "<Key-Tab>", tk_top.bind_class("Text", "<Control-Key-Tab>"))
+    for class_name in ("TextReadOnly", "TextSel"):
+        tk_top.bind_class(class_name, "<Key-Tab>", tk_top.bind_class("Text", "<Control-Key-Tab>"))
 
-    tk_top.bind_class("TextReadOnly", "<Control-Key-a>", lambda e: e.widget.event_generate("<<SelectAll>>"))
-    tk_top.bind_class("Text", "<Control-Key-a>", lambda e: e.widget.event_generate("<<SelectAll>>"))
-    tk_top.bind_class("Entry", "<Control-Key-a>", lambda e: e.widget.event_generate("<<SelectAll>>"))
-    tk_top.bind_class("Listbox", "<Control-Key-a>", lambda e: e.widget.event_generate("<<SelectAll>>"))
+    for class_name in ("TextReadOnly", "Text", "Entry", "Listbox"):
+        tk_top.bind_class(class_name, "<Control-Key-a>",
+                          lambda e: e.widget.event_generate("<<SelectAll>>"))
 
     tk_top.bind_class("Listbox", "<Key-Home>", tk_top.bind_class("Listbox", "<Control-Key-Home>"))
     tk_top.bind_class("Listbox", "<Key-End>", tk_top.bind_class("Listbox", "<Control-Key-End>"))
@@ -249,7 +256,7 @@ def init_font_trace(opt):
 # Clipboard helper functions
 #
 
-def xselection_init(tk_top):
+def xselection_init():
     global xselection_wid, xselection_txt
     xselection_txt = ""
     xselection_wid = tk.Label(tk_top)

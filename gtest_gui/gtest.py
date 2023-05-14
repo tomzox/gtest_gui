@@ -17,7 +17,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # ------------------------------------------------------------------------ #
 
-from io import StringIO
+"""
+Implements Interface classes to GTest command line and trace output.
+"""
+
 import os
 import queue
 import re
@@ -40,16 +43,17 @@ gtest_ctrl = None
 
 def initialize():
     global gtest_ctrl
-    gtest_ctrl = Gtest_control()
+    gtest_ctrl = GtestControl()
 
 
-class Gtest_control(object):
+class GtestControl:
     def __init__(self):
         self.__jobs = []
         self.__result_queue = queue.Queue()
         self.__thr_lock = threading.Lock()
         self.__thr_inst = None
-        self.__tid = None
+        self.__max_fail = 0
+        self.__exe_ts = None
 
 
     def start(self, job_cnt, job_runall_cnt, rep_cnt, filter_str, tc_list, is_resume,
@@ -62,25 +66,25 @@ class Gtest_control(object):
         if not os.path.exists(trace_dir_path):
             try:
                 os.mkdir(trace_dir_path)
-            except OSError as e:
-                tk_messagebox.showerror(parent=tk_utils.tk_top,
-                                        message="Failed to create trace output directory: " + str(e))
+            except OSError as exc:
+                msg = "Failed to create trace output directory: " + str(exc)
+                tk_messagebox.showerror(parent=tk_utils.tk_top, message=msg)
                 return
 
         exe_name = gtest_control_get_exe_file_link_name(test_db.test_exe_name, self.__exe_ts)
         if config_db.options["copy_executable"] and not os.access(exe_name, os.X_OK):
             try:
                 os.link(test_db.test_exe_name, exe_name)
-            except OSError as e:
+            except OSError as exc:
                 msg = ("Failed to link or copy executable: %s. Will use executable directly. "
-                       "See Configuration to disable this warning.") % str(e)
+                       "See Configuration to disable this warning.") % str(exc)
                 answer = tk_messagebox.showwarning(parent=tk_utils.tk_top, message=msg)
                 if answer == "cancel":
                     return
                 exe_name = test_db.test_exe_name
 
-        (shard_parts, shard_reps) = calc_sharding_partitioning(
-                                        len(tc_list), rep_cnt, job_cnt - job_runall_cnt)
+        (shard_parts, shard_reps) = \
+            calc_sharding_partitioning(len(tc_list), rep_cnt, job_cnt - job_runall_cnt)
         for idx in range(job_runall_cnt):
             shard_parts.append(1)
             shard_reps.append(rep_cnt)
@@ -96,17 +100,19 @@ class Gtest_control(object):
                                                   shard_parts[part_idx], shard_idx)
 
             try:
-                self.__jobs.append(Gtest_job(self, exe_name, self.__exe_ts,
-                                             gtest_control_get_trace_file_name(self.__exe_ts, trace_idx),
-                                             filter_str, run_disabled, shuffle, valgrind_cmd,
-                                             clean_trace, clean_core, break_on_fail, break_on_except,
-                                             shard_reps[part_idx], shard_parts[part_idx], shard_idx,
-                                             shard_tc_cnt,
-                                             idx >= job_cnt - job_runall_cnt,
-                                             self.__result_queue))
-            except OSError as e:
+                self.__jobs.append(GtestJob(exe_name, self.__exe_ts,
+                                            gtest_control_get_trace_file_name(self.__exe_ts,
+                                                                              trace_idx),
+                                            filter_str, run_disabled, shuffle, valgrind_cmd,
+                                            clean_trace, clean_core,
+                                            break_on_fail, break_on_except,
+                                            shard_reps[part_idx], shard_parts[part_idx],
+                                            shard_idx, shard_tc_cnt,
+                                            idx >= job_cnt - job_runall_cnt,
+                                            self.__result_queue))
+            except OSError as exc:
                 tk_messagebox.showerror(parent=tk_utils.tk_top,
-                                        message="Failed to start jobs: " + str(e))
+                                        message="Failed to start jobs: " + str(exc))
                 break
 
             trace_idx += 1
@@ -115,7 +121,7 @@ class Gtest_control(object):
                 shard_idx = 0
                 part_idx += 1
 
-        self.__tid = tk_utils.tk_top.after(250, self.__poll_queue)
+        tk_utils.tk_top.after(250, self.__poll_queue)
 
         if self.__thr_inst:
             self.__thr_inst.join(timeout=0)
@@ -151,9 +157,9 @@ class Gtest_control(object):
                     return
 
                 for event in pending_events:
-                    fd = event[0].data.get_pipe()
+                    event_fd = event[0].data.get_pipe()
                     if not event[0].data.communicate():
-                        selector.unregister(fd)
+                        selector.unregister(event_fd)
 
             # Add minimum delay between reading pipes for reducing parser overhead
             sleep = next_poll - time.time()
@@ -195,9 +201,7 @@ class Gtest_control(object):
             pass
 
         if self.__jobs:
-            self.__tid = tk_utils.tk_top.after(250, self.__poll_queue)
-        else:
-            self.__tid = None
+            tk_utils.tk_top.after(250, self.__poll_queue)
 
 
     def stop(self, kill=False):
@@ -257,7 +261,7 @@ class Gtest_control(object):
         test_db.set_job_status(len(self.__jobs))
 
         with self.__thr_lock:
-            have_non_bg = any([not job.is_bg_job() for job in self.__jobs])
+            have_non_bg = any(not job.is_bg_job() for job in self.__jobs)
 
         if not have_non_bg:
             tk_utils.tk_top.after_idle(self.stop)
@@ -269,27 +273,28 @@ class Gtest_control(object):
 def calc_parts_sub(pre_part, cpu_cnt, tc_cnt, rep_cnt, max_cpu_cnt):
     #print("DBG %s | %d,%d,%d,%d" % (str(pre_part), cpu_cnt, tc_cnt, rep_cnt, max_cpu_cnt))
     partitions = []
-    prev_c = 0
+    prev_cval = 0
     div = 1
     while True:
-        c = int((tc_cnt + div - 1) / div)
+        cval = int((tc_cnt + div - 1) / div)
 
-        if c != prev_c and c <= max_cpu_cnt:
-            if c > 1:
-                cnt = int(cpu_cnt / c)
-                part = pre_part + ([c] * cnt)
-                remainder = cpu_cnt - (c * cnt)
+        if cval != prev_cval and cval <= max_cpu_cnt:
+            if cval > 1:
+                cnt = int(cpu_cnt / cval)
+                part = pre_part + ([cval] * cnt)
+                remainder = cpu_cnt - (cval * cnt)
 
                 if remainder > 0:
+                    # Recurse to decide partitioning of remaining CPUs
                     partitions.extend(calc_parts_sub(part, remainder, tc_cnt, rep_cnt,
-                                                     min(remainder, c)))
+                                                     min(remainder, cval)))
                 else:
                     partitions.append(part)
             else:
                 partitions.append(pre_part + [1] * cpu_cnt)
 
-        prev_c = c
-        if c <= 1:
+        prev_cval = cval
+        if cval <= 1:
             break
         div += 1
 
@@ -300,6 +305,7 @@ def calc_parts_sub(pre_part, cpu_cnt, tc_cnt, rep_cnt, max_cpu_cnt):
 
 
 def calc_partitions(tc_cnt, job_cnt, rep_cnt):
+    # Start recursion for enumeration of possible partitionings
     partitions = calc_parts_sub([], job_cnt, tc_cnt, rep_cnt, job_cnt)
     return partitions
 
@@ -309,7 +315,7 @@ def calc_repetitions(partitions, tc_cnt, rep_cnt):
     min_parts = None
     min_reps = None
     for part in partitions:
-        tcs = [int((tc_cnt + c - 1) / c) for c in part]
+        tcs = [int((tc_cnt + x - 1) / x) for x in part]
 
         # step #1: estimate repetiton count based on TC# relation between CPU partitions
         # (needed for reducing the number of iterations in step 2)
@@ -320,7 +326,7 @@ def calc_repetitions(partitions, tc_cnt, rep_cnt):
         for rep_idx in range(len(tcs_rep)):
             tcs_rep[rep_idx] *= reps[rep_idx]
 
-        # step #2: distribute remaining repetitons to partitions
+        # step #2: distribute remaining repetitions to partitions
         for rep_idx in range(sum(reps), rep_cnt):
             min_idx = 0
             min_val = tcs_rep[0] + tcs[0]
@@ -346,8 +352,8 @@ def calc_repetitions(partitions, tc_cnt, rep_cnt):
 def calc_sharding_partitioning(tc_cnt, rep_cnt, job_cnt):
     if tc_cnt and rep_cnt and job_cnt:
         return calc_repetitions(calc_partitions(tc_cnt, job_cnt, rep_cnt), tc_cnt, rep_cnt)
-    else:
-        return ([job_cnt], [rep_cnt])
+
+    return ([job_cnt], [rep_cnt])
 
 
 def get_tc_count_per_shard(tc_cnt, rep_cnt, shard_size, shard_idx):
@@ -398,8 +404,8 @@ def gtest_control_get_exe_file_link_name(exe_name, exe_ts):
     if config_db.options["copy_executable"]:
         trace_dir_path = gtest_control_get_trace_dir(exe_ts)
         return os.path.join(trace_dir_path, os.path.basename(exe_name))
-    else:
-        return exe_name
+
+    return exe_name
 
 
 def gtest_control_get_trace_file_name(exe_ts, idx):
@@ -409,9 +415,9 @@ def gtest_control_get_trace_file_name(exe_ts, idx):
 def gtest_control_get_temp_name_for_trace(file_name, file_off, is_extern_import):
     if is_extern_import:
         return "imported!" + file_name.replace(os.path.sep, "!") + "." + str(file_off)
-    else:
-        trace_path, trace_name = os.path.split(file_name)
-        return "%s.%s.%d" % (os.path.basename(trace_path), trace_name, file_off)
+
+    trace_path, trace_name = os.path.split(file_name)
+    return "%s.%s.%d" % (os.path.basename(trace_path), trace_name, file_off)
 
 
 def gtest_control_get_core_file_name(trace_name, is_valgrind):
@@ -436,13 +442,13 @@ def release_exe_file_copy(exe_name=None, exe_ts=None):
     if os.path.exists(trace_dir_path):
         dir_list = os.listdir(trace_dir_path)
 
-        if not any([x.startswith(("core.", "vgcore.")) for x in dir_list]):
+        if not any(x.startswith(("core.", "vgcore.")) for x in dir_list):
             exe_link = gtest_control_get_exe_file_link_name(exe_name, exe_ts)
             try:
                 os.unlink(exe_link)
                 try:
                     dir_list.remove(os.path.basename(exe_link))
-                except:
+                except ValueError:
                     pass
             except OSError:
                 pass
@@ -461,7 +467,7 @@ def remove_trace_or_core_files(rm_files, rm_exe):
 
     try:
         for file_name in rm_files:
-            os.remove(file_name);
+            os.remove(file_name)
     except OSError:
         pass
 
@@ -519,38 +525,37 @@ def __add_passed_section(pass_parts, name, start, length):
 
 def __compress_trace_file(name, parts):
     try:
-        with open(name, "r+b") as fd:
+        with open(name, "r+b") as file_obj:
             size = os.stat(name).st_size
             off = parts[0][0]
             for idx in range(len(parts)):
                 next_start = parts[idx + 1][0] if (idx + 1 < len(parts)) else size
                 cur_end = parts[idx][1]
 
-                fd.seek(cur_end)
-                data = fd.read(next_start - cur_end)
+                file_obj.seek(cur_end)
+                data = file_obj.read(next_start - cur_end)
 
-                fd.seek(off)
-                fd.write(data)
+                file_obj.seek(off)
+                file_obj.write(data)
 
                 off += len(data)
                 idx += 1
 
-            fd.truncate(off)
+            file_obj.truncate(off)
 
-    except OSError as e:
+    except OSError:
         pass
 
 
 
 # ----------------------------------------------------------------------------
 
-class Gtest_job(object):
-    def __init__(self, parent, exe_name, exe_ts, out_file_name,
+class GtestJob:
+    def __init__(self, exe_name, exe_ts, out_file_name,
                  filter_str, run_disabled, shuffle, valgrind_cmd,
                  clean_trace, clean_core, break_on_fail, break_on_except,
                  rep_cnt, shard_cnt, shard_idx, expexted_result_cnt,
                  is_bg_job, result_queue):
-        self.__parent = parent
         self.__exe_name = test_db.test_exe_name
         self.__exe_ts = exe_ts
         self.__out_file_name = out_file_name
@@ -623,7 +628,7 @@ class Gtest_job(object):
                                        creationflags=gtest_gui.fcntl.subprocess_creationflags())
         # Configure output pipe as non-blocking:
         # Caller is responsible for periodically calling communicate() to collect trace output
-        flags = gtest_gui.fcntl.set_nonblocking(self.__proc.stdout)
+        gtest_gui.fcntl.set_nonblocking(self.__proc.stdout)
 
         self.__out_file = open(out_file_name, "wb", buffering=0)
 
@@ -693,9 +698,9 @@ class Gtest_job(object):
             self.__buf_data += data
             done_off = 0
             for match in re.finditer(
-                  b"^\[( +RUN +| +OK +| +FAILED +| +SKIPPED +|----------|==========)\] +"
-                  b"(\S+)(?:\s+\((\d+)\s*ms\))?[^\n\r]*[\r\n]",
-                  self.__buf_data, re.MULTILINE):
+                    rb"^\[( +RUN +| +OK +| +FAILED +| +SKIPPED +|----------|==========)\] +"
+                    rb"(\S+)(?:\s+\((\d+)\s*ms\))?[^\n\r]*[\r\n]",
+                    self.__buf_data, re.MULTILINE):
 
                 if b"RUN" in match.group(1):
                     self.__trace_to_file(self.__snippet_data)
@@ -733,14 +738,14 @@ class Gtest_job(object):
             self.__buf_data = self.__buf_data[last_line_off:]
             return True
 
-        else:
-            retval = self.__proc.poll()
-            if retval is not None:
-                self.__process_exit(retval)
-                self.__proc = None
-                return False
+        # no data read: check if process is still alive
+        retval = self.__proc.poll()
+        if retval is not None:
+            self.__process_exit(retval)
+            self.__proc = None
+            return False
 
-            return True
+        return True
 
 
     def __process_exit(self, retval):
@@ -824,7 +829,7 @@ class Gtest_job(object):
                 match = re.search(pat.encode(), self.__snippet_data, re.MULTILINE)
                 if match:
                     seed = match.group(1).decode(errors="backslashreplace")
-            except:
+            except (re.error, IndexError):
                 pass
 
         trace_start_off = self.__out_file.tell()
@@ -838,12 +843,12 @@ class Gtest_job(object):
             trace_start_off = 0
             trace_length = self.__out_file.tell()
 
-        self.__result_queue.put( ((tc_name, self.__exe_name, self.__exe_ts, is_failed,
-                                   self.__out_file_name if store_trace else None,
-                                   trace_start_off, trace_length, core_file,
-                                   fail_file, fail_line, duration, int(time.time()),
-                                   self.__is_valgrind, False, seed),
-                                  self.__is_bg_job) )
+        self.__result_queue.put(((tc_name, self.__exe_name, self.__exe_ts, is_failed,
+                                  self.__out_file_name if store_trace else None,
+                                  trace_start_off, trace_length, core_file,
+                                  fail_file, fail_line, duration, int(time.time()),
+                                  self.__is_valgrind, False, seed),
+                                 self.__is_bg_job))
         self.__result_cnt += 1
 
 
@@ -869,26 +874,26 @@ def gtest_list_tests(pattern="", exe_file=None):
     if pattern:
         cmd.append("--gtest_filter=" + pattern)
     try:
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                universal_newlines=True,
-                                creationflags=gtest_gui.fcntl.subprocess_creationflags())
-        result = proc.communicate(timeout=10)
-        if proc.returncode == 0:
-            tc_names = gtest_parse_test_list(result[0].rstrip())
-            if not tc_names:
-                msg = ('Read empty test case list from executable "--gtest_list_tests". '
-                       'Continue anyway?')
-                if not tk_messagebox.askokcancel(parent=tk_utils.tk_top, message=msg):
-                    return None
-            return tc_names
-        else:
+        with subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                              universal_newlines=True,
+                              creationflags=gtest_gui.fcntl.subprocess_creationflags()) as proc:
+            result = proc.communicate(timeout=10)
+            if proc.returncode == 0:
+                tc_names = gtest_parse_test_list(result[0].rstrip())
+                if not tc_names:
+                    msg = ('Read empty test case list from executable "--gtest_list_tests". '
+                           'Continue anyway?')
+                    if not tk_messagebox.askokcancel(parent=tk_utils.tk_top, message=msg):
+                        return None
+                return tc_names
+
             msg = ("Gtest exited with error code %d when querying test case list: "
-                          % proc.returncode) + str(result[1].rstrip())
+                   % proc.returncode) + str(result[1].rstrip())
             tk_messagebox.showerror(parent=tk_utils.tk_top, message=msg)
             return None
 
-    except OSError as e:
-        msg = "Failed to read test case list: " + str(e)
+    except OSError as exc:
+        msg = "Failed to read test case list: " + str(exc)
         tk_messagebox.showerror(parent=tk_utils.tk_top, message=msg)
         return None
 
@@ -911,49 +916,47 @@ def gtest_parse_test_list(lines):
 
 
 def find_last_line_start(buf, off):
-    nl = b"\n"[0]
+    nl_char = b"\n"[0]
     for idx in reversed(range(off, len(buf))):
-        if buf[idx] == nl:
+        if buf[idx] == nl_char:
             return idx + 1
     return off
 
 
 def find_prev_line_end(buf, off):
-    nl = b"\n"[0]
+    nl_char = b"\n"[0]
     for idx in reversed(range(off, len(buf))):
-        if buf[idx] == nl:
+        if buf[idx] == nl_char:
             return idx
     return off
 
 
 def find_next_line_end(buf, off):
-    nl = b"\n"[0]
+    nl_char = b"\n"[0]
     for idx in range(off, len(buf)):
-        if buf[idx] == nl:
+        if buf[idx] == nl_char:
             return idx + 1
     return off
 
 
 def extract_trace(file_name, file_offs, length):
     try:
-        with open(file_name, "rb") as f:
-            if f.seek(file_offs) == file_offs:
-                snippet = f.read(length)
+        with open(file_name, "rb") as file_obj:
+            if file_obj.seek(file_offs) == file_offs:
+                snippet = file_obj.read(length)
                 if snippet:
                     return snippet.decode(errors="backslashreplace")
-            #else:
-            #  print("Failed to seek in %s to %d: length %d" % (file_name, file_offs, f.seek(0, 2)), file=sys.stderr)
-    except OSError as e:
-      # use print as this function may be called from context of secondary threads
-      print("Failed to read trace file:" + str(e), file=sys.stderr)
+    except OSError as exc:
+        # use print as this function may be called from context of secondary threads
+        print("Failed to read trace file:" + str(exc), file=sys.stderr)
 
     return None
 
 
 def extract_trace_to_temp_file(tmp_dir, trace_name, file_offs, length, is_extern_import):
-    tmp_name = os.path.join(
-                    tmp_dir,
-                    gtest_control_get_temp_name_for_trace(trace_name, file_offs, is_extern_import))
+    tmp_name = os.path.join(tmp_dir,
+                            gtest_control_get_temp_name_for_trace(trace_name, file_offs,
+                                                                  is_extern_import))
     if not os.path.exists(tmp_name):
         try:
             with open(trace_name, "rb") as fread:
@@ -961,9 +964,9 @@ def extract_trace_to_temp_file(tmp_dir, trace_name, file_offs, length, is_extern
                     with open(tmp_name, "wb") as fwrite:
                         snippet = fread.read(length)
                         fwrite.write(snippet)
-        except OSError as e:
+        except OSError as exc:
             tk_messagebox.showerror(parent=tk_utils.tk_top,
-                                    message="Failed to copy trace to temporary file: " + str(e))
+                                    message="Failed to copy trace to temporary file: " + str(exc))
             tmp_name = None
 
     return tmp_name
@@ -980,7 +983,7 @@ def gtest_import_tc_result(tc_name, is_failed, duration, snippet, start_off,
     else:
         try:
             duration = int(duration.decode())
-        except:
+        except ValueError:
             duration = 0
 
     core_path = None
@@ -1007,7 +1010,7 @@ def gtest_import_tc_result(tc_name, is_failed, duration, snippet, start_off,
             match = re.search(pat.encode(), snippet, re.MULTILINE)
             if match:
                 seed = match.group(1).decode(errors="backslashreplace")
-        except:
+        except (re.error, IndexError):
             pass
 
     test_db.import_result((tc_name, None, 0, is_failed, file_name, start_off, len(snippet),
@@ -1018,7 +1021,7 @@ def gtest_import_tc_result(tc_name, is_failed, duration, snippet, start_off,
 def gtest_import_result_file(file_name, is_auto):
     import_flag = 1 if is_auto else 2
     file_ts = int(os.stat(file_name).st_mtime)  # cast away sub-second fraction
-    with open(file_name, "rb", buffering=0) as f:
+    with open(file_name, "rb", buffering=0) as file_obj:
         snippet_start = 0
         snippet_name = b""
         snippet_data = b""
@@ -1028,16 +1031,16 @@ def gtest_import_result_file(file_name, is_auto):
         file_off = -1
 
         while True:
-            new_data = f.read(256*1024)
+            new_data = file_obj.read(256*1024)
             if not new_data:
                 break
 
             buf_data += new_data
             done_off = 0
             for match in re.finditer(
-                  b"\n\[( +RUN +| +OK +| +FAILED +| +SKIPPED +| +CRASHED +|----------|==========)\] +"
-                  b"(\S+)(?:\s+\((\d+)\s*ms\))?",
-                  buf_data):
+                    rb"\n\[( +RUN +| +OK +| +FAILED +| +SKIPPED +| +CRASHED +|----------|"
+                    rb"==========)\] +(\S+)(?:\s+\((\d+)\s*ms\))?",
+                    buf_data):
 
                 if b"RUN" in match.group(1):
                     snippet_name = match.group(2)
@@ -1082,7 +1085,7 @@ def gtest_automatic_import():
     try:
         for file_name in gtest_control_search_trace_dirs():
             gtest_import_result_file(file_name, True)
-    except OSError as e:
+    except OSError as exc:
         tk_messagebox.showerror(parent=tk_utils.tk_top,
-                                message="Error during automatic import of trace files: " + str(e))
+                                message="Error during automatic import of trace files: " + str(exc))
         return

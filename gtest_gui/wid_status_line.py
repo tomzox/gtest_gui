@@ -17,7 +17,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # ------------------------------------------------------------------------ #
 
-import re
+"""
+This module implements the status line widget class.
+"""
+
 import tkinter as tk
 
 import gtest_gui.tk_utils as tk_utils
@@ -26,7 +29,7 @@ stline = None
 
 def create_widget(tk_top, parent):
     global stline
-    stline = Status_line_widget(tk_top, parent)
+    stline = StatusLineWidget(tk_top, parent)
 
 
 def show_message(msg_type, msg_txt):
@@ -37,9 +40,9 @@ def clear_message():
     stline.clear()
 
 
-class Status_line_widget(object):
+class StatusLineWidget:
     def __init__(self, tk_top, parent):
-        self.tk = tk_top
+        self.tk_top = tk_top
         self.wid_parent = parent
         self.timer_id = None
         self.wid_message = None
@@ -66,8 +69,8 @@ class Status_line_widget(object):
             self.wid_message.configure(text=msg_txt, foreground=color)
 
         if self.timer_id:
-            self.tk.after_cancel(self.timer_id)
-        self.timer_id = self.tk.after(5000, self.__handle_timer)
+            self.tk_top.after_cancel(self.timer_id)
+        self.timer_id = self.tk_top.after(5000, self.__handle_timer)
 
 
     def __get_color(self):
@@ -90,15 +93,15 @@ class Status_line_widget(object):
         self.wid_message.configure(foreground=self.__get_color())
 
         if self.timer_id:
-            self.tk.after_cancel(self.timer_id)
-        self.timer_id = self.tk.after(5000, self.__handle_timer)
+            self.tk_top.after_cancel(self.timer_id)
+        self.timer_id = self.tk_top.after(5000, self.__handle_timer)
 
 
     def __handle_timer(self):
         self.fade_val += 0.015
         if self.fade_val < 1:
             self.wid_message.config(foreground=self.__get_color())
-            self.timer_id = self.tk.after(50, self.__handle_timer)
+            self.timer_id = self.tk_top.after(50, self.__handle_timer)
 
         else:
             self.timer_id = None
@@ -107,7 +110,7 @@ class Status_line_widget(object):
 
     def clear(self):
         if self.timer_id:
-            self.tk.after_cancel(self.timer_id)
+            self.tk_top.after_cancel(self.timer_id)
             self.timer_id = None
 
         tk_utils.safe_destroy(self.wid_message)

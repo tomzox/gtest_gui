@@ -17,14 +17,16 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # ------------------------------------------------------------------------ #
 
+"""
+Implements function interfaces for using external applications for displaying
+trace file content, stack traces and for exporting trace files.
+"""
+
 import os
 import re
 import subprocess
-import sys
 import tempfile
 import threading
-
-if (os.name == "posix"): import fcntl
 
 import tkinter as tk
 from tkinter import messagebox as tk_messagebox
@@ -35,6 +37,9 @@ import gtest_gui.gtest as gtest
 import gtest_gui.test_db as test_db
 import gtest_gui.tk_utils as tk_utils
 import gtest_gui.wid_status_line as wid_status_line
+
+if os.name == "posix":
+    import fcntl
 
 prev_trace_export_path = ""
 
@@ -58,9 +63,10 @@ def show_trace_snippet(tk_top, file_name, file_off, length, is_extern_import):
         if txt is None:
             wid_status_line.show_message("error", "Failed to read trace file")
             return
-        elif txt == "":
+        if txt == "":
             wid_status_line.show_message("error", "Trace empty for this result")
             return
+
         file_name = "-"
         shared_file = None
 
@@ -72,13 +78,13 @@ def show_trace_snippet(tk_top, file_name, file_off, length, is_extern_import):
         shared_file = file_name
         txt = ""
 
-    Proc_monitor.create(re.split(r"\s+", browser_cmd) + [file_name], txt, shared_file)
+    ProcMonitor.create(re.split(r"\s+", browser_cmd) + [file_name], txt, shared_file)
 
 
 def show_trace(tk_top, file_name):
     browser_cmd = config_db.options["browser"]
     if browser_cmd:
-        Proc_monitor.create(re.split(r"\s+", browser_cmd) + [file_name], "", None)
+        ProcMonitor.create(re.split(r"\s+", browser_cmd) + [file_name], "", None)
     else:
         wid_status_line.show_message("error", "No trace browser app is configured")
 
@@ -87,11 +93,11 @@ def show_stack_trace(tk_top, tc_name, exe_name, exe_ts, core_name):
     cmd_filename = os.path.join(__get_temp_dir_name(), "gdb_command.bat")
     if not os.path.exists(cmd_filename):
         try:
-            with open(cmd_filename, "w") as f:
-                print("info thread", file=f)
-                print("thread apply all backtrace", file=f)
-        except Exception as e:
-            msg = "Error writing command input file for gdb: " + str(e)
+            with open(cmd_filename, "w", encoding="ascii") as file_obj:
+                print("info thread", file=file_obj)
+                print("thread apply all backtrace", file=file_obj)
+        except OSError as exc:
+            msg = "Error writing command input file for gdb: " + str(exc)
             tk_messagebox.showerror(parent=tk_top, message=msg)
             return
 
@@ -102,15 +108,15 @@ def show_stack_trace(tk_top, tc_name, exe_name, exe_ts, core_name):
         if answer is None:
             return
         if not answer:
-            if (os.name == "posix"):
+            if os.name == "posix":
                 filetypes = [("all", "*"), ("Executable", "*.exe")]
             else:
                 filetypes = [("Executable", "*.exe"), ("all", "*")]
             exe_file = tk_filedialog.askopenfilename(
-                            parent=tk_top, filetypes=filetypes,
-                            title="Select test executable",
-                            initialfile="",
-                            initialdir=os.path.dirname(core_name))
+                parent=tk_top, filetypes=filetypes,
+                title="Select test executable",
+                initialfile="",
+                initialdir=os.path.dirname(core_name))
             if not exe_file:
                 return
         else:
@@ -126,12 +132,12 @@ def show_stack_trace(tk_top, tc_name, exe_name, exe_ts, core_name):
         flags = fcntl.fcntl(proc.stdout, fcntl.F_GETFL)
         fcntl.fcntl(proc.stdout, fcntl.F_SETFL, flags | os.O_NONBLOCK)
 
-    except Exception as e:
-        tk_messagebox.showerror(parent=tk_top, message="Failed to run gdb: " + str(e))
+    except (OSError, subprocess.SubprocessError) as exc:
+        tk_messagebox.showerror(parent=tk_top, message="Failed to run gdb: " + str(exc))
         return
 
     title = "GtestGui: Stack trace - %s (%s)" % (tc_name, core_name)
-    Log_browser(tk_top, title, proc)
+    LogBrowser(tk_top, title, proc)
 
 
 def export_traces(tk_top, log_idx_sel):
@@ -139,10 +145,10 @@ def export_traces(tk_top, log_idx_sel):
 
     types = [("ZIP archive", "*.zip"), ("all", "*")]
     out_name = tk_filedialog.asksaveasfilename(
-                    parent=tk_top, filetypes=types,
-                    title="Select output file for trace export",
-                    initialfile=os.path.basename(prev_trace_export_path),
-                    initialdir=os.path.dirname(prev_trace_export_path))
+        parent=tk_top, filetypes=types,
+        title="Select output file for trace export",
+        initialfile=os.path.basename(prev_trace_export_path),
+        initialdir=os.path.dirname(prev_trace_export_path))
     if not out_name:
         return
 
@@ -160,12 +166,12 @@ def export_traces(tk_top, log_idx_sel):
                     filename = "trace.%d.%s" % (file_idx, log[0])
                     abs_filename = os.path.join(tempdir, filename)
                     try:
-                        with open(abs_filename, "w") as f:
-                            f.write(txt)
-                    except OSError as e:
+                        with open(abs_filename, "w") as file_obj:
+                            file_obj.write(txt)
+                    except OSError as exc:
                         tk_messagebox.showerror(
                             parent=tk_top,
-                            message="Failed to write temporary file: " + str(e))
+                            message="Failed to write temporary file: " + str(exc))
                         break
 
                     file_list.append(filename)
@@ -175,11 +181,10 @@ def export_traces(tk_top, log_idx_sel):
             try:
                 cmd = ["zip", "-9", out_name]
                 cmd.extend(file_list)
-                proc = subprocess.run(cmd, check=True, timeout=20, cwd=tempdir,
-                                      stdout=subprocess.DEVNULL)
-            except Exception as e:
+                subprocess.run(cmd, check=True, timeout=20, cwd=tempdir, stdout=subprocess.DEVNULL)
+            except (OSError, subprocess.SubprocessError) as exc:
                 tk_messagebox.showerror(parent=tk_top,
-                                        message="Failed to create archive: " + str(e))
+                                        message="Failed to create archive: " + str(exc))
 
 
 
@@ -187,7 +192,7 @@ def export_traces(tk_top, log_idx_sel):
 #
 # Mini dialog only used for displaying text snippets
 #
-class Log_browser(object):
+class LogBrowser:
     def __init__(self, tk_top, title, proc):
         wid_top = tk.Toplevel(tk_top)
         wid_top.wm_group(tk_top)
@@ -262,7 +267,7 @@ class Log_browser(object):
 # - catching error messages
 # - cleaning up temporary input file after exit
 
-class Proc_monitor(object):
+class ProcMonitor:
     procs = []
     shared_files = {}
     tid = None
@@ -273,34 +278,34 @@ class Proc_monitor(object):
             proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
             if file_name:
-                Proc_monitor.alloc_shared_file(file_name)
+                ProcMonitor.alloc_shared_file(file_name)
 
-            Proc_monitor.procs.append(Proc_monitor(proc, txt, file_name))
+            ProcMonitor.procs.append(ProcMonitor(proc, txt, file_name))
 
-            if Proc_monitor.tid is None:
-                Proc_monitor.tid = tk_utils.tk_top.after(1000, Proc_monitor.proc_monitor)
+            if ProcMonitor.tid is None:
+                ProcMonitor.tid = tk_utils.tk_top.after(1000, ProcMonitor.proc_monitor)
 
-        except Exception as e:
+        except (OSError, subprocess.SubprocessError) as exc:
             tk_messagebox.showerror(parent=tk_utils.tk_top,
-                                    message="Failed to start external trace browser: " + str(e))
+                                    message="Failed to start external trace browser: " + str(exc))
 
 
     @staticmethod
     def alloc_shared_file(name):
-        if Proc_monitor.shared_files.get(name, None):
-            Proc_monitor.shared_files[name] += 1
+        if ProcMonitor.shared_files.get(name, None):
+            ProcMonitor.shared_files[name] += 1
         else:
-            Proc_monitor.shared_files[name] = 1
+            ProcMonitor.shared_files[name] = 1
 
 
     @staticmethod
     def release_shared_file(name):
-        reg = Proc_monitor.shared_files.get(name, None)
+        reg = ProcMonitor.shared_files.get(name, None)
         if reg is not None:
             if reg > 1:
-                Proc_monitor.shared_files[name] -= 1
+                ProcMonitor.shared_files[name] -= 1
             else:
-                del Proc_monitor.shared_files[name]
+                del ProcMonitor.shared_files[name]
                 try:
                     os.unlink(name)
                 except OSError:
@@ -309,21 +314,21 @@ class Proc_monitor(object):
 
     @staticmethod
     def remove(proc):
-        Proc_monitor.procs = [x for x in Proc_monitor.procs if x is not proc]
-        if not Proc_monitor.procs and Proc_monitor.tid:
-            tk_utils.tk_top.after_cancel(Proc_monitor.tid)
-            Proc_monitor.tid = None
+        ProcMonitor.procs = [x for x in ProcMonitor.procs if x is not proc]
+        if not ProcMonitor.procs and ProcMonitor.tid:
+            tk_utils.tk_top.after_cancel(ProcMonitor.tid)
+            ProcMonitor.tid = None
 
 
     @staticmethod
     def proc_monitor():
-        for proc in Proc_monitor.procs:
+        for proc in ProcMonitor.procs:
             proc.monitor()
 
-        if Proc_monitor.procs:
-            Proc_monitor.tid = tk_utils.tk_top.after(1000, Proc_monitor.proc_monitor)
+        if ProcMonitor.procs:
+            ProcMonitor.tid = tk_utils.tk_top.after(1000, ProcMonitor.proc_monitor)
         else:
-            Proc_monitor.tid = None
+            ProcMonitor.tid = None
 
 
     def __init__(self, proc, txt, file_name):
@@ -331,7 +336,7 @@ class Proc_monitor(object):
         self.done = False
         self.stderr = None
         self.proc = proc
-        self.thr = threading.Thread(target=lambda:self.__thread_browser(txt), daemon=True)
+        self.thr = threading.Thread(target=lambda: self.__thread_browser(txt), daemon=True)
         self.thr.start()
 
 
@@ -349,7 +354,5 @@ class Proc_monitor(object):
                         (self.proc.returncode, self.stderr)
                 tk_messagebox.showerror(parent=tk_utils.tk_top, message=msg)
             if self.file_name:
-                Proc_monitor.release_shared_file(self.file_name)
-            Proc_monitor.remove(self)
-
-
+                ProcMonitor.release_shared_file(self.file_name)
+            ProcMonitor.remove(self)

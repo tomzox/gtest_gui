@@ -17,6 +17,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # ------------------------------------------------------------------------ #
 
+"""
+Database of test case names and results.
+"""
+
 # Plain list of test case names, in order returned by test executable
 test_case_names = []
 
@@ -63,7 +67,7 @@ test_exe_ts = 0
 test_exe_name = ""
 
 
-class Test_db_slots(object):
+class TestDbSlots:
     result_appended = None
     repeat_req_update = None
     campaign_stats_update = None
@@ -89,10 +93,10 @@ def update_executable(filename, exe_ts, tc_names):
     if tc_exe_update:
         repeat_requests = {}
 
-    if Test_db_slots.executable_update:
-        Test_db_slots.executable_update()
-    if tc_names_update and Test_db_slots.tc_names_update:
-        Test_db_slots.tc_names_update()
+    if TestDbSlots.executable_update:
+        TestDbSlots.executable_update()
+    if tc_names_update and TestDbSlots.tc_names_update:
+        TestDbSlots.tc_names_update()
     reset_run_stats(0, False)
 
 
@@ -107,14 +111,14 @@ def add_result(log, from_bg_job):
     verdict = log[3]
 
     test_results.append(log)
-    if Test_db_slots.result_appended:
-        Test_db_slots.result_appended()
+    if TestDbSlots.result_appended:
+        TestDbSlots.result_appended()
 
     rep_req = repeat_requests.get(tc_name)
     if rep_req is not None and rep_req < test_exe_ts:
         repeat_requests.pop(tc_name)
-        if Test_db_slots.repeat_req_update:
-            Test_db_slots.repeat_req_update(tc_name)
+        if TestDbSlots.repeat_req_update:
+            TestDbSlots.repeat_req_update(tc_name)
 
     if verdict == 0: # pass
         campaign_stats[0] += 1
@@ -128,10 +132,10 @@ def add_result(log, from_bg_job):
     if not from_bg_job and (verdict <= 3):
         campaign_stats[5] += 1
 
-    if Test_db_slots.campaign_stats_update:
-        Test_db_slots.campaign_stats_update()
+    if TestDbSlots.campaign_stats_update:
+        TestDbSlots.campaign_stats_update()
 
-    stat = test_case_stats.get(tc_name);
+    stat = test_case_stats.get(tc_name)
     if stat is None:
         stat = [0, 0, 0, 0, 0]
         test_case_stats[tc_name] = stat
@@ -143,8 +147,8 @@ def add_result(log, from_bg_job):
         stat[0] += 1
     stat[3] += log[10]
     stat[4] = log[2]
-    if Test_db_slots.tc_stats_update:
-        Test_db_slots.tc_stats_update(tc_name)
+    if TestDbSlots.tc_stats_update:
+        TestDbSlots.tc_stats_update(tc_name)
 
 
 def reset_run_stats(exp_result_cnt, is_resume):
@@ -160,10 +164,10 @@ def reset_run_stats(exp_result_cnt, is_resume):
     else:
         campaign_stats[4] = exp_result_cnt + campaign_stats[5]
 
-    if Test_db_slots.campaign_stats_update:
-        Test_db_slots.campaign_stats_update()
-    if Test_db_slots.campaign_stats_reset:
-        Test_db_slots.campaign_stats_reset()
+    if TestDbSlots.campaign_stats_update:
+        TestDbSlots.campaign_stats_update()
+    if TestDbSlots.campaign_stats_reset:
+        TestDbSlots.campaign_stats_reset()
 
 
 def set_job_status(job_count, start_time=0):
@@ -171,5 +175,5 @@ def set_job_status(job_count, start_time=0):
     if start_time:
         campaign_stats[7] = start_time
 
-    if Test_db_slots.campaign_stats_update:
-        Test_db_slots.campaign_stats_update()
+    if TestDbSlots.campaign_stats_update:
+        TestDbSlots.campaign_stats_update()

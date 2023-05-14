@@ -17,9 +17,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # ------------------------------------------------------------------------ #
 
-#
-# This class implements the help dialog.
-#
+"""
+This class implements the help dialog.
+"""
 
 import re
 import tkinter as tk
@@ -50,7 +50,7 @@ def create_dialog(tk_top, index, subheading="", subrange=""):
     if prev_dialog_wid and tk_utils.wid_exists(prev_dialog_wid.wid_top):
         prev_dialog_wid.raise_window(index, subheading, subrange)
     else:
-        prev_dialog_wid = Help_dialog(tk_top, index, subheading, subrange)
+        prev_dialog_wid = HelpDialog(tk_top, index, subheading, subrange)
 
 
 def define_fonts():
@@ -71,13 +71,13 @@ def define_fonts():
 def add_menu_commands(tk_top, wid_men):
     global help_titles
 
-    for title, idx in help_db.helpIndex.items():
+    for title in help_db.helpIndex.keys():
         help_titles.append(title)
 
-    Help_dialog.fill_menu(tk_top, wid_men)
+    HelpDialog.fill_menu(tk_top, wid_men)
 
 
-class Help_dialog(object):
+class HelpDialog:
     def __init__(self, tk_top, index, subheading, subrange):
         self.tk_top = tk_top
         self.chapter_idx = -1
@@ -117,7 +117,7 @@ class Help_dialog(object):
 
         men_chpt = tk.Menu(but_cmd_chpt, tearoff=0)
         but_cmd_chpt.configure(menu=men_chpt)
-        Help_dialog.fill_menu(self.tk_top, men_chpt)
+        HelpDialog.fill_menu(self.tk_top, men_chpt)
 
         self.but_cmd_prev = but_cmd_prev
         self.but_cmd_next = but_cmd_next
@@ -127,10 +127,11 @@ class Help_dialog(object):
         for idx in range(len(help_titles)):
             wid_men.add_command(label=help_titles[idx],
                                 command=lambda idx=idx: create_dialog(tk_top, idx))
-            for foo, sub in sorted([x for x in help_db.helpSections.keys() if x[0] == idx]):
+            for sub in sorted([x[1] for x in help_db.helpSections.keys() if x[0] == idx]):
                 title = help_db.helpSections[(idx, sub)]
                 wid_men.add_command(label="- " + title,
-                            command=lambda idx=idx, title=title: create_dialog(tk_top, idx, title))
+                                    command=lambda idx=idx, title=title:
+                                    create_dialog(tk_top, idx, title))
 
 
     def __create_text_widget(self):
@@ -154,25 +155,26 @@ class Help_dialog(object):
         wid_txt.tag_configure("pfixed", font=help_font_fixed, spacing1=0, spacing2=0, spacing3=0)
         wid_txt.tag_configure("href", underline=1, foreground="blue")
         wid_txt.tag_bind("href", "<ButtonRelease-1>", lambda e: self.__follow_help_hyperlink())
-        wid_txt.tag_bind("href", "<Enter>", lambda e: self.wid_txt.configure(cursor="top_left_arrow"))
+        wid_txt.tag_bind("href", "<Enter>",
+                         lambda e: self.wid_txt.configure(cursor="top_left_arrow"))
         wid_txt.tag_bind("href", "<Leave>", lambda e: self.wid_txt.configure(cursor="circle"))
 
         # allow to scroll the text with the cursor keys
         wid_txt.bindtags([wid_txt, "TextReadOnly", self.wid_top, "all"])
         wid_txt.bind("<Up>", lambda e, self=self: tk_utils.bind_call_and_break(
-                                lambda: wid_txt.yview(tk.SCROLL, -1, "unit")))
+            lambda: wid_txt.yview(tk.SCROLL, -1, "unit")))
         wid_txt.bind("<Down>", lambda e, self=self: tk_utils.bind_call_and_break(
-                                lambda: wid_txt.yview(tk.SCROLL, 1, "unit")))
+            lambda: wid_txt.yview(tk.SCROLL, 1, "unit")))
         wid_txt.bind("<Prior>", lambda e, self=self: tk_utils.bind_call_and_break(
-                                lambda: wid_txt.yview(tk.SCROLL, -1, "pages")))
+            lambda: wid_txt.yview(tk.SCROLL, -1, "pages")))
         wid_txt.bind("<Next>", lambda e, self=self: tk_utils.bind_call_and_break(
-                                lambda: wid_txt.yview(tk.SCROLL, 1, "pages")))
+            lambda: wid_txt.yview(tk.SCROLL, 1, "pages")))
         wid_txt.bind("<Home>", lambda e, self=self: tk_utils.bind_call_and_break(
-                                lambda: wid_txt.yview(tk.MOVETO, 0.0)))
+            lambda: wid_txt.yview(tk.MOVETO, 0.0)))
         wid_txt.bind("<End>", lambda e, self=self: tk_utils.bind_call_and_break(
-                                lambda: wid_txt.yview(tk.MOVETO, 1.0)))
+            lambda: wid_txt.yview(tk.MOVETO, 1.0)))
         wid_txt.bind("<Enter>", lambda e, self=self: tk_utils.bind_call_and_break(
-                                lambda: e.widget.focus_set()))
+            e.widget.focus_set))
         wid_txt.bind("<Escape>", lambda e: self.__destroy_window())
         wid_txt.bind("<Alt-Key-n>", lambda e: self.but_cmd_next.invoke())
         wid_txt.bind("<Alt-Key-p>", lambda e: self.but_cmd_prev.invoke())
@@ -201,7 +203,8 @@ class Help_dialog(object):
             self.wid_txt.see(subrange[1])
             self.wid_txt.see(subrange[0])
         elif subheading:
-            # search for the string at the beginning of the line only (prevents matches on hyperlinks)
+            # search for the string at the beginning of the line only
+            # (prevents matches on hyperlinks)
             pattern = "^" + str(subheading)
             pos = self.wid_txt.search(pattern, regexp=True, index="1.0")
             if pos:
@@ -216,12 +219,14 @@ class Help_dialog(object):
 
         # define/update bindings for left/right command buttons
         if help_db.helpTexts.get(index - 1, None):
-            self.but_cmd_prev.configure(command=lambda: self.raise_window(index - 1), state=tk.NORMAL)
+            self.but_cmd_prev.configure(command=lambda:
+                                        self.raise_window(index - 1), state=tk.NORMAL)
         else:
             self.but_cmd_prev.configure(command=lambda: None, state=tk.DISABLED)
 
         if help_db.helpTexts.get(index + 1, None):
-            self.but_cmd_next.configure(command=lambda: self.raise_window(index + 1), state=tk.NORMAL)
+            self.but_cmd_next.configure(command=lambda:
+                                        self.raise_window(index + 1), state=tk.NORMAL)
         else:
             self.but_cmd_next.configure(command=lambda: None, state=tk.DISABLED)
 
@@ -235,16 +240,14 @@ class Help_dialog(object):
 
 
     def __follow_help_hyperlink(self):
-        global helpIndex
-
         # the text under the mouse carries the mark 'current'
         curidx = self.wid_txt.index("current + 1 char")
 
         # determine the range of the 'href' tag under the mouse
-        range = self.wid_txt.tag_prevrange("href", curidx)
+        href_range = self.wid_txt.tag_prevrange("href", curidx)
 
         # cut out the text in that range
-        hlink = self.wid_txt.get(*range)
+        hlink = self.wid_txt.get(*href_range)
 
         # check if the text contains a sub-section specification
         match = re.match(r"(.*): *(.*)", hlink)

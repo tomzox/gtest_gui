@@ -17,9 +17,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # ------------------------------------------------------------------------ #
 
-#
-# Library for managing test case filter patterns
-#
+"""
+Library for managing test case filter patterns
+"""
 
 import re
 import sys
@@ -28,7 +28,7 @@ import gtest_gui.test_db as test_db
 import gtest_gui.tk_utils as tk_utils
 
 
-class Filter_expr(object):
+class FilterExpr:
     def __init__(self, pat_str, opt_run_disabled):
         self.opt_run_disabled = opt_run_disabled
         self.pat_str = pat_str
@@ -77,15 +77,15 @@ class Filter_expr(object):
             if self.matched_list is None:
                 self.matched_list = get_matches(self.pat_list, get_test_list(self.opt_run_disabled))
             return self.matched_list
-        else:
-            return get_test_list(self.opt_run_disabled)
+
+        return get_test_list(self.opt_run_disabled)
 
 
     def can_select_test(self, tc_name):
         if not self.pat_str:
             return True
-        else:
-            return tc_name not in self.get_selected_tests()
+
+        return tc_name not in self.get_selected_tests()
 
 
     def can_deselect_test(self, tc_name):
@@ -174,8 +174,7 @@ def build_expr(tc_names, all_tc_names):
 
         return build_sub_expr(tc_names, tc_excluded, 0, True)
 
-    else:
-        return []
+    return []
 
 
 def build_sub_expr(tc_names, tc_excluded, min_prefix_len, allow_neg):
@@ -241,7 +240,7 @@ def minimize_prefix(tc_excluded, prefix, min_len):
 
         for prefix_len in range(len(prefix) - 1, min_len - 1, -1):
             part = prefix[:prefix_len]
-            if any(map(lambda x: x.startswith(part), tc_excluded)):
+            if any(map(lambda x, part=part: x.startswith(part), tc_excluded)):
                 return prefix[:prefix_len + 1]
 
     return prefix[:min_len]
@@ -271,8 +270,8 @@ def split_at_prefix(tc_names, prefix_len):
 def get_test_list(opt_run_disabled):
     if opt_run_disabled:
         return test_db.test_case_names
-    else:
-        return [x for x in test_db.test_case_names if not is_disabled_by_name(x)]
+
+    return [x for x in test_db.test_case_names if not is_disabled_by_name(x)]
 
 
 def get_test_suite_names(tc_list):
@@ -287,10 +286,10 @@ def get_test_suite_names(tc_list):
 
 
 def get_tests_in_test_suite(tc_suite, all_tc_names):
-    if tc_suite:
-        return [x for x in all_tc_names if x.startswith(tc_suite)]
-    else:
+    if not tc_suite:
         return [x for x in all_tc_names if "." not in x]
+
+    return [x for x in all_tc_names if x.startswith(tc_suite)]
 
 
 def check_pattern(pat_str, run_disabled, suppressions=None):
@@ -300,30 +299,31 @@ def check_pattern(pat_str, run_disabled, suppressions=None):
 
     for pat in split_gtest_filter(pat_str):
         expr = re.sub(r"^\-", "", pat)
-        is_neg = pat.startswith("-")
 
-        if not any([match_name(x, expr) for x in tc_names]):
-            if suppressions is None or not expr in suppressions:
-                # Search for match again, but this time against the full list of tests
-                if (not run_disabled and
-                        any([match_name(x, expr) for x in test_db.test_case_names])):
-                    msg = ('Test filter pattern "%s" only matches disabled tests. '
-                           'Please enable option "Run disabled tests" for running these.'
-                           % expr)
-                elif any([expr in x for x in test_db.test_case_names]):
-                    msg = ('Test filter pattern "%s" does not match any test case names. '
-                           'Use wildcard "*" for matching on names containing this text.' % expr)
-                elif any([match_name_nocase(x, expr) for x in test_db.test_case_names]):
-                    msg = ('Test filter pattern "%s" does not match any test case names. '
-                           'Note patterns are case sensitive.' % expr)
-                else:
-                    msg = 'Test filter pattern "%s" does not match any test case names.' % expr
-
-                if suppressions is not None:
-                    suppressions.append(expr)
-                return (False, msg)
-
-            else: # Ignoring due to suppression
+        if not any(match_name(x, expr) for x in tc_names):
+            # Ignore previously reported errors
+            if suppressions and expr in suppressions:
                 return (False, "")
+
+            # Search for match again, but this time against the full list of tests
+            if (not run_disabled and
+                    any(match_name(x, expr) for x in test_db.test_case_names)):
+                msg = ('Test filter pattern "%s" only matches disabled tests. '
+                       'Please enable option "Run disabled tests" for running these.'
+                       % expr)
+            elif any(expr in x for x in test_db.test_case_names):
+                msg = ('Test filter pattern "%s" does not match any test case names. '
+                       'Use wildcard "*" for matching on names containing this text.' % expr)
+            elif any(match_name_nocase(x, expr) for x in test_db.test_case_names):
+                msg = ('Test filter pattern "%s" does not match any test case names. '
+                       'Note patterns are case sensitive.' % expr)
+            else:
+                msg = 'Test filter pattern "%s" does not match any test case names.' % expr
+
+            # Remember reported error
+            if suppressions is not None:
+                suppressions.append(expr)
+
+            return (False, msg)
 
     return (True, "")

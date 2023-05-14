@@ -19,6 +19,10 @@
 
 # This code is derived from Trace Browser (trowser.py)
 
+"""
+Implements a font selection dialog class.
+"""
+
 import tkinter as tk
 import tkinter.font as tkf
 
@@ -32,22 +36,22 @@ def create_dialog(tk_top, ftype, font, callback):
     if prev_dialog_wid.get(ftype, None) and tk_utils.wid_exists(prev_dialog_wid[ftype].wid_top):
         prev_dialog_wid[ftype].raise_window()
     else:
-        prev_dialog_wid[ftype] = Font_selection_dialog(tk_top, ftype, font, callback)
+        prev_dialog_wid[ftype] = FontSelectionDialog(tk_top, ftype, font, callback)
 
 
-class Font_selection_dialog(object):
+class FontSelectionDialog:
     def __init__(self, tk_top, ftype, font, callback):
-        self.tk = tk_top
+        self.tk_top = tk_top
         self.ftype = ftype
         self.font = font
         self.callback = callback
 
-        self.wid_top = tk.Toplevel(self.tk)
+        self.wid_top = tk.Toplevel(self.tk_top)
         self.wid_top.wm_title("GtestGui: Font selection")
-        self.wid_top.wm_group(self.tk)
+        self.wid_top.wm_group(self.tk_top)
 
-        self.var_font_bold = tk.BooleanVar(self.tk, False)
-        self.var_font_size = tk.IntVar(self.tk, 10)
+        self.var_font_bold = tk.BooleanVar(self.tk_top, False)
+        self.var_font_size = tk.IntVar(self.tk_top, 10)
 
         # frame #1: listbox with all available fonts
         wid_frm = tk.Frame(self.wid_top)
@@ -60,19 +64,20 @@ class Font_selection_dialog(object):
         wid_sb.pack(side=tk.LEFT, fill=tk.Y)
         self.wid_font_list.configure(yscrollcommand=wid_sb.set)
         wid_frm.pack(side=tk.TOP, fill=tk.BOTH, expand=1, padx=5, pady=5)
-        self.wid_font_list.bind("<<ListboxSelect>>",
-                                lambda e: tk_utils.bind_call_and_break(
-                                            self.__handle_selection_change))
+        self.wid_font_list.bind("<<ListboxSelect>>", lambda e:
+                                tk_utils.bind_call_and_break(self.__handle_selection_change))
 
         # frame #2: size and weight controls
         wid_frm2 = tk.Frame(self.wid_top)
         wid_lab = tk.Label(wid_frm2, text="Font size:")
         wid_lab.pack(side=tk.LEFT)
         wid_spin = tk.Spinbox(wid_frm2, from_=1, to=99, width=3,
-                              textvariable=self.var_font_size, command=self.__handle_selection_change)
+                              textvariable=self.var_font_size,
+                              command=self.__handle_selection_change)
         wid_spin.pack(side=tk.LEFT)
         wid_chk = tk.Checkbutton(wid_frm2, text="bold",
-                                 variable=self.var_font_bold, command=self.__handle_selection_change)
+                                 variable=self.var_font_bold,
+                                 command=self.__handle_selection_change)
         wid_chk.pack(side=tk.LEFT, padx=15)
         wid_frm2.pack(side=tk.TOP, fill=tk.X, padx=5, pady=5)
 
@@ -80,7 +85,7 @@ class Font_selection_dialog(object):
         self.wid_demo = tk.Text(self.wid_top, width=20, height=4, wrap=tk.NONE,
                                 exportselection=tk.FALSE, relief=tk.RIDGE, takefocus=0)
         self.wid_demo.pack(side=tk.TOP, fill=tk.X, padx=15, pady=10)
-        self.wid_demo.bindtags([self.wid_demo, "TextReadOnly", self.tk, "all"])
+        self.wid_demo.bindtags([self.wid_demo, "TextReadOnly", self.tk_top, "all"])
 
         self.wid_demo.insert("end", "ABCDEFGHIJKLMNOPQRSTUVWXYZ\n")
         self.wid_demo.insert("end", "abcdefghijklmnopqrstuvwxyz\n")
@@ -128,7 +133,7 @@ class Font_selection_dialog(object):
 
     def __fill_font_list(self):
         # remove duplicates, then sort alphabetically
-        self.font_families = sorted(set(tkf.families(displayof=self.tk)))
+        self.font_families = sorted(set(tkf.families(displayof=self.tk_top)))
 
         for f in self.font_families:
             self.wid_font_list.insert("end", f)
@@ -137,12 +142,12 @@ class Font_selection_dialog(object):
     def __handle_selection_change(self):
         sel = self.wid_font_list.curselection()
         if (len(sel) == 1) and (sel[0] < len(self.font_families)):
-          name = "{%s} %d" % (self.font_families[sel[0]], self.var_font_size.get())
-          if self.var_font_bold.get():
-              name = name + " bold"
+            name = "{%s} %d" % (self.font_families[sel[0]], self.var_font_size.get())
+            if self.var_font_bold.get():
+                name = name + " bold"
 
-          # succeeds even for unknown fonts, therefore try/except not needed
-          self.wid_demo.configure(font=name)
+            # succeeds even for unknown fonts, therefore try/except not needed
+            self.wid_demo.configure(font=name)
 
 
     def __quit(self):
@@ -160,9 +165,9 @@ class Font_selection_dialog(object):
                 self.callback(self.font)
                 return True
 
-            except Exception as e:
+            except Exception as exc:
                 tk.messagebox.showerror(parent=self.wid_top,
-                                        message="Selected font is unavailable: " + str(e))
+                                        message="Selected font is unavailable: " + str(exc))
         else:
             tk.messagebox.showerror(parent=self.wid_top,
                                     message=("No font is selected - "

@@ -17,6 +17,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # ------------------------------------------------------------------------ #
 
+"""
+This class implements the debug dialog.
+"""
+
 import re
 import tkinter as tk
 
@@ -33,18 +37,18 @@ def create_dialog(tk_top, main_globals, raise_if_exists=True):
             and tk_utils.wid_exists(prev_dialog_wid.get_toplevel())):
         prev_dialog_wid.raise_window()
     else:
-        prev_dialog_wid = Debug_dialog(tk_top, main_globals)
+        prev_dialog_wid = DebugDialog(tk_top, main_globals)
 
 
-class Debug_dialog(object):
+class DebugDialog:
     def __init__(self, tk_top, main_globals):
-        self.tk = tk_top
+        self.tk_top = tk_top
         self.globals = main_globals
-        self.wid_top = tk.Toplevel(self.tk)
-        self.wid_top.wm_group(self.tk)
+        self.wid_top = tk.Toplevel(self.tk_top)
+        self.wid_top.wm_group(self.tk_top)
         self.wid_top.wm_title("GtestGui: Debug console")
 
-        char_h = self.tk.call("font", "metrics", "TkFixedFont", "-linespace")
+        char_h = self.tk_top.call("font", "metrics", "TkFixedFont", "-linespace")
         height = 15 * char_h
 
         self.__create_var_name_entry_frame(self.wid_top)
@@ -111,9 +115,9 @@ class Debug_dialog(object):
         wid_txt.configure(yscrollcommand=wid_sb.set)
 
         wid_txt.bind("<Control-Key-e>", lambda e: tk_utils.bind_call_and_break(
-                                                    lambda: self.__eval_input(False)))
+            lambda: self.__eval_input(False)))
         wid_txt.bind("<Control-Key-x>", lambda e: tk_utils.bind_call_and_break(
-                                                    lambda: self.__eval_input(True)))
+            lambda: self.__eval_input(True)))
         wid_txt.bind("<Key-Tab>", wid_txt.bind("Text", "<Control-Key-Tab>"))
 
         wid_pane.add(wid_frm, sticky="news", height=height)
@@ -129,7 +133,7 @@ class Debug_dialog(object):
         wid_but_clear = tk.Button(wid_frm, text="Clear", width=5, pady=1,
                                   command=lambda: self.wid_output.delete("1.0", "end"))
         wid_but_new = tk.Button(wid_frm, text="New window", pady=1,
-                                command=lambda: create_dialog(self.tk, self.globals, False))
+                                command=lambda: create_dialog(self.tk_top, self.globals, False))
         wid_but_eval.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=1)
         wid_but_exec.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=1)
         wid_but_clear.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=1)
@@ -148,8 +152,8 @@ class Debug_dialog(object):
                 output = str(exec(cmd, self.globals))
             else:
                 output = str(eval(cmd, self.globals))
-        except Exception as e:
-            output = str(e)
+        except Exception as exc:
+            output = str(exc)
 
         self.wid_output.replace("1.0", "end", output)
 
@@ -172,9 +176,9 @@ class Debug_dialog(object):
             if match:
                 try:
                     inst = eval(match.group(1), self.globals)
-                    matches = [match.group(1) + "." + x for x in
-                                inst.__dict__.keys() if x.startswith(match.group(2))]
-                except:
+                    matches = [match.group(1) + "." + x for x in inst.__dict__.keys()
+                               if x.startswith(match.group(2))]
+                except Exception:
                     matches = []
             else:
                 matches = [x for x in self.globals if x.startswith(var_ref)]
@@ -184,7 +188,7 @@ class Debug_dialog(object):
         if len(matches) == 1:
             try:
                 val = eval(matches[0], self.globals)
-            except:
+            except Exception:
                 val = ""
             self.wid_input.replace("1.0", "end", "%s = %s" % (matches[0], val))
         else:

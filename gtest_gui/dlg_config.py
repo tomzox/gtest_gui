@@ -17,9 +17,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # ------------------------------------------------------------------------ #
 
-#
-# This class implements the configuration parameter dialog.
-#
+"""
+This class implements the configuration parameter dialog.
+"""
 
 import os
 import re
@@ -40,19 +40,20 @@ def create_dialog(tk_top):
     if prev_dialog_wid and tk_utils.wid_exists(prev_dialog_wid.wid_top):
         prev_dialog_wid.raise_window()
     else:
-        prev_dialog_wid = Config_dialog(tk_top)
+        prev_dialog_wid = ConfigDialog(tk_top)
 
 
-class Config_dialog(object):
+class ConfigDialog:
     def __init__(self, tk_top):
-        self.tk = tk_top
+        self.tk_top = tk_top
         self.var_cfg_browser = tk.StringVar(tk_top, config_db.options["browser"])
         self.var_cfg_browser_stdin = tk.BooleanVar(tk_top, config_db.options["browser_stdin"])
         self.var_cfg_seed_regexp = tk.StringVar(tk_top, config_db.options["seed_regexp"])
 
         self.var_cfg_trace_dir = tk.StringVar(tk_top, config_db.options["trace_dir"])
         self.var_cfg_exit_clean_trace = tk.BooleanVar(tk_top, config_db.options["exit_clean_trace"])
-        self.var_cfg_startup_import = tk.BooleanVar(tk_top, config_db.options["startup_import_trace"])
+        self.var_cfg_startup_import = tk.BooleanVar(tk_top,
+                                                    config_db.options["startup_import_trace"])
         self.var_cfg_copy_executable = tk.BooleanVar(tk_top, config_db.options["copy_executable"])
 
         self.var_cfg_valgrind1 = tk.StringVar(tk_top, config_db.options["valgrind1"])
@@ -81,8 +82,10 @@ class Config_dialog(object):
                                self.var_cfg_copy_executable, "config.copy_executable")
         self.__add_separator(8)
 
-        self.__add_entry_widget(9, "Valgrind command line:", self.var_cfg_valgrind1, "config.valgrind1")
-        self.__add_entry_widget(10, "Valgrind alternate:", self.var_cfg_valgrind2, "config.valgrind2")
+        self.__add_entry_widget(9, "Valgrind command line:",
+                                self.var_cfg_valgrind1, "config.valgrind1")
+        self.__add_entry_widget(10, "Valgrind alternate:",
+                                self.var_cfg_valgrind2, "config.valgrind2")
         self.__add_checkbutton(11, "Valgrind supports --error-exitcode",
                                self.var_cfg_valgrind_exit, "config.valgrind_exit")
 
@@ -158,10 +161,10 @@ class Config_dialog(object):
     def __check_seed_pattern(self, seed_exp):
         try:
             re.compile(seed_exp)
-        except Exception as e:
+        except re.error as exc:
             tk_messagebox.showerror(
-                    parent=self.wid_top,
-                    message="Syntax error in regular expression for \"seed\": " + str(e))
+                parent=self.wid_top,
+                message="Syntax error in regular expression for \"seed\": " + str(exc))
             return False
         return True
 
@@ -173,16 +176,15 @@ class Config_dialog(object):
                                         message="Trace directory is not a directory")
                 return False
 
-            if not tk_messagebox.askokcancel(
-                        parent=self.wid_top,
-                        message="Trace directory does not exist - Do you want to create it?"):
+            msg = "Trace directory does not exist - Do you want to create it?"
+            if not tk_messagebox.askokcancel(parent=self.wid_top, message=msg):
                 return False
 
             try:
                 os.mkdir(trace_dir)
-            except OSError as e:
+            except OSError as exc:
                 tk_messagebox.showerror(parent=self.wid_top,
-                                        message="Failed to create directory: " + str(e))
+                                        message="Failed to create directory: " + str(exc))
                 return False
 
         return True
@@ -200,7 +202,7 @@ class Config_dialog(object):
                 return False
 
         if ((trace_dir != config_db.options["trace_dir"]) or
-            (self.var_cfg_copy_executable.get() != config_db.options["copy_executable"])):
+                (self.var_cfg_copy_executable.get() != config_db.options["copy_executable"])):
             if gtest.gtest_ctrl.is_active():
                 msg = "Need to stop running tests for changing the trace directory " \
                       "or copy-executable options."

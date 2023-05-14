@@ -17,9 +17,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # ------------------------------------------------------------------------ #
 
-#
-# This class implements the test case list dialog.
-#
+"""
+Implements the test case list dialog class.
+"""
 
 from enum import Enum
 import os
@@ -33,14 +33,13 @@ import gtest_gui.filter_expr as filter_expr
 import gtest_gui.gtest as gtest
 import gtest_gui.test_db as test_db
 import gtest_gui.tk_utils as tk_utils
-import gtest_gui.wid_test_ctrl as wid_test_ctrl
 import gtest_gui.wid_text_sel as wid_text_sel
 
 
 prev_dialog_wid = None
 prev_export_filename = ""
 
-class Sort_mode(Enum):
+class SortMode(Enum):
     by_name = 0
     by_exec_cnt = 1
     by_fail_cnt = 2
@@ -60,12 +59,12 @@ def create_dialog(tk_top, test_ctrl):
     if prev_dialog_wid and tk_utils.wid_exists(prev_dialog_wid.wid_top):
         prev_dialog_wid.raise_window()
     else:
-        prev_dialog_wid = Tc_list_dialog(tk_top, test_ctrl)
+        prev_dialog_wid = TcListDialog(tk_top, test_ctrl)
 
 
-class Tc_list_dialog(object):
+class TcListDialog:
     def __init__(self, tk_top, test_ctrl):
-        self.tk = tk_top
+        self.tk_top = tk_top
         self.test_ctrl = test_ctrl
         self.table_header_txt = ("Run", "Name", "Passed", "Failed", "Exec time")
         self.opt_sort_modes = []
@@ -73,17 +72,17 @@ class Tc_list_dialog(object):
         self.__create_dialog_window()
         self.__handle_filter_change()
 
-        test_db.Test_db_slots.tc_stats_update = self.__handle_tc_stats_update
-        test_db.Test_db_slots.tc_names_update = self.__handle_tc_names_update
-        test_db.Test_db_slots.campaign_stats_reset = self.__handle_campaign_status_change
+        test_db.TestDbSlots.tc_stats_update = self.__handle_tc_stats_update
+        test_db.TestDbSlots.tc_names_update = self.__handle_tc_names_update
+        test_db.TestDbSlots.campaign_stats_reset = self.__handle_campaign_status_change
         self.test_ctrl.register_filter_change_slot(self.__handle_main_tc_filter_expr_change)
 
 
     def __destroy_window(self):
         global prev_dialog_wid
-        test_db.Test_db_slots.tc_stats_update = None
-        test_db.Test_db_slots.tc_names_update = None
-        test_db.Test_db_slots.campaign_stats_reset = None
+        test_db.TestDbSlots.tc_stats_update = None
+        test_db.TestDbSlots.tc_names_update = None
+        test_db.TestDbSlots.campaign_stats_reset = None
 
         self.test_ctrl.register_filter_change_slot(None)
 
@@ -97,18 +96,18 @@ class Tc_list_dialog(object):
 
 
     def __create_dialog_window(self):
-        self.wid_top = tk.Toplevel(self.tk)
+        self.wid_top = tk.Toplevel(self.tk_top)
         self.wid_top.wm_title("GtestGui: Test case list")
-        self.wid_top.wm_group(self.tk)
+        self.wid_top.wm_group(self.tk_top)
 
-        self.var_filter_run = tk.BooleanVar(self.tk, False)
-        self.var_filter_failed = tk.BooleanVar(self.tk, False)
-        self.var_filter_disabled = tk.BooleanVar(self.tk, False)
+        self.var_filter_run = tk.BooleanVar(self.tk_top, False)
+        self.var_filter_failed = tk.BooleanVar(self.tk_top, False)
+        self.var_filter_disabled = tk.BooleanVar(self.tk_top, False)
 
-        self.var_sort_name = tk.BooleanVar(self.tk, False)
-        self.var_sort_exec_cnt = tk.BooleanVar(self.tk, False)
-        self.var_sort_fail_cnt = tk.BooleanVar(self.tk, False)
-        self.var_sort_duration = tk.BooleanVar(self.tk, False)
+        self.var_sort_name = tk.BooleanVar(self.tk_top, False)
+        self.var_sort_exec_cnt = tk.BooleanVar(self.tk_top, False)
+        self.var_sort_fail_cnt = tk.BooleanVar(self.tk_top, False)
+        self.var_sort_duration = tk.BooleanVar(self.tk_top, False)
 
         self.__create_table_widget()
 
@@ -116,7 +115,8 @@ class Tc_list_dialog(object):
         self.wid_table.bind("<Key-Delete>", lambda e: self.__do_filter_selected_tests(False))
         self.wid_table.bind("<FocusIn>", lambda e: self.test_ctrl.check_filter_expression(False))
 
-        self.wid_top.bind("<ButtonRelease-3>", lambda e: self.__post_context_menu(e.widget, e.x, e.y))
+        self.wid_top.bind("<ButtonRelease-3>",
+                          lambda e: self.__post_context_menu(e.widget, e.x, e.y))
         self.wid_top.bind("<Configure>", lambda e: self.__handle_window_resize(e.widget))
         self.wid_top.bind("<Destroy>", lambda e: self.__destroy_window())
 
@@ -128,8 +128,8 @@ class Tc_list_dialog(object):
         self.wid_header.insert("0.0", "\t".join(self.table_header_txt), "head", "\n", [])
         self.__update_column_widths()
 
-        self.sel_obj = wid_text_sel.Text_sel_wid(self.wid_table,
-                                                 self.__handle_selection_change, self.__get_len)
+        self.sel_obj = wid_text_sel.TextSelWidget(self.wid_table,
+                                                  self.__handle_selection_change, self.__get_len)
 
         if config_db.tc_list_geometry:
             self.wid_top.wm_geometry(config_db.tc_list_geometry)
@@ -166,13 +166,14 @@ class Tc_list_dialog(object):
 
     def __update_column_widths(self):
         char_w = tk_utils.font_content.measure("0")
-        if char_w == 0: char_w = 15
+        if char_w == 0:
+            char_w = 15
 
         title_text = self.table_header_txt
         tab_widths = [tk_utils.font_content_bold.measure(x) + 2*char_w for x in title_text]
 
         tc_max_width = max([tk_utils.font_content.measure(x)
-                                for x in test_db.test_case_names]) + 2*char_w
+                            for x in test_db.test_case_names]) + 2*char_w
         if tc_max_width > tab_widths[1]:
             tab_widths[1] = tc_max_width
 
@@ -248,12 +249,12 @@ class Tc_list_dialog(object):
                 if self.__check_sort_order(tc_name, line_idx):
                     self.__replace_single(tc_name, line_idx)
                 else:
-                    self.__delete_single(tc_name, line_idx)
+                    self.__delete_single(line_idx)
                     line_idx = bisect.bisect_left(self.tc_list_sorted, tc_name,
                                                   self.__get_sort_key_fn())
                     self.__insert_single(tc_name, line_idx)
             else:
-                self.__delete_single(tc_name, line_idx)
+                self.__delete_single(line_idx)
 
 
     def __replace_single(self, tc_name, line_idx):
@@ -270,7 +271,7 @@ class Tc_list_dialog(object):
         self.sel_obj.text_sel_adjust_insert(line_idx)
 
 
-    def __delete_single(self, tc_name, line_idx):
+    def __delete_single(self, line_idx):
         line_1 = "%d.0" % (line_idx + 1)
         line_2 = "%d.0" % (line_idx + 2)
         self.wid_table.delete(line_1, line_2)
@@ -320,14 +321,7 @@ class Tc_list_dialog(object):
     def __handle_filter_change(self):
         self.tc_enabled = self.test_ctrl.get_test_filter_expr().get_selected_tests()
 
-        filter_run = self.var_filter_run.get()
-        filter_failed = self.var_filter_failed.get()
-        filter_disabled = self.var_filter_disabled.get()
-        tc_list = []
-
-        for tc_name in test_db.test_case_names:
-            if self.__matches_filter(tc_name):
-                tc_list.append(tc_name)
+        tc_list = [x for x in test_db.test_case_names if self.__matches_filter(x)]
 
         self.tc_list_sorted = self.__sort_tc_list(tc_list)
         self.__populate_table()
@@ -335,49 +329,51 @@ class Tc_list_dialog(object):
 
     def __matches_filter(self, tc_name):
         tc_stats = test_db.test_case_stats[tc_name]
-        return ( (not self.var_filter_run.get() or tc_name in self.tc_enabled) and
-                 (not self.var_filter_failed.get() or tc_stats[1]) and
-                 (not self.var_filter_disabled.get() or not filter_expr.is_disabled_by_name(tc_name)) )
+        return ((not self.var_filter_run.get() or tc_name in self.tc_enabled) and
+                (not self.var_filter_failed.get() or tc_stats[1]) and
+                (not self.var_filter_disabled.get()
+                 or not filter_expr.is_disabled_by_name(tc_name)))
 
 
     def __get_sort_key_fn(self):
-        if self.opt_sort_modes:
-            return lambda x: Tc_list_dialog.__get_sort_keys(self.opt_sort_modes, x)
-        else:
+        if not self.opt_sort_modes:
             return lambda x: x
+
+        return lambda x: TcListDialog.__get_sort_keys(self.opt_sort_modes, x)
 
 
     @staticmethod
     def __get_sort_keys(opt_sort_modes, tc_name):
         keys = []
         for mode in opt_sort_modes:
-            if mode == Sort_mode.by_name:
+            if mode == SortMode.by_name:
                 keys.append(tc_name)
 
-            elif mode == Sort_mode.by_exec_cnt:
+            elif mode == SortMode.by_exec_cnt:
                 keys.append(0 - test_db.test_case_stats[tc_name][0]
-                              - test_db.test_case_stats[tc_name][1]
-                              - test_db.test_case_stats[tc_name][2])
+                            - test_db.test_case_stats[tc_name][1]
+                            - test_db.test_case_stats[tc_name][2])
 
-            elif mode == Sort_mode.by_fail_cnt:
+            elif mode == SortMode.by_fail_cnt:
                 keys.append(0 - test_db.test_case_stats[tc_name][1])
 
-            elif mode == Sort_mode.by_duration:
+            elif mode == SortMode.by_duration:
                 keys.append(0 - test_db.test_case_stats[tc_name][3])
         return keys
 
 
     def __sort_tc_list(self, tc_list):
         for mode in reversed(self.opt_sort_modes):
-            if mode == Sort_mode.by_name:
+            if mode == SortMode.by_name:
                 tc_list = sorted(tc_list)
-            elif mode == Sort_mode.by_exec_cnt:
-                tc_list = sorted(tc_list, key=lambda x: 0 - test_db.test_case_stats[x][0]
-                                                          - test_db.test_case_stats[x][1]
-                                                          - test_db.test_case_stats[x][2])
-            elif mode == Sort_mode.by_fail_cnt:
+            elif mode == SortMode.by_exec_cnt:
+                tc_list = sorted(tc_list, key=lambda x:
+                                 0 - test_db.test_case_stats[x][0]
+                                 - test_db.test_case_stats[x][1]
+                                 - test_db.test_case_stats[x][2])
+            elif mode == SortMode.by_fail_cnt:
                 tc_list = sorted(tc_list, key=lambda x: 0 - test_db.test_case_stats[x][1])
-            elif mode == Sort_mode.by_duration:
+            elif mode == SortMode.by_duration:
                 tc_list = sorted(tc_list, key=lambda x: 0 - test_db.test_case_stats[x][3])
         return tc_list
 
@@ -386,14 +382,14 @@ class Tc_list_dialog(object):
         if self.opt_sort_modes:
             if line_idx > 0:
                 prev_name = self.tc_list_sorted[line_idx - 1]
-                if (Tc_list_dialog.__get_sort_keys(self.opt_sort_modes, tc_name)
-                        < Tc_list_dialog.__get_sort_keys(self.opt_sort_modes, prev_name)):
+                if (TcListDialog.__get_sort_keys(self.opt_sort_modes, tc_name)
+                        < TcListDialog.__get_sort_keys(self.opt_sort_modes, prev_name)):
                     return False
 
             if line_idx + 1 < len(self.tc_list_sorted):
                 next_name = self.tc_list_sorted[line_idx + 1]
-                if (Tc_list_dialog.__get_sort_keys(self.opt_sort_modes, next_name)
-                        < Tc_list_dialog.__get_sort_keys(self.opt_sort_modes, tc_name)):
+                if (TcListDialog.__get_sort_keys(self.opt_sort_modes, next_name)
+                        < TcListDialog.__get_sort_keys(self.opt_sort_modes, tc_name)):
                     return False
 
         return True
@@ -427,11 +423,11 @@ class Tc_list_dialog(object):
                 plural_s = "" if len(sel) == 1 else "s"
                 need_sep = False
 
-                if any([expr.can_select_test(x) for x in sel]):
+                if any(expr.can_select_test(x) for x in sel):
                     wid_men.add_command(label="Add selected test case%s to filter" % plural_s,
                                         command=lambda: self.test_ctrl.select_tcs(sel, True))
                     need_sep = True
-                if any([expr.can_deselect_test(x) for x in sel]):
+                if any(expr.can_deselect_test(x) for x in sel):
                     wid_men.add_command(label="Remove selected test case%s from filter" % plural_s,
                                         command=lambda: self.test_ctrl.select_tcs(sel, False))
                     need_sep = True
@@ -441,11 +437,11 @@ class Tc_list_dialog(object):
                 for tc_suite in filter_expr.get_test_suite_names(sel):
                     tc_names.extend(filter_expr.get_tests_in_test_suite(tc_suite, all_tc_names))
 
-                if any([expr.can_select_test(x) for x in tc_names]):
+                if any(expr.can_select_test(x) for x in tc_names):
                     wid_men.add_command(label="Add selected test suites to filter",
                                         command=lambda: self.test_ctrl.select_tcs(tc_names, True))
                     need_sep = True
-                if any([expr.can_deselect_test(x) for x in tc_names]):
+                if any(expr.can_deselect_test(x) for x in tc_names):
                     wid_men.add_command(label="Remove selected test suites from filter",
                                         command=lambda: self.test_ctrl.select_tcs(tc_names, False))
                     need_sep = True
@@ -454,29 +450,35 @@ class Tc_list_dialog(object):
                     wid_men.add_separator()
 
         wid_men.add_checkbutton(label="Show only tests enabled to run",
-                                 command=self.__handle_filter_change, variable=self.var_filter_run)
+                                command=self.__handle_filter_change,
+                                variable=self.var_filter_run)
         wid_men.add_checkbutton(label="Show only failed tests",
-                                 command=self.__handle_filter_change, variable=self.var_filter_failed)
+                                command=self.__handle_filter_change,
+                                variable=self.var_filter_failed)
         wid_men.add_checkbutton(label="Show no DISABLED tests",
-                                 command=self.__handle_filter_change, variable=self.var_filter_disabled)
+                                command=self.__handle_filter_change,
+                                variable=self.var_filter_disabled)
         wid_men.add_separator()
 
         wid_men.add_checkbutton(
-                label="Sort by test case name",
-                command=lambda: self.__do_toggle_sort_mode(self.var_sort_name.get(), Sort_mode.by_name),
-                variable=self.var_sort_name)
+            label="Sort by test case name",
+            command=lambda: self.__do_toggle_sort_mode(self.var_sort_name.get(), SortMode.by_name),
+            variable=self.var_sort_name)
         wid_men.add_checkbutton(
-                label="Sort by execution count",
-                command=lambda: self.__do_toggle_sort_mode(self.var_sort_exec_cnt.get(), Sort_mode.by_exec_cnt),
-                variable=self.var_sort_exec_cnt)
+            label="Sort by execution count",
+            command=lambda: self.__do_toggle_sort_mode(self.var_sort_exec_cnt.get(),
+                                                       SortMode.by_exec_cnt),
+            variable=self.var_sort_exec_cnt)
         wid_men.add_checkbutton(
-                label="Sort by failure count",
-                command=lambda: self.__do_toggle_sort_mode(self.var_sort_fail_cnt.get(), Sort_mode.by_fail_cnt),
-                variable=self.var_sort_fail_cnt)
+            label="Sort by failure count",
+            command=lambda: self.__do_toggle_sort_mode(self.var_sort_fail_cnt.get(),
+                                                       SortMode.by_fail_cnt),
+            variable=self.var_sort_fail_cnt)
         wid_men.add_checkbutton(
-                label="Sort by duration",
-                command=lambda: self.__do_toggle_sort_mode(self.var_sort_duration.get(), Sort_mode.by_duration),
-                variable=self.var_sort_duration)
+            label="Sort by duration",
+            command=lambda: self.__do_toggle_sort_mode(self.var_sort_duration.get(),
+                                                       SortMode.by_duration),
+            variable=self.var_sort_duration)
         wid_men.add_separator()
 
         wid_men.add_command(label="Export list to file...", command=self.__do_export_pass_fail)
@@ -496,15 +498,15 @@ class Tc_list_dialog(object):
         if filename:
             prev_export_filename = filename
             try:
-                with open(filename, "w") as f:
+                with open(filename, "w") as file_obj:
                     for tc_name in self.tc_list_sorted:
                         tc_stats = test_db.test_case_stats[tc_name]
                         txt = "%s\t%d\t%d\t%d" % (tc_name, tc_stats[0], tc_stats[1], tc_stats[2])
-                        print(txt, file=f)
+                        print(txt, file=file_obj)
 
-            except OSError as e:
+            except OSError as exc:
                 tk_messagebox.showerror(parent=self.wid_top,
-                                        message="Error writing to file: %s" % str(e))
+                                        message="Error writing to file: %s" % str(exc))
 
 
     def __do_toggle_sort_mode(self, enable, mode):

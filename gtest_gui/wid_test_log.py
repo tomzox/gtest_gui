@@ -17,11 +17,14 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # ------------------------------------------------------------------------ #
 
+"""
+This module implements the test result log class.
+"""
+
 from datetime import datetime
 from enum import Enum
 import bisect
 import os
-import re
 import time
 
 import tkinter as tk
@@ -30,25 +33,24 @@ from tkinter import messagebox as tk_messagebox
 import gtest_gui.bisect
 import gtest_gui.config_db as config_db
 import gtest_gui.dlg_browser as dlg_browser
-import gtest_gui.filter_expr as filter_expr
 import gtest_gui.gtest as gtest
 import gtest_gui.test_db as test_db
 import gtest_gui.tk_utils as tk_utils
 import gtest_gui.wid_status_line as wid_status_line
-import gtest_gui.wid_test_ctrl as wid_test_ctrl
 import gtest_gui.wid_text_sel as wid_text_sel
 
 
-class Sort_mode(Enum):
+class SortMode(Enum):
     by_name = 0
     by_failure = 1
     by_duration = 2
     by_seed = 3
 
 
-class Test_log_widget(object):
+class TestLogWidget:
     def __init__(self, tk_top, parent):
-        self.tk = tk_top
+        self.tk_top = tk_top
+        self.test_ctrl = None # set later
         self.test_ctrl_visible = True
         self.opt_sort_modes = []
         self.opt_filter_exe_ts = 0
@@ -59,9 +61,9 @@ class Test_log_widget(object):
         self.__create_log_widget(self.wid_pane)
         self.__create_trace_widget(self.wid_pane)
 
-        test_db.Test_db_slots.result_appended = self.__append_new_result
-        test_db.Test_db_slots.repeat_req_update = self.update_repetition_status
-        test_db.Test_db_slots.executable_update = self.__refill_log
+        test_db.TestDbSlots.result_appended = self.__append_new_result
+        test_db.TestDbSlots.repeat_req_update = self.update_repetition_status
+        test_db.TestDbSlots.executable_update = self.__refill_log
 
 
     def get_widget(self):
@@ -83,14 +85,15 @@ class Test_log_widget(object):
 
         wid_txt.tag_configure("highlight", font=tk_utils.font_content_bold, foreground="#2020A0")
 
-        wid_txt.bindtags([wid_txt, self.tk, "TextSel", "all"])
+        wid_txt.bindtags([wid_txt, self.tk_top, "TextSel", "all"])
         wid_txt.bind("<ButtonRelease-3>", lambda e: self.__post_context_menu(e.widget, e.x, e.y))
-        wid_txt.bind("<Double-Button-1>", lambda e: tk_utils.bind_call_and_break(self.do_open_trace_browser))
+        wid_txt.bind("<Double-Button-1>", lambda e:
+                     tk_utils.bind_call_and_break(self.do_open_trace_browser))
         wid_txt.bind("<Key-Return>", lambda e: self.do_open_trace_browser())
         wid_txt.bind("<Key-Delete>", lambda e: self.do_remove_selected_results())
 
-        self.sel_obj = wid_text_sel.Text_sel_wid(wid_txt,
-                                                 self.__handle_selection_change, self.__get_len)
+        self.sel_obj = wid_text_sel.TextSelWidget(wid_txt,
+                                                  self.__handle_selection_change, self.__get_len)
 
         if config_db.log_pane_height:
             wid_pane.add(wid_frm, sticky="news", height=config_db.log_pane_height)
@@ -107,7 +110,7 @@ class Test_log_widget(object):
         wid_txt = tk.Text(wid_frm, width=40, height=1, wrap=tk.NONE,
                           insertofftime=0, font=tk_utils.font_trace)
         wid_txt.pack(side=tk.LEFT, fill=tk.BOTH, expand=1)
-        wid_txt.bindtags([wid_txt, "TextReadOnly", self.tk, "all"])
+        wid_txt.bindtags([wid_txt, "TextReadOnly", self.tk_top, "all"])
         wid_txt.tag_configure("failure", background="#FF4040")
         wid_sb = tk.Scrollbar(wid_frm, orient=tk.VERTICAL, command=wid_txt.yview, takefocus=0)
         wid_sb.pack(side=tk.LEFT, fill=tk.Y)
@@ -123,42 +126,50 @@ class Test_log_widget(object):
 
 
     def add_menu_commands(self, wid_men):
-        self.var_opt_sort_tc_name = tk.BooleanVar(self.tk, False)
-        self.var_opt_sort_seed = tk.BooleanVar(self.tk, False)
-        self.var_opt_sort_duration = tk.BooleanVar(self.tk, False)
-        self.var_opt_sort_exception = tk.BooleanVar(self.tk, False)
+        self.var_opt_sort_tc_name = tk.BooleanVar(self.tk_top, False)
+        self.var_opt_sort_seed = tk.BooleanVar(self.tk_top, False)
+        self.var_opt_sort_duration = tk.BooleanVar(self.tk_top, False)
+        self.var_opt_sort_exception = tk.BooleanVar(self.tk_top, False)
 
-        self.var_opt_filter_pass = tk.BooleanVar(self.tk, False)
-        self.var_opt_filter_exe_name = tk.BooleanVar(self.tk, False)
-        self.var_opt_filter_exe_ts = tk.BooleanVar(self.tk, False)
-        self.var_opt_filter_tc_name = tk.BooleanVar(self.tk, False)
+        self.var_opt_filter_pass = tk.BooleanVar(self.tk_top, False)
+        self.var_opt_filter_exe_name = tk.BooleanVar(self.tk_top, False)
+        self.var_opt_filter_exe_ts = tk.BooleanVar(self.tk_top, False)
+        self.var_opt_filter_tc_name = tk.BooleanVar(self.tk_top, False)
 
         wid_men.add_checkbutton(label="Show only failed results",
-                                command=self.__toggle_verdict_filter, variable=self.var_opt_filter_pass)
+                                command=self.__toggle_verdict_filter,
+                                variable=self.var_opt_filter_pass)
         wid_men.add_checkbutton(label="Show only results from current exe. file",
-                                command=self.__toggle_exe_name_filter, variable=self.var_opt_filter_exe_name)
+                                command=self.__toggle_exe_name_filter,
+                                variable=self.var_opt_filter_exe_name)
         wid_men.add_checkbutton(label="Show only results from current exe. version",
-                                command=self.__toggle_exe_ts_filter, variable=self.var_opt_filter_exe_ts)
+                                command=self.__toggle_exe_ts_filter,
+                                variable=self.var_opt_filter_exe_ts)
         wid_men.add_checkbutton(label="Show only selected test cases",
-                                command=self.__toggle_tc_name_filter, variable=self.var_opt_filter_tc_name)
+                                command=self.__toggle_tc_name_filter,
+                                variable=self.var_opt_filter_tc_name)
         wid_men.add_separator()
 
         wid_men.add_checkbutton(
-                label="Sort by test case name",
-                command=lambda: self.__toggle_sort_mode(self.var_opt_sort_tc_name.get(), Sort_mode.by_name),
-                variable=self.var_opt_sort_tc_name)
+            label="Sort by test case name",
+            command=lambda: self.__toggle_sort_mode(self.var_opt_sort_tc_name.get(),
+                                                    SortMode.by_name),
+            variable=self.var_opt_sort_tc_name)
         wid_men.add_checkbutton(
-                label="Sort by seed",
-                command=lambda: self.__toggle_sort_mode(self.var_opt_sort_seed.get(), Sort_mode.by_seed),
-                variable=self.var_opt_sort_seed)
+            label="Sort by seed",
+            command=lambda: self.__toggle_sort_mode(self.var_opt_sort_seed.get(),
+                                                    SortMode.by_seed),
+            variable=self.var_opt_sort_seed)
         wid_men.add_checkbutton(
-                label="Sort by duration",
-                command=lambda: self.__toggle_sort_mode(self.var_opt_sort_duration.get(), Sort_mode.by_duration),
-                variable=self.var_opt_sort_duration)
+            label="Sort by duration",
+            command=lambda: self.__toggle_sort_mode(self.var_opt_sort_duration.get(),
+                                                    SortMode.by_duration),
+            variable=self.var_opt_sort_duration)
         wid_men.add_checkbutton(
-                label="Sort by failure type",
-                command=lambda: self.__toggle_sort_mode(self.var_opt_sort_exception.get(), Sort_mode.by_failure),
-                variable=self.var_opt_sort_exception)
+            label="Sort by failure type",
+            command=lambda: self.__toggle_sort_mode(self.var_opt_sort_exception.get(),
+                                                    SortMode.by_failure),
+            variable=self.var_opt_sort_exception)
 
 
     def __window_resized(self, is_log, height):
@@ -215,7 +226,7 @@ class Test_log_widget(object):
         if self.__matches_filter(log):
             if self.opt_sort_modes:
                 list_idx = gtest_gui.bisect.bisect_left(self.log_idx_map, log_idx,
-                                                       self.__get_sort_key_fn())
+                                                        self.__get_sort_key_fn())
                 self.log_idx_map.insert(list_idx, log_idx)
             else:
                 self.log_idx_map.append(log_idx)
@@ -245,12 +256,12 @@ class Test_log_widget(object):
 
 
     def __remove_log_line(self, list_idx):
-        line_1 = "%d.0" % (idx + 1)
-        line_2 = "%d.0" % (idx + 2)
+        line_1 = "%d.0" % (list_idx + 1)
+        line_2 = "%d.0" % (list_idx + 2)
         self.wid_log.delete(line_1, line_2)
 
-        del self.log_idx_map[idx]
-        self.sel_obj.text_sel_adjust_deletion(idx)
+        del self.log_idx_map[list_idx]
+        self.sel_obj.text_sel_adjust_deletion(list_idx)
 
         if not self.sel_obj.text_sel_get_selection():
             self.clear_trace_preview()
@@ -335,10 +346,12 @@ class Test_log_widget(object):
 
         elif log[2] != test_db.test_exe_ts:
             if now - log[2] <= 11*60*60:
-                tagged_txt.append(datetime.fromtimestamp(log[2]).strftime(" (old exe: %H:%M:%S)"))
+                tagged_txt.append(datetime.fromtimestamp(log[2]).strftime(
+                    " (old exe: %H:%M:%S)"))
                 tagged_txt.append([])
             else:
-                tagged_txt.append(datetime.fromtimestamp(log[2]).strftime(" (old exe: %a %d.%m %H:%M)"))
+                tagged_txt.append(datetime.fromtimestamp(log[2]).strftime(
+                    " (old exe: %a %d.%m %H:%M)"))
                 tagged_txt.append([])
 
         tagged_txt.extend(["\n", []])
@@ -349,7 +362,7 @@ class Test_log_widget(object):
         self.wid_log.delete("1.0", "end")
 
         logs = [idx for idx in range(len(test_db.test_results))
-                    if self.__matches_filter(test_db.test_results[idx])]
+                if self.__matches_filter(test_db.test_results[idx])]
 
         self.log_idx_map = self.__sort_idx_map(logs)
 
@@ -391,14 +404,14 @@ class Test_log_widget(object):
 
     def __sort_idx_map(self, logs):
         for mode in reversed(self.opt_sort_modes):
-            if mode == Sort_mode.by_name:
+            if mode == SortMode.by_name:
                 logs = sorted(logs, key=lambda x: test_db.test_results[x][0])
-            elif mode == Sort_mode.by_failure:
+            elif mode == SortMode.by_failure:
                 logs = sorted(logs, key=lambda x: test_db.test_results[x][9])
                 logs = sorted(logs, key=lambda x: test_db.test_results[x][8])
-            elif mode == Sort_mode.by_duration:
+            elif mode == SortMode.by_duration:
                 logs = sorted(logs, key=lambda x: test_db.test_results[x][10])
-            elif mode == Sort_mode.by_seed:
+            elif mode == SortMode.by_seed:
                 logs = sorted(logs, key=lambda x: test_db.test_results[x][14])
         return logs
 
@@ -406,32 +419,32 @@ class Test_log_widget(object):
     def __get_sort_key_fn(self):
         if len(self.opt_sort_modes) == 1:
             mode = self.opt_sort_modes[0]
-            if mode == Sort_mode.by_name:
+            if mode == SortMode.by_name:
                 return lambda x: test_db.test_results[x][0]
 
-            elif mode == Sort_mode.by_failure:
+            if mode == SortMode.by_failure:
                 return lambda x: (test_db.test_results[x][8], test_db.test_results[x][9])
 
-            elif mode == Sort_mode.by_duration:
+            if mode == SortMode.by_duration:
                 return lambda x: test_db.test_results[x][10]
 
-            elif mode == Sort_mode.by_seed:
+            if mode == SortMode.by_seed:
                 return lambda x: test_db.test_results[x][14]
 
         elif len(self.opt_sort_modes) > 1:
             key_idx = []
             for mode in self.opt_sort_modes:
-                if mode == Sort_mode.by_name:
+                if mode == SortMode.by_name:
                     key_idx.append(0)
 
-                elif mode == Sort_mode.by_failure:
+                elif mode == SortMode.by_failure:
                     key_idx.append(8)
                     key_idx.append(9)
 
-                elif mode == Sort_mode.by_duration:
+                elif mode == SortMode.by_duration:
                     key_idx.append(10)
 
-                elif mode == Sort_mode.by_seed:
+                elif mode == SortMode.by_seed:
                     key_idx.append(14)
 
             return lambda log_idx: [test_db.test_results[log_idx][x] for x in key_idx]
@@ -440,14 +453,14 @@ class Test_log_widget(object):
 
 
     def __matches_filter(self, log):
-        return ( ((not self.var_opt_filter_pass.get()) or
-                    (log[3] >= 2)) and
-                 ((not self.var_opt_filter_exe_name.get()) or
-                    (log[1] == test_db.test_exe_name)) and
-                 ((not self.var_opt_filter_exe_ts.get()) or
-                    ((log[2] >= self.opt_filter_exe_ts) and (log[1] == test_db.test_exe_name))) and
-                 ((not self.var_opt_filter_tc_name.get()) or
-                    (log[0] in self.opt_filter_tc_names)) )
+        return (((not self.var_opt_filter_pass.get()) or
+                 (log[3] >= 2)) and
+                ((not self.var_opt_filter_exe_name.get()) or
+                 (log[1] == test_db.test_exe_name)) and
+                ((not self.var_opt_filter_exe_ts.get()) or
+                 ((log[2] >= self.opt_filter_exe_ts) and (log[1] == test_db.test_exe_name))) and
+                ((not self.var_opt_filter_tc_name.get()) or
+                 (log[0] in self.opt_filter_tc_names)))
 
 
     def __toggle_verdict_filter(self):
@@ -458,7 +471,7 @@ class Test_log_widget(object):
         self.__refill_log(restore_selection=True)
 
 
-    def __toggle_exe_ts_filter(self, exe_ts = None):
+    def __toggle_exe_ts_filter(self, exe_ts=None):
         if not exe_ts:
             exe_ts = test_db.test_exe_ts
 
@@ -466,14 +479,14 @@ class Test_log_widget(object):
         self.__refill_log(restore_selection=True)
 
 
-    def __toggle_tc_name_filter(self, tc_names = None):
+    def __toggle_tc_name_filter(self, tc_names=None):
         if self.var_opt_filter_tc_name.get():
             if tc_names is None:
                 tc_names = [test_db.test_results[log_idx][0]
-                                for log_idx in self.__get_mapped_selection()]
+                            for log_idx in self.__get_mapped_selection()]
             if not tc_names:
                 self.var_opt_filter_tc_name.set(False) # must come before messagebox
-                tk_messagebox.showerror(parent=self.tk, message="No results selected")
+                tk_messagebox.showerror(parent=self.tk_top, message="No results selected")
                 return
 
             self.opt_filter_tc_names = set(tc_names)
@@ -576,7 +589,7 @@ class Test_log_widget(object):
                     wid_men.add_command(label="Extract stack trace from core dump file",
                                         command=lambda name=log[0], exe_name=log[1],
                                                        exe_ts=log[2], core=log[7]:
-                                            self.do_open_stack_trace(name, exe_name, exe_ts, core))
+                                        self.do_open_stack_trace(name, exe_name, exe_ts, core))
 
                 if log[4] or log[7]:
                     wid_men.add_separator()
@@ -618,7 +631,8 @@ class Test_log_widget(object):
 
         need_sep = post_menu
         if len(self.log_idx_map) < len(test_db.test_results):
-            if need_sep: wid_men.add_separator()
+            if need_sep:
+                wid_men.add_separator()
             wid_men.add_command(label="Remove all currently filtered results",
                                 command=self.do_remove_filtered_results)
             need_sep = False
@@ -627,7 +641,8 @@ class Test_log_widget(object):
         for log in test_db.test_results:
             if ((log[3] == 0) and
                     ((log[1] != test_db.test_exe_name) or (log[2] < test_db.test_exe_ts))):
-                if need_sep: wid_men.add_separator()
+                if need_sep:
+                    wid_men.add_separator()
                 wid_men.add_command(label="Remove results of passed tests from old exe.",
                                     command=self.do_remove_old_pass_results)
                 post_menu = True
@@ -657,7 +672,7 @@ class Test_log_widget(object):
             self.__remove_trace_files(idx_list)
         else:
             msg = "There are no results of passed tests from old executables."
-            tk_messagebox.showerror(parent=self.tk, message=msg)
+            tk_messagebox.showerror(parent=self.tk_top, message=msg)
 
 
     def do_remove_filtered_results(self):
@@ -670,7 +685,8 @@ class Test_log_widget(object):
         if idx_list:
             self.__remove_trace_files(idx_list)
         else:
-            tk_messagebox.showerror(parent=self.tk, message="There are no filtered log entries.")
+            msg = "There are no filtered log entries."
+            tk_messagebox.showerror(parent=self.tk_top, message=msg)
 
 
     def __remove_trace_files(self, idx_list):
@@ -717,7 +733,7 @@ class Test_log_widget(object):
             msg += " and %d trace output and core dump files" % len(rm_files)
 
         msg += "? (This cannot be undone.)"
-        answer = tk_messagebox.askokcancel(parent=self.tk, message=msg)
+        answer = tk_messagebox.askokcancel(parent=self.tk_top, message=msg)
         if answer:
             if len(idx_list) == 1:
                 self.__delete_single_result(idx_list[0])
@@ -732,13 +748,14 @@ class Test_log_widget(object):
             log = test_db.test_results[idx]
             if log[1] and (log[1] != test_db.test_exe_name):
                 msg = 'Test case "%s" is from a different executable file "%s".' % (log[0], log[1])
-                tk_messagebox.showerror(parent=self.tk, message=msg)
+                tk_messagebox.showerror(parent=self.tk_top, message=msg)
                 return False
-            elif test_db.test_case_stats.get(log[0], None) is None:
+
+            if test_db.test_case_stats.get(log[0], None) is None:
                 msg = 'Test case "%s" no longer exists in current executable' % log[0]
                 if log[1] is None:
                     msg += " or may be from a different executable"
-                tk_messagebox.showerror(parent=self.tk, message=msg + ".")
+                tk_messagebox.showerror(parent=self.tk_top, message=msg + ".")
                 return False
 
         return True
@@ -787,11 +804,11 @@ class Test_log_widget(object):
     def do_export_trace(self):
         sel = self.__get_mapped_selection()
         if sel:
-            dlg_browser.export_traces(self.tk, sel)
+            dlg_browser.export_traces(self.tk_top, sel)
 
 
     def do_open_stack_trace(self, tc_name, exe_name, exe_ts, core_name):
-        dlg_browser.show_stack_trace(self.tk, tc_name, exe_name, exe_ts, core_name)
+        dlg_browser.show_stack_trace(self.tk_top, tc_name, exe_name, exe_ts, core_name)
 
 
     def do_open_trace_browser(self, complete_trace=False):
@@ -800,9 +817,10 @@ class Test_log_widget(object):
             log = test_db.test_results[sel[0]]
             if log[4]:
                 if complete_trace:
-                    dlg_browser.show_trace(self.tk, log[4])
+                    dlg_browser.show_trace(self.tk_top, log[4])
                 else:
-                    dlg_browser.show_trace_snippet(self.tk, log[4], log[5], log[6], log[13]==2)
+                    dlg_browser.show_trace_snippet(self.tk_top,
+                                                   log[4], log[5], log[6], log[13] == 2)
             else:
                 wid_status_line.show_message("warning", "No trace available for this result")
 

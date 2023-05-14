@@ -36,7 +36,7 @@ if sys.platform == "win32":
     def read_nonblocking(pipe, length):
         try:
             return os.read(pipe.fileno(), length)
-        except OSError as e:
+        except OSError:
             if GetLastError() != ERROR_NO_DATA:
                 raise OSError(GetLastError(), WinError())
             return None

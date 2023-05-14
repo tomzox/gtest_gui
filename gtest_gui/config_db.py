@@ -17,6 +17,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # ------------------------------------------------------------------------ #
 
+"""
+Database and persistent storage for configuration parameters.
+"""
+
 import errno
 from datetime import datetime
 import json
@@ -37,8 +41,13 @@ options = {
     "exit_clean_trace": True,
     "startup_import_trace": True,
     "copy_executable": True,
-    "valgrind1": "valgrind --leak-check=full --show-leak-kinds=definite,possible,indirect --show-reachable=yes --num-callers=50",
-    "valgrind2": "valgrind --leak-check=full --show-leak-kinds=definite,possible,indirect --expensive-definedness-checks=yes --show-reachable=yes --num-callers=50 --track-origins=yes",
+    "valgrind1": "valgrind --leak-check=full "
+                 "--show-leak-kinds=definite,possible,indirect "
+                 "--show-reachable=yes --num-callers=50",
+    "valgrind2": "valgrind --leak-check=full "
+                 "--show-leak-kinds=definite,possible,indirect "
+                 "--show-reachable=yes --num-callers=50 "
+                 "--track-origins=yes --expensive-definedness-checks=yes",
     "valgrind_exit": True,
     "enable_tool_tips": True,
 }
@@ -80,7 +89,7 @@ def update_prev_exe_file_list(path):
 
 
 def get_rc_file_path():
-    if (os.name == "posix"):
+    if os.name == "posix":
         xdg_config_home = os.environ.get("XDG_CONFIG_HOME")
         home = os.path.expanduser("~")
 
@@ -136,52 +145,57 @@ def rc_file_load():
                     try:
                         val = json.loads(match.group(2))
 
-                        if   (var == "log_browser"):            options["browser"] = val
-                        elif (var == "browser_stdin"):          options["browser_stdin"] = val
-                        elif (var == "cmd_valgrind1"):          options["valgrind1"] = val
-                        elif (var == "cmd_valgrind2"):          options["valgrind2"] = val
-                        elif (var == "valgrind_exit"):          options["valgrind_exit"] = val
-                        elif (var == "seed_regexp"):            options["seed_regexp"] = val
-                        elif (var == "trace_dir"):              options["trace_dir"] = val
-                        elif (var == "exit_clean_trace"):       options["exit_clean_trace"] = val
-                        elif (var == "startup_import_trace"):   options["startup_import_trace"] = val
-                        elif (var == "copy_executable"):        options["copy_executable"] = val
-                        elif (var == "enable_tool_tips"):       options["enable_tool_tips"] = val
+                        if var == "log_browser":              options["browser"] = val
+                        elif var == "browser_stdin":          options["browser_stdin"] = val
+                        elif var == "cmd_valgrind1":          options["valgrind1"] = val
+                        elif var == "cmd_valgrind2":          options["valgrind2"] = val
+                        elif var == "valgrind_exit":          options["valgrind_exit"] = val
+                        elif var == "seed_regexp":            options["seed_regexp"] = val
+                        elif var == "trace_dir":              options["trace_dir"] = val
+                        elif var == "exit_clean_trace":       options["exit_clean_trace"] = val
+                        elif var == "startup_import_trace":   options["startup_import_trace"] = val
+                        elif var == "copy_executable":        options["copy_executable"] = val
+                        elif var == "enable_tool_tips":       options["enable_tool_tips"] = val
 
-                        elif (var == "font_content"):           font_content_opt = val
-                        elif (var == "font_trace"):             font_trace_opt = val
-                        elif (var == "prev_exe_file_list"):     prev_exe_file_list = val
+                        elif var == "font_content":           font_content_opt = val
+                        elif var == "font_trace":             font_trace_opt = val
+                        elif var == "prev_exe_file_list":     prev_exe_file_list = val
 
-                        elif (var == "log_pane_height"):        log_pane_height = val
-                        elif (var == "log_pane_solo_height"):   log_pane_solo_height = val
-                        elif (var == "trace_pane_height"):      trace_pane_height = val
-                        elif (var == "trace_pane_solo_height"): trace_pane_solo_height = val
-                        elif (var == "tc_list_geometry"):       tc_list_geometry = val
-                        elif (var == "job_list_geometry"):      job_list_geometry = val
-                        elif (var == "help_win_geometry"):      help_win_geometry = val
+                        elif var == "log_pane_height":        log_pane_height = val
+                        elif var == "log_pane_solo_height":   log_pane_solo_height = val
+                        elif var == "trace_pane_height":      trace_pane_height = val
+                        elif var == "trace_pane_solo_height": trace_pane_solo_height = val
+                        elif var == "tc_list_geometry":       tc_list_geometry = val
+                        elif var == "job_list_geometry":      job_list_geometry = val
+                        elif var == "help_win_geometry":      help_win_geometry = val
 
-                        elif (var == "rcfile_version"):         rcfile_version = val
-                        elif (var == "rc_compat_version"):      rc_compat_version = val
-                        elif (var == "rc_timestamp"):           pass
+                        elif var == "rcfile_version":         rcfile_version = val
+                        elif var == "rc_compat_version":      rc_compat_version = val
+                        elif var == "rc_timestamp":           pass
                         else:
-                            print("Warning: ignoring unknown keyword in rcfile line %d:" % line_no, var, file=sys.stderr)
+                            print("Warning: ignoring unknown keyword in rcfile line %d:"
+                                  % line_no, var, file=sys.stderr)
 
                     except json.decoder.JSONDecodeError:
-                        tk_messagebox.showerror(parent=tk_utils.tk_top, message="Syntax error decoding rcfile line %d: %s" % (line_no, line[:40]))
+                        tk_messagebox.showerror(parent=tk_utils.tk_top,
+                                                message="Syntax error decoding rcfile line %d: %s"
+                                                % (line_no, line[:40]))
                         error = True
 
                 elif not error:
-                    tk_messagebox.showerror(parent=tk_utils.tk_top, message="Syntax error in rc file, line #%d: %s" % (line_no, line[:40]))
+                    tk_messagebox.showerror(parent=tk_utils.tk_top,
+                                            message="Syntax error in rc file, line #%d: %s"
+                                            % (line_no, line[:40]))
                     error = True
 
                 elif not ver_check:
                     # check if the given rc file is from a newer version
                     if rc_compat_version is not None:
                         if rc_compat_version > rcfile_version:
-                            tk_messagebox.showerror(parent=tk_utils.tk_top,
-                                                    message="rc file '%s' is from an incompatible, "
-                                                    "newer version (%s) of this softare and cannot be loaded."
-                                                    % (rc_path, rcfile_version))
+                            msg = "rc file '%s' is from an incompatible, " \
+                                  "newer version (%s) of this softare and cannot be loaded." \
+                                  % (rc_path, rcfile_version)
+                            tk_messagebox.showerror(parent=tk_utils.tk_top, message=msg)
 
                             # change name of rc file so that the newer one isn't overwritten
                             rc_path = rc_path + "." + rcfile_version
@@ -193,18 +207,18 @@ def rc_file_load():
         if font_content_opt:
             try:
                 tk_utils.init_font_content(font_content_opt)
-            except Exception as e:
-                print("Error configuring content font:", str(e), file=sys.stderr)
+            except Exception as exc:
+                print("Error configuring content font:", str(exc), file=sys.stderr)
 
         if font_trace_opt:
             try:
                 tk_utils.init_font_trace(font_trace_opt)
-            except Exception as e:
-                print("Error configuring trace font:", str(e), file=sys.stderr)
+            except Exception as exc:
+                print("Error configuring trace font:", str(exc), file=sys.stderr)
 
-    except OSError as e:
-        if e.errno != errno.ENOENT:
-            print("Failed to load config file " + rc_path + ":", str(e), file=sys.stderr)
+    except OSError as exc:
+        if exc.errno != errno.ENOENT:
+            print("Failed to load config file " + rc_path + ":", str(exc), file=sys.stderr)
 
 
 def rc_file_update():
@@ -215,10 +229,12 @@ def rc_file_update():
     global tc_list_geometry, job_list_geometry, help_win_geometry
     global prev_exe_file_list
 
-    if tid_update_rc_sec: tk_utils.tk_top.after_cancel(tid_update_rc_sec)
-    if tid_update_rc_min: tk_utils.tk_top.after_cancel(tid_update_rc_min)
-    tid_update_rc_sec = None
-    tid_update_rc_min = None
+    if tid_update_rc_sec:
+        tk_utils.tk_top.after_cancel(tid_update_rc_sec)
+        tid_update_rc_sec = None
+    if tid_update_rc_min:
+        tk_utils.tk_top.after_cancel(tid_update_rc_min)
+        tid_update_rc_min = None
 
     rc_path = get_rc_file_path()
     try:
@@ -272,35 +288,39 @@ def rc_file_update():
             st = os.stat(rc_path)
             try:
                 os.chmod(rcfile.name, st.st_mode & 0o777)
-                if (os.name == "posix"):
+                if os.name == "posix":
                     os.chown(rcfile.name, st.st_uid, st.st_gid)
-            except OSError as e:
-                print("Warning: Failed to update mode/permissions on %s: %s" % (rc_path, e.strerror), file=sys.stderr)
-        except OSError as e:
+            except OSError as exc:
+                print("Warning: Failed to update mode/permissions on %s: %s" %
+                      (rc_path, exc.strerror), file=sys.stderr)
+        except OSError:
             pass
 
         # move the new file over the old one
         try:
             # MS-Windows does not allow renaming when the target file already exists,
             # therefore remove the target first. Disadvantage: operation is not atomic.
-            if (os.name != "posix"):
+            if os.name != "posix":
                 try:
                     os.remove(rc_path)
                 except OSError:
                     pass
             os.rename(rcfile.name, rc_path)
             rcfile_error = False
-        except OSError as e:
+        except OSError as exc:
             if not rcfile_error:
-                tk_messagebox.showerror(parent=tk_utils.tk_top, message="Could not replace rc file %s with temporary %s: %s" % (rc_path, rcfile.name, e.strerror))
+                msg = "Could not replace rc file %s with temporary %s: %s" % \
+                      (rc_path, rcfile.name, exc.strerror)
+                tk_messagebox.showerror(parent=tk_utils.tk_top, message=msg)
             rcfile_error = True
             os.remove(rcfile.name)
 
-    except OSError as e:
+    except OSError as exc:
         # write error - remove the file fragment, report to user
         if not rcfile_error:
             rcfile_error = True
-            tk_messagebox.showerror(parent=tk_utils.tk_top, message="Failed to write file %s: %s" % (rcfilename, e.strerror))
+            msg = "Failed to write file %s: %s" % (rcfilename, exc.strerror)
+            tk_messagebox.showerror(parent=tk_utils.tk_top, message=msg)
         os.remove(rcfile.name)
 
     return not rcfile_error
@@ -314,7 +334,8 @@ def rc_file_update():
 def rc_file_update_after_idle():
     global tid_update_rc_sec, tid_update_rc_min
 
-    if tid_update_rc_sec: tk_utils.tk_top.after_cancel(tid_update_rc_sec)
+    if tid_update_rc_sec:
+        tk_utils.tk_top.after_cancel(tid_update_rc_sec)
     tid_update_rc_sec = tk_utils.tk_top.after(3000, rc_file_update)
 
     if not tid_update_rc_min:
