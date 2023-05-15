@@ -102,8 +102,8 @@ class HelpDialog:
         self.__create_buttons()
         self.__create_text_widget()
 
-        if config_db.help_win_geometry:
-            self.wid_top.wm_geometry(config_db.help_win_geometry)
+        if config_db.get_opt("help_win_geometry"):
+            self.wid_top.wm_geometry(config_db.get_opt("help_win_geometry"))
 
         self.wid_top.bind("<Configure>", lambda e: self.__handle_window_resize(e.widget))
         self.wid_txt.focus_set()
@@ -283,6 +283,4 @@ class HelpDialog:
     def __handle_window_resize(self, wid):
         if wid == self.wid_top:
             new_size = self.wid_top.wm_geometry()
-            if new_size != config_db.help_win_geometry:
-                config_db.help_win_geometry = new_size
-                config_db.rc_file_update_after_idle()
+            config_db.set_opt("help_win_geometry", new_size)

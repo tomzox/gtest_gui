@@ -100,8 +100,8 @@ def main():
 
     config_db.rc_file_load()
 
-    if config_db.options["startup_import_trace"]:
-        if config_db.options["trace_dir"] and not os.path.exists(config_db.options["trace_dir"]):
+    if config_db.get_opt("startup_import_trace"):
+        if config_db.get_opt("trace_dir") and not os.path.exists(config_db.get_opt("trace_dir")):
             answer = tk_messagebox.showwarning(
                 parent=tk_top, type="okcancel",
                 message="Warning: Configured trace directory does not exist. " \

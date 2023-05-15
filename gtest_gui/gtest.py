@@ -72,7 +72,7 @@ class GtestControl:
                 return
 
         exe_name = gtest_control_get_exe_file_link_name(test_db.test_exe_name, self.__exe_ts)
-        if config_db.options["copy_executable"] and not os.access(exe_name, os.X_OK):
+        if config_db.get_opt("copy_executable") and not os.access(exe_name, os.X_OK):
             try:
                 os.link(test_db.test_exe_name, exe_name)
             except OSError as exc:
@@ -375,8 +375,8 @@ def gtest_control_first_free_trace_file_idx(exe_ts):
 
 
 def gtest_control_search_trace_dirs():
-    if config_db.options["trace_dir"]:
-        trace_dir_path = config_db.options["trace_dir"]
+    if config_db.get_opt("trace_dir"):
+        trace_dir_path = config_db.get_opt("trace_dir")
     else:
         trace_dir_path = "."
 
@@ -395,13 +395,13 @@ def gtest_control_search_trace_dirs():
 
 def gtest_control_get_trace_dir(exe_ts):
     trace_dir_path = "trace.%d" % exe_ts
-    if config_db.options["trace_dir"]:
-        trace_dir_path = os.path.join(config_db.options["trace_dir"], trace_dir_path)
+    if config_db.get_opt("trace_dir"):
+        trace_dir_path = os.path.join(config_db.get_opt("trace_dir"), trace_dir_path)
     return trace_dir_path
 
 
 def gtest_control_get_exe_file_link_name(exe_name, exe_ts):
-    if config_db.options["copy_executable"]:
+    if config_db.get_opt("copy_executable"):
         trace_dir_path = gtest_control_get_trace_dir(exe_ts)
         return os.path.join(trace_dir_path, os.path.basename(exe_name))
 
@@ -435,7 +435,7 @@ def release_exe_file_copy(exe_name=None, exe_ts=None):
     if not exe_name or not exe_ts:
         return
 
-    if not config_db.options["copy_executable"]:
+    if not config_db.get_opt("copy_executable"):
         return
 
     trace_dir_path = gtest_control_get_trace_dir(exe_ts)
@@ -461,7 +461,7 @@ def release_exe_file_copy(exe_name=None, exe_ts=None):
 
 
 def remove_trace_or_core_files(rm_files, rm_exe):
-    if config_db.options["copy_executable"]:
+    if config_db.get_opt("copy_executable"):
         for exe_name_ts in rm_exe:
             rm_files.add(gtest_control_get_exe_file_link_name(exe_name_ts[0], exe_name_ts[1]))
 
@@ -580,7 +580,7 @@ class GtestJob:
         cmd = []
         if valgrind_cmd:
             cmd.extend(re.split(r"\s+", valgrind_cmd))
-        if valgrind_cmd and config_db.options["valgrind_exit"]:
+        if valgrind_cmd and config_db.get_opt("valgrind_exit"):
             self.__valgrind_exit = 125
             cmd.append("--error-exitcode=125")
         cmd.append(exe_name)
@@ -823,7 +823,7 @@ class GtestJob:
             self.__failed_cnt += 1
 
         seed = ""
-        pat = config_db.options.get("seed_regexp")
+        pat = config_db.get_opt("seed_regexp")
         if pat:
             try:
                 match = re.search(pat.encode(), self.__snippet_data, re.MULTILINE)
@@ -1004,7 +1004,7 @@ def gtest_import_tc_result(tc_name, is_failed, duration, snippet, start_off,
             fail_line = int(match.group(2))
 
     seed = ""
-    pat = config_db.options.get("seed_regexp")
+    pat = config_db.get_opt("seed_regexp")
     if pat:
         try:
             match = re.search(pat.encode(), snippet, re.MULTILINE)

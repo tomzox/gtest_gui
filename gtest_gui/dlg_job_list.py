@@ -102,8 +102,8 @@ class JobListDialog:
 
         self.sel_obj = TextSelWidget(self.wid_table, self.__handle_selection_change, self.__get_len)
 
-        if config_db.job_list_geometry:
-            self.wid_top.wm_geometry(config_db.job_list_geometry)
+        if config_db.get_opt("job_list_geometry"):
+            self.wid_top.wm_geometry(config_db.get_opt("job_list_geometry"))
 
         self.wid_table.focus_set()
 
@@ -181,9 +181,7 @@ class JobListDialog:
     def __handle_window_resize(self, wid):
         if wid == self.wid_top:
             new_size = self.wid_top.wm_geometry()
-            if new_size != config_db.job_list_geometry:
-                config_db.job_list_geometry = new_size
-                config_db.rc_file_update_after_idle()
+            config_db.set_opt("job_list_geometry", new_size)
 
 
     def __format_table_row(self, stats):

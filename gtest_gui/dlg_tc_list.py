@@ -141,8 +141,8 @@ class TcListDialog:
 
         self.sel_obj = TextSelWidget(self.wid_table, self.__handle_selection_change, self.__get_len)
 
-        if config_db.tc_list_geometry:
-            self.wid_top.wm_geometry(config_db.tc_list_geometry)
+        if config_db.get_opt("tc_list_geometry"):
+            self.wid_top.wm_geometry(config_db.get_opt("tc_list_geometry"))
 
         self.wid_table.focus_set()
 
@@ -207,9 +207,7 @@ class TcListDialog:
     def __handle_window_resize(self, wid):
         if wid == self.wid_top:
             new_size = self.wid_top.wm_geometry()
-            if new_size != config_db.tc_list_geometry:
-                config_db.tc_list_geometry = new_size
-                config_db.rc_file_update_after_idle()
+            config_db.set_opt("tc_list_geometry", new_size)
 
 
     def __format_table_row(self, tc_name):

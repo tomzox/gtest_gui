@@ -59,19 +59,19 @@ class ConfigDialog:
 
     def __init__(self, tk_top):
         self.tk_top = tk_top
-        self.var_cfg_browser = tk.StringVar(tk_top, config_db.options["browser"])
-        self.var_cfg_browser_stdin = tk.BooleanVar(tk_top, config_db.options["browser_stdin"])
-        self.var_cfg_seed_regexp = tk.StringVar(tk_top, config_db.options["seed_regexp"])
+        self.var_cfg_browser = tk.StringVar(tk_top, config_db.get_opt("log_browser"))
+        self.var_cfg_browser_stdin = tk.BooleanVar(tk_top, config_db.get_opt("browser_stdin"))
+        self.var_cfg_seed_regexp = tk.StringVar(tk_top, config_db.get_opt("seed_regexp"))
 
-        self.var_cfg_trace_dir = tk.StringVar(tk_top, config_db.options["trace_dir"])
-        self.var_cfg_exit_clean_trace = tk.BooleanVar(tk_top, config_db.options["exit_clean_trace"])
+        self.var_cfg_trace_dir = tk.StringVar(tk_top, config_db.get_opt("trace_dir"))
+        self.var_cfg_exit_clean_trace = tk.BooleanVar(tk_top, config_db.get_opt("exit_clean_trace"))
         self.var_cfg_startup_import = tk.BooleanVar(tk_top,
-                                                    config_db.options["startup_import_trace"])
-        self.var_cfg_copy_executable = tk.BooleanVar(tk_top, config_db.options["copy_executable"])
+                                                    config_db.get_opt("startup_import_trace"))
+        self.var_cfg_copy_executable = tk.BooleanVar(tk_top, config_db.get_opt("copy_executable"))
 
-        self.var_cfg_valgrind1 = tk.StringVar(tk_top, config_db.options["valgrind1"])
-        self.var_cfg_valgrind2 = tk.StringVar(tk_top, config_db.options["valgrind2"])
-        self.var_cfg_valgrind_exit = tk.BooleanVar(tk_top, config_db.options["valgrind_exit"])
+        self.var_cfg_valgrind1 = tk.StringVar(tk_top, config_db.get_opt("cmd_valgrind1"))
+        self.var_cfg_valgrind2 = tk.StringVar(tk_top, config_db.get_opt("cmd_valgrind2"))
+        self.var_cfg_valgrind_exit = tk.BooleanVar(tk_top, config_db.get_opt("valgrind_exit"))
 
         self.wid_top = tk.Toplevel(tk_top)
         self.wid_top.wm_group(tk_top)
@@ -203,6 +203,11 @@ class ConfigDialog:
         return True
 
 
+    @staticmethod
+    def __normalize_shell_cmd(var):
+        return re.sub(r"\s+", " ", var.get()).strip()
+
+
     def __apply_config(self):
         seed_exp = self.var_cfg_seed_regexp.get()
         if seed_exp and not self.__check_seed_pattern(seed_exp):
@@ -214,8 +219,8 @@ class ConfigDialog:
             if not self.__check_trace_dir(trace_dir):
                 return False
 
-        if ((trace_dir != config_db.options["trace_dir"]) or
-                (self.var_cfg_copy_executable.get() != config_db.options["copy_executable"])):
+        if ((trace_dir != config_db.get_opt("trace_dir")) or
+                (self.var_cfg_copy_executable.get() != config_db.get_opt("copy_executable"))):
             if gtest.gtest_ctrl.is_active():
                 msg = "Need to stop running tests for changing the trace directory " \
                       "or copy-executable options."
@@ -225,18 +230,20 @@ class ConfigDialog:
 
             gtest.release_exe_file_copy()
 
-        config_db.options["browser"] = re.sub(r"\s+", " ", self.var_cfg_browser.get()).strip()
-        config_db.options["browser_stdin"] = self.var_cfg_browser_stdin.get()
-        config_db.options["seed_regexp"] = seed_exp
+        config_db.set_opt("log_browser", ConfigDialog.__normalize_shell_cmd(self.var_cfg_browser))
+        config_db.set_opt("browser_stdin", self.var_cfg_browser_stdin.get())
+        config_db.set_opt("seed_regexp", seed_exp)
 
-        config_db.options["trace_dir"] = trace_dir
-        config_db.options["exit_clean_trace"] = self.var_cfg_exit_clean_trace.get()
-        config_db.options["startup_import_trace"] = self.var_cfg_startup_import.get()
-        config_db.options["copy_executable"] = self.var_cfg_copy_executable.get()
+        config_db.set_opt("trace_dir", trace_dir)
+        config_db.set_opt("exit_clean_trace", self.var_cfg_exit_clean_trace.get())
+        config_db.set_opt("startup_import_trace", self.var_cfg_startup_import.get())
+        config_db.set_opt("copy_executable", self.var_cfg_copy_executable.get())
 
-        config_db.options["valgrind1"] = re.sub(r"\s+", " ", self.var_cfg_valgrind1.get()).strip()
-        config_db.options["valgrind2"] = re.sub(r"\s+", " ", self.var_cfg_valgrind2.get()).strip()
-        config_db.options["valgrind_exit"] = self.var_cfg_valgrind_exit.get()
+        config_db.set_opt("cmd_valgrind1",
+                          ConfigDialog.__normalize_shell_cmd(self.var_cfg_valgrind1))
+        config_db.set_opt("cmd_valgrind2",
+                          ConfigDialog.__normalize_shell_cmd(self.var_cfg_valgrind2))
+        config_db.set_opt("valgrind_exit", self.var_cfg_valgrind_exit.get())
 
         return config_db.rc_file_update()
 

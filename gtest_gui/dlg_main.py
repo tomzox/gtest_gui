@@ -91,9 +91,9 @@ class MainWindow:
     def __create_menubar(self):
         wid_men = tk.Menu(self.tk_top, name="menubar", tearoff=0)
         self.var_opt_test_ctrl = tk.BooleanVar(self.tk_top, True)
-        self.var_opt_tool_tips = tk.BooleanVar(self.tk_top, config_db.options["enable_tool_tips"])
+        self.var_opt_tool_tips = tk.BooleanVar(self.tk_top, config_db.get_opt("enable_tool_tips"))
 
-        wid_tool_tip.enable_tips(config_db.options["enable_tool_tips"])
+        wid_tool_tip.enable_tips(config_db.get_opt("enable_tool_tips"))
 
         wid_men_ctrl = wid_tool_tip.Menu(wid_men, tearoff=0)
         wid_men.add_cascade(menu=wid_men_ctrl, label="Control", underline=0)
@@ -168,9 +168,10 @@ class MainWindow:
                 return False
 
         config_db.rc_file_update_upon_exit()
+
         gtest.gtest_ctrl.stop(kill=True)
         gtest.release_exe_file_copy()
-        if config_db.options["exit_clean_trace"]:
+        if config_db.get_opt("exit_clean_trace"):
             gtest.clean_all_trace_files()
 
         tk_utils.safe_destroy(self.tk_top)
@@ -273,9 +274,10 @@ class MainWindow:
 
         self.var_prev_exe_name.set(test_db.test_exe_name)
 
-        mapped = MainWindow.__get_prev_exe_names(config_db.prev_exe_file_list)
+        prev_exe_file_list = config_db.get_opt("prev_exe_file_list")
+        mapped = MainWindow.__get_prev_exe_names(prev_exe_file_list)
         need_sep = True
-        for exe_name in reversed(config_db.prev_exe_file_list):
+        for exe_name in reversed(prev_exe_file_list):
             if need_sep:
                 self.wid_men_set_exe.add_separator()
                 need_sep = False
@@ -429,7 +431,7 @@ You should have received a copy of the GNU General Public License along with thi
     def toggle_tool_tips(self):
         """ Reconfigure tool-tip widget to show or hide tool-tips after config changes."""
 
-        config_db.options["enable_tool_tips"] = self.var_opt_tool_tips.get()
-        config_db.rc_file_update_after_idle()
+        new_val = self.var_opt_tool_tips.get()
+        config_db.set_opt("enable_tool_tips", new_val)
 
-        wid_tool_tip.enable_tips(config_db.options["enable_tool_tips"])
+        wid_tool_tip.enable_tips(new_val)

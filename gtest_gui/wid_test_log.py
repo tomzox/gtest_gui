@@ -94,8 +94,8 @@ class TestLogWidget:
 
         self.sel_obj = TextSelWidget(wid_txt, self.__handle_selection_change, self.__get_len)
 
-        if config_db.log_pane_height:
-            wid_pane.add(wid_frm, sticky="news", height=config_db.log_pane_height)
+        if config_db.get_opt("log_pane_height"):
+            wid_pane.add(wid_frm, sticky="news", height=config_db.get_opt("log_pane_height"))
         else:
             wid_pane.add(wid_frm, sticky="news")
 
@@ -115,9 +115,9 @@ class TestLogWidget:
         wid_sb.pack(side=tk.LEFT, fill=tk.Y)
         wid_txt.configure(yscrollcommand=wid_sb.set)
 
-        if not config_db.trace_pane_height:
-            config_db.trace_pane_height = 9 * tk_utils.font_trace.metrics("linespace")
-        wid_pane.add(wid_frm, sticky="news", height=config_db.trace_pane_height)
+        if not config_db.get_opt("trace_pane_height"):
+            config_db.set_opt("trace_pane_height", 9 * tk_utils.font_trace.metrics("linespace"))
+        wid_pane.add(wid_frm, sticky="news", height=config_db.get_opt("trace_pane_height"))
 
         wid_frm.bind("<Configure>", lambda e: self.__window_resized(False, e.height))
         self.wid_trace = wid_txt
@@ -174,31 +174,33 @@ class TestLogWidget:
     def __window_resized(self, is_log, height):
         if is_log:
             if self.test_ctrl_visible:
-                config_db.log_pane_height = height
+                config_db.set_opt("log_pane_height", height)
             else:
-                config_db.log_pane_solo_height = height
+                config_db.set_opt("log_pane_solo_height", height)
         else:
             if self.test_ctrl_visible:
-                config_db.trace_pane_height = height
+                config_db.set_opt("trace_pane_height", height)
             else:
-                config_db.trace_pane_solo_height = height
-
-        config_db.rc_file_update_after_idle()
+                config_db.set_opt("trace_pane_solo_height", height)
 
 
     def toggle_test_ctrl_visible(self, visible):
         self.test_ctrl_visible = visible
 
         if visible:
-            if config_db.log_pane_height:
-                self.wid_pane.paneconfigure(self.wid_frm1, height=config_db.log_pane_height)
-            if config_db.trace_pane_height:
-                self.wid_pane.paneconfigure(self.wid_frm2, height=config_db.trace_pane_height)
+            if config_db.get_opt("log_pane_height"):
+                self.wid_pane.paneconfigure(self.wid_frm1,
+                                            height=config_db.get_opt("log_pane_height"))
+            if config_db.get_opt("trace_pane_height"):
+                self.wid_pane.paneconfigure(self.wid_frm2,
+                                            height=config_db.get_opt("trace_pane_height"))
         else:
-            if config_db.log_pane_solo_height:
-                self.wid_pane.paneconfigure(self.wid_frm1, height=config_db.log_pane_solo_height)
-            if config_db.trace_pane_solo_height:
-                self.wid_pane.paneconfigure(self.wid_frm2, height=config_db.trace_pane_solo_height)
+            if config_db.get_opt("log_pane_solo_height"):
+                self.wid_pane.paneconfigure(self.wid_frm1,
+                                            height=config_db.get_opt("log_pane_solo_height"))
+            if config_db.get_opt("trace_pane_solo_height"):
+                self.wid_pane.paneconfigure(self.wid_frm2,
+                                            height=config_db.get_opt("trace_pane_solo_height"))
 
 
     def __get_len(self):

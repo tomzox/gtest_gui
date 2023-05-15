@@ -34,61 +34,98 @@ import gtest_gui.tk_utils as tk_utils
 
 # Options set via configuration menu
 options = {
-    "browser": "trowser.py",
+    "log_browser": "trowser.py",
     "browser_stdin": True,
     "seed_regexp": "",
     "trace_dir": "",
     "exit_clean_trace": True,
     "startup_import_trace": True,
     "copy_executable": True,
-    "valgrind1": "valgrind --leak-check=full "
-                 "--show-leak-kinds=definite,possible,indirect "
-                 "--show-reachable=yes --num-callers=50",
-    "valgrind2": "valgrind --leak-check=full "
-                 "--show-leak-kinds=definite,possible,indirect "
-                 "--show-reachable=yes --num-callers=50 "
-                 "--track-origins=yes --expensive-definedness-checks=yes",
+    "cmd_valgrind1": "valgrind --leak-check=full "
+                     "--show-leak-kinds=definite,possible,indirect "
+                     "--show-reachable=yes --num-callers=50",
+    "cmd_valgrind2": "valgrind --leak-check=full "
+                     "--show-leak-kinds=definite,possible,indirect "
+                     "--show-reachable=yes --num-callers=50 "
+                     "--track-origins=yes --expensive-definedness-checks=yes",
     "valgrind_exit": True,
     "enable_tool_tips": True,
+
+    # Parameters of class TextLogWidget
+    "log_pane_height": 0,
+    "log_pane_solo_height": 0,
+    "trace_pane_height": 0,
+    "trace_pane_solo_height": 0,
+
+    # Parameters of misc. dialog classes
+    "tc_list_geometry": "",
+    "job_list_geometry": "",
+    "help_win_geometry": "",
+
+    # Parameters of class MainWindow
+    "prev_exe_file_list": [],
 }
-
-# Parameters of main window
-prev_exe_file_list = []
-
-# Parameters of wid_test_log
-log_pane_height = 0
-log_pane_solo_height = 0
-trace_pane_height = 0
-trace_pane_solo_height = 0
-
-# Parameters of misc. dialogs
-tc_list_geometry = ""
-job_list_geometry = ""
-help_win_geometry = ""
-
 
 # internal state
 tid_update_rc_sec = None
 tid_update_rc_min = None
 
 # "compat" := oldest version of gtest_gui that can parse this file
-rcfile_compat = 0x01000000
-rcfile_version = 0x01000003
+RCFILE_COMPAT = 0x01000000
+RCFILE_VERSION = 0x01000003
+rcfile_name_appendix = ""
 rcfile_error = 0
 
 
+def get_opt(name):
+    return options[name]
+
+
+def set_opt(name, value):
+    if options[name] != value:
+        options[name] = value
+        __rc_file_update_after_idle()
+
+
 def update_prev_exe_file_list(path):
-    global prev_exe_file_list
-
     path = os.path.abspath(path)
-    if not prev_exe_file_list or prev_exe_file_list[-1] != path:
-        prev_exe_file_list = [x for x in prev_exe_file_list if x != path]
-        prev_exe_file_list.append(path)
+    prev_list = options["prev_exe_file_list"]
+    if not prev_list or prev_list[-1] != path:
+        prev_list = [x for x in prev_list if x != path]
+        prev_list.append(path)
+        options["prev_exe_file_list"] = prev_list
 
-        rc_file_update_after_idle()
+        __rc_file_update_after_idle()
 
 
-def get_rc_file_path():
+def __load_rc_value(var, val, font_opts):
+    result = True
+
+    if var in options:
+        options[var] = val
+
+    elif var == "font_content":
+        font_opts[0] = val
+    elif var == "font_trace":
+        font_opts[1] = val
+
+    else:
+        result = False
+
+    return result
+
+
+def __write_rc_values(rcfile):
+    # dump configuration options
+    for var in options:
+        print(var + "=" + json.dumps(options[var]), file=rcfile)
+
+    # dump font selection
+    print("font_content=", json.dumps(tk_utils.font_content.configure()), file=rcfile)
+    print("font_trace=", json.dumps(tk_utils.font_trace.configure()), file=rcfile)
+
+
+def __get_rc_file_path():
     if os.name == "posix":
         xdg_config_home = os.environ.get("XDG_CONFIG_HOME")
         home = os.path.expanduser("~")
@@ -106,31 +143,23 @@ def get_rc_file_path():
         else:
             rc_file = "gtest_gui.rc"
 
+        rc_file += rcfile_name_appendix
+
         os.makedirs(os.path.dirname(rc_file), exist_ok=True)
 
     else:
-        # TODO
+        # TODO where to store config on MS Windows platform
         rc_file = "gtest_gui.ini"
 
     return rc_file
 
 
 def rc_file_load():
-    global rcfile_version
-    global log_pane_height, log_pane_solo_height
-    global trace_pane_height, trace_pane_solo_height
-    global tc_list_geometry, job_list_geometry, help_win_geometry
-    global options
-    global prev_exe_file_list
-
-    font_content_opt = None
-    font_trace_opt = None
-
+    font_opts = [None, None]
     error = False
-    ver_check = False
-    rc_compat_version = None
     line_no = 0
-    rc_path = get_rc_file_path()
+    rc_path = __get_rc_file_path()
+    file_version = 0
 
     try:
         with open(rc_path, "r") as rcfile:
@@ -145,34 +174,26 @@ def rc_file_load():
                     try:
                         val = json.loads(match.group(2))
 
-                        if var == "log_browser":              options["browser"] = val
-                        elif var == "browser_stdin":          options["browser_stdin"] = val
-                        elif var == "cmd_valgrind1":          options["valgrind1"] = val
-                        elif var == "cmd_valgrind2":          options["valgrind2"] = val
-                        elif var == "valgrind_exit":          options["valgrind_exit"] = val
-                        elif var == "seed_regexp":            options["seed_regexp"] = val
-                        elif var == "trace_dir":              options["trace_dir"] = val
-                        elif var == "exit_clean_trace":       options["exit_clean_trace"] = val
-                        elif var == "startup_import_trace":   options["startup_import_trace"] = val
-                        elif var == "copy_executable":        options["copy_executable"] = val
-                        elif var == "enable_tool_tips":       options["enable_tool_tips"] = val
+                        if var == "rc_compat_version":
+                            # check if the given rc file is from a newer version
+                            if val > RCFILE_VERSION:
+                                msg = "RC file '%s' is from an incompatible, " \
+                                      "newer version (%s) of this software (version %s) " \
+                                      "and cannot be loaded." \
+                                      % (rc_path, file_version if file_version > val else val,
+                                         RCFILE_VERSION)
+                                tk_messagebox.showerror(parent=tk_utils.tk_top, message=msg)
 
-                        elif var == "font_content":           font_content_opt = val
-                        elif var == "font_trace":             font_trace_opt = val
-                        elif var == "prev_exe_file_list":     prev_exe_file_list = val
-
-                        elif var == "log_pane_height":        log_pane_height = val
-                        elif var == "log_pane_solo_height":   log_pane_solo_height = val
-                        elif var == "trace_pane_height":      trace_pane_height = val
-                        elif var == "trace_pane_solo_height": trace_pane_solo_height = val
-                        elif var == "tc_list_geometry":       tc_list_geometry = val
-                        elif var == "job_list_geometry":      job_list_geometry = val
-                        elif var == "help_win_geometry":      help_win_geometry = val
-
-                        elif var == "rcfile_version":         rcfile_version = val
-                        elif var == "rc_compat_version":      rc_compat_version = val
-                        elif var == "rc_timestamp":           pass
-                        else:
+                                # change name of rc file so that the newer one isn't overwritten
+                                global rcfile_name_appendix
+                                rcfile_name_appendix = "." + val
+                                # abort loading further data (would overwrite valid defaults)
+                                return
+                        elif var == "rcfile_version":
+                            file_version = val
+                        elif var == "rc_timestamp":
+                            pass
+                        elif not __load_rc_value(var, val, font_opts):
                             print("Warning: ignoring unknown keyword in rcfile line %d:"
                                   % line_no, var, file=sys.stderr)
 
@@ -188,31 +209,15 @@ def rc_file_load():
                                             % (line_no, line[:40]))
                     error = True
 
-                elif not ver_check:
-                    # check if the given rc file is from a newer version
-                    if rc_compat_version is not None:
-                        if rc_compat_version > rcfile_version:
-                            msg = "rc file '%s' is from an incompatible, " \
-                                  "newer version (%s) of this softare and cannot be loaded." \
-                                  % (rc_path, rcfile_version)
-                            tk_messagebox.showerror(parent=tk_utils.tk_top, message=msg)
-
-                            # change name of rc file so that the newer one isn't overwritten
-                            rc_path = rc_path + "." + rcfile_version
-                            # abort loading further data (would overwrite valid defaults)
-                            return
-
-                        ver_check = True
-
-        if font_content_opt:
+        if font_opts[0]:
             try:
-                tk_utils.init_font_content(font_content_opt)
+                tk_utils.init_font_content(font_opts[0])
             except Exception as exc:
                 print("Error configuring content font:", str(exc), file=sys.stderr)
 
-        if font_trace_opt:
+        if font_opts[1]:
             try:
-                tk_utils.init_font_trace(font_trace_opt)
+                tk_utils.init_font_trace(font_opts[1])
             except Exception as exc:
                 print("Error configuring trace font:", str(exc), file=sys.stderr)
 
@@ -222,12 +227,8 @@ def rc_file_load():
 
 
 def rc_file_update():
-    global rcfile_error, rcfile_compat, rcfile_version
-    global options, tid_update_rc_sec, tid_update_rc_min
-    global log_pane_height, log_pane_solo_height
-    global trace_pane_height, trace_pane_solo_height
-    global tc_list_geometry, job_list_geometry, help_win_geometry
-    global prev_exe_file_list
+    global rcfile_error
+    global tid_update_rc_sec, tid_update_rc_min
 
     if tid_update_rc_sec:
         tk_utils.tk_top.after_cancel(tid_update_rc_sec)
@@ -236,7 +237,7 @@ def rc_file_update():
         tk_utils.tk_top.after_cancel(tid_update_rc_min)
         tid_update_rc_min = None
 
-    rc_path = get_rc_file_path()
+    rc_path = __get_rc_file_path()
     try:
         with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".tmp",
                                          dir=os.path.dirname(rc_path),
@@ -250,46 +251,20 @@ def rc_file_update():
                   "#\n" % timestamp, file=rcfile, end="")
 
             # dump software version
-            print("rcfile_version=", json.dumps(rcfile_version), file=rcfile)
-            print("rc_compat_version=", json.dumps(rcfile_compat), file=rcfile)
+            print("rcfile_version=", json.dumps(RCFILE_VERSION), file=rcfile)
+            print("rc_compat_version=", json.dumps(RCFILE_COMPAT), file=rcfile)
             print("rc_timestamp=", json.dumps(timestamp), file=rcfile)
 
-            # dump configuration options
-            print("log_browser=", json.dumps(options["browser"]), file=rcfile)
-            print("browser_stdin=", json.dumps(options["browser_stdin"]), file=rcfile)
-            print("cmd_valgrind1=", json.dumps(options["valgrind1"]), file=rcfile)
-            print("cmd_valgrind2=", json.dumps(options["valgrind2"]), file=rcfile)
-            print("valgrind_exit=", json.dumps(options["valgrind_exit"]), file=rcfile)
-            print("seed_regexp=", json.dumps(options["seed_regexp"]), file=rcfile)
-            print("trace_dir=", json.dumps(options["trace_dir"]), file=rcfile)
-            print("exit_clean_trace=", json.dumps(options["exit_clean_trace"]), file=rcfile)
-            print("startup_import_trace=", json.dumps(options["startup_import_trace"]), file=rcfile)
-            print("copy_executable=", json.dumps(options["copy_executable"]), file=rcfile)
-            print("enable_tool_tips=", json.dumps(options["enable_tool_tips"]), file=rcfile)
-
-            # dump font selection
-            print("font_content=", json.dumps(tk_utils.font_content.configure()), file=rcfile)
-            print("font_trace=", json.dumps(tk_utils.font_trace.configure()), file=rcfile)
-
-            # dump executable file history
-            print("prev_exe_file_list=", json.dumps(prev_exe_file_list), file=rcfile)
-
-            # dump dialog geometry hints
-            print("log_pane_height=", json.dumps(log_pane_height), file=rcfile)
-            print("log_pane_solo_height=", json.dumps(log_pane_solo_height), file=rcfile)
-            print("trace_pane_height=", json.dumps(trace_pane_height), file=rcfile)
-            print("trace_pane_solo_height=", json.dumps(trace_pane_solo_height), file=rcfile)
-            print("tc_list_geometry=", json.dumps(tc_list_geometry), file=rcfile)
-            print("job_list_geometry=", json.dumps(job_list_geometry), file=rcfile)
-            print("help_win_geometry=", json.dumps(help_win_geometry), file=rcfile)
+            # write option values
+            __write_rc_values(rcfile)
 
         # copy attributes on the new file
         try:
-            st = os.stat(rc_path)
+            stt = os.stat(rc_path)
             try:
-                os.chmod(rcfile.name, st.st_mode & 0o777)
+                os.chmod(rcfile.name, stt.st_mode & 0o777)
                 if os.name == "posix":
-                    os.chown(rcfile.name, st.st_uid, st.st_gid)
+                    os.chown(rcfile.name, stt.st_uid, stt.st_gid)
             except OSError as exc:
                 print("Warning: Failed to update mode/permissions on %s: %s" %
                       (rc_path, exc.strerror), file=sys.stderr)
@@ -319,7 +294,7 @@ def rc_file_update():
         # write error - remove the file fragment, report to user
         if not rcfile_error:
             rcfile_error = True
-            msg = "Failed to write file %s: %s" % (rcfilename, exc.strerror)
+            msg = "Failed to write file %s: %s" % (rcfile.name, exc.strerror)
             tk_messagebox.showerror(parent=tk_utils.tk_top, message=msg)
         os.remove(rcfile.name)
 
@@ -331,7 +306,7 @@ def rc_file_update():
 # times when multiple values are changed. This timer is restarted when
 # another change occurs during the delay, however only up to a limit.
 #
-def rc_file_update_after_idle():
+def __rc_file_update_after_idle():
     global tid_update_rc_sec, tid_update_rc_min
 
     if tid_update_rc_sec:

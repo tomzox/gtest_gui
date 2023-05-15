@@ -774,9 +774,9 @@ class TestControlWidget:
 
         valgrind_cmd = ""
         if self.var_opt_valgrind.get() == 1:
-            valgrind_cmd = config_db.options["valgrind1"]
+            valgrind_cmd = config_db.get_opt("cmd_valgrind1")
         elif self.var_opt_valgrind.get() == 2:
-            valgrind_cmd = config_db.options["valgrind2"]
+            valgrind_cmd = config_db.get_opt("cmd_valgrind2")
         if self.var_opt_valgrind.get() and not valgrind_cmd:
             if tk_messagebox.askokcancel(
                     parent=self.tk_top,

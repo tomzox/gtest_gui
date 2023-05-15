@@ -53,12 +53,12 @@ def __get_temp_dir_name():
 
 
 def show_trace_snippet(tk_top, file_name, file_off, length, is_extern_import):
-    browser_cmd = config_db.options["browser"]
+    browser_cmd = config_db.get_opt("log_browser")
     if not browser_cmd:
         StatusLineWidget.get().show_message("error", "No trace browser app is configured")
         return
 
-    if config_db.options["browser_stdin"]:
+    if config_db.get_opt("browser_stdin"):
         txt = gtest.extract_trace(file_name, file_off, length)
         if txt is None:
             StatusLineWidget.get().show_message("error", "Failed to read trace file")
@@ -82,7 +82,7 @@ def show_trace_snippet(tk_top, file_name, file_off, length, is_extern_import):
 
 
 def show_trace(tk_top, file_name):
-    browser_cmd = config_db.options["browser"]
+    browser_cmd = config_db.get_opt("log_browser")
     if browser_cmd:
         ProcMonitor.create(re.split(r"\s+", browser_cmd) + [file_name], "", None)
     else:
