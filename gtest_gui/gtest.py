@@ -499,22 +499,22 @@ def clean_all_trace_files(clean_failed=False):
     if not clean_failed:
         for name in contains_fail:
             rm_files.remove(name)
-            pp = pass_parts.get(name)
-            if pp:
-                __compress_trace_file(name, pp)
+            parts = pass_parts.get(name)
+            if parts:
+                __compress_trace_file(name, parts)
 
     remove_trace_or_core_files(rm_files, rm_exe)
 
 
-def __add_passed_section(pass_parts, name, start, end):
+def __add_passed_section(pass_parts, name, start, length):
     parts = pass_parts.get(name)
     if parts:
         if parts[-1][1] == start:
-            parts[-1] = (pp[-1][0], end)
+            parts[-1][1] = start + length
         else:
-            pass_parts[name].append((start, end))
+            pass_parts[name].append([start, start + length])
     else:
-        pass_parts[name] = [(start, end)]
+        pass_parts[name] = [[start, start + length]]
 
 
 def __compress_trace_file(name, parts):
@@ -523,11 +523,8 @@ def __compress_trace_file(name, parts):
             size = os.stat(name).st_size
             off = parts[0][0]
             for idx in range(len(parts)):
-                if idx + 1 < len(parts):
-                    next_start = parts[idx + 1][0]
-                else:
-                    next_start = size
-                cur_end = parts[idx][0] + parts[idx][1]
+                next_start = parts[idx + 1][0] if (idx + 1 < len(parts)) else size
+                cur_end = parts[idx][1]
 
                 fd.seek(cur_end)
                 data = fd.read(next_start - cur_end)

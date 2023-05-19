@@ -1,8 +1,10 @@
 General:
+- pylint
 - code comments
 - test suite at least for filter_expr & gtest parser
 
 gtest:
+- clean-up at shutdown: delete traces from file that were deleted from result log
 - import of trace with core: executable not linked & not cleaned upon trace removal
 - import of trace: executable file & timestamp is unknown:
   Add "info" file to directory, or encode name in sub-directory path (hash);
