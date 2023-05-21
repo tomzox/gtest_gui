@@ -2,19 +2,15 @@
 #
 # Source: https://github.com/python/cpython/blob/3.11/Lib/bisect.py
 
-"""
-Replacement for Python's bisect_left in Python versions before 3.10,
-which did not support the "key" parameter yet.
-"""
-
-#import sys
-#if sys.version_info[0] >= 3 and sys.version_info[0] >= 10:
-#    import bisect
-#    def bisect_left(lst, value, keyfn):
-#        return bisect.bisect_left(lst, value, key=keyfn)
-#else:
+""" Defines a replacement for Python's bisect_left that supports the "key" parameter. """
 
 def bisect_left(lst, value, keyfn):
+    """
+    Replacement for Python's bisect_left, which did not support the "key"
+    parameter in Python versions before 3.10. This code is copied from the
+    Python 3.11 library, but with a minor simplification as the "keyfn"
+    parameter is made mandatory.
+    """
     value_key = keyfn(value)
     low = 0
     high = len(lst)

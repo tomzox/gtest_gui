@@ -36,6 +36,7 @@ xselection_wid = None
 xselection_txt = ""
 
 def initialize(tk_arg):
+    """ To be called once upon start-up for initialization. """
     global tk_top
     tk_top = tk_arg
 
@@ -46,28 +47,51 @@ def initialize(tk_arg):
 
 
 def wid_exists(obj):
+    """
+    Helper function for safely checking if the given variable is a valid
+    reference to a widget that has not yet been destroyed.
+    """
     if obj is not None:
         try:
             obj.winfo_ismapped()
             return True
-        except:
+        except tk.TclError:
             pass
     return False
 
 
 def safe_destroy(wid):
+    """
+    Destroy the widget referred to by the given variable and ignore any errors,
+    such as reference being uninitialized or widget alredy destroyed.
+    """
     try:
         wid.destroy()
-    except:
+    except tk.TclError:
         pass
 
 
 def bind_call_and_break(func):
+    """
+    Helper function for use in callables registered to windowing events: The
+    function will invoke the given callable and then return string "break",
+    which informs the event handler to stop dispatching callbacks for this
+    event, in case multiple callables are registered for it. This helper
+    function is needed as Python lambdas can only contain a single expression.
+    """
     func()
     return "break"
 
 
 def get_context_menu_widget():
+    """
+    Helper function that returns a widget that can be used for a context menu.
+    The returned widget is shared across all context menus, as only a single
+    menu will be displayed at the same time. The previous menu content is
+    cleared before returning from this function. The caller shall fill the menu
+    newly from scratch every time it needs to be displayed. (If this is not
+    wanted, it should use a dedicated menu widget instead.)
+    """
     global wid_ctx_men
     if wid_exists(wid_ctx_men):
         wid_ctx_men.delete(0, "end")
@@ -77,6 +101,11 @@ def get_context_menu_widget():
 
 
 def post_context_menu(parent, xoff, yoff):
+    """
+    Helper function for "posting" (i.e. displaying) the default menu widget
+    returned by get_context_menu_widget() at the given screen coordinates which
+    are relative to the given widget's root coordinates.
+    """
     global wid_ctx_men
     rootx = parent.winfo_rootx() + xoff
     rooty = parent.winfo_rooty() + yoff
@@ -84,6 +113,10 @@ def post_context_menu(parent, xoff, yoff):
 
 
 def create_images():
+    """
+    Define images for use by various widgets. The images are defined centrally
+    as they share a global namespace.
+    """
     tk_top.call('image', 'create', 'bitmap', 'img_run', '-data',
                 '#define img_width 12\n'
                 '#define img_height 9\n'
@@ -172,6 +205,10 @@ def create_images():
 
 
 def bind_classes():
+    """
+    This function is called upon start-up for defining event binding classes for
+    use by various widgets.
+    """
     text_modifier_events = (
         "<<Clear>>", "<<Cut>>", "<<Paste>>", "<<PasteSelection>>",
         "<<Redo>>", "<<Undo>>", "<<TkAccentBackspace>>", "<Key-BackSpace>",
@@ -212,6 +249,11 @@ def bind_classes():
 
 
 def define_fonts():
+    """
+    This function is called upon start-up for defining common fonts for use by
+    various widgets. Font configuration initialized here is usually overridden
+    immediately afterward when loading the configuration file.
+    """
     global font_normal, font_bold, font_content, font_content_bold, font_trace
 
     # smaller font for the Tk message box
@@ -227,6 +269,11 @@ def define_fonts():
 
 
 def update_derived_fonts():
+    """
+    When the user reconfigures fints, the caller applies the new configuration
+    directly to the respective font objects. This function needs to be called
+    afterward for additionally updating derived fonts, namely the bold variants.
+    """
     global font_normal, font_bold, font_content, font_content_bold
     opt = font_normal.configure()
     opt["weight"] = tkf.BOLD
@@ -238,6 +285,11 @@ def update_derived_fonts():
 
 
 def init_font_content(opt):
+    """
+    Create a font object with the given configuration parameters and assign it
+    to the font variables used for displaying text in lists et.al. (Usually a
+    proportional font is used here.)
+    """
     global font_content, font_content_bold
     if font_content.configure() != opt:
         font_content = tkf.Font(**opt)
@@ -247,6 +299,11 @@ def init_font_content(opt):
 
 
 def init_font_trace(opt):
+    """
+    Create a font object with the given configuration parameters and assign it
+    to the font variables used for displaying text from trace output files.
+    (Usually a monospace font is used here.)
+    """
     global font_trace
     if font_trace.configure() != opt:
         font_trace = tkf.Font(**opt)
@@ -257,6 +314,12 @@ def init_font_trace(opt):
 #
 
 def xselection_init():
+    """
+    Initialize widgets required for managing the X11 selection (clipboard
+    equivalent). Specifically the function creates a dummy widget that is later
+    used for adding a handler which is called every time the window system wants
+    to read the selection text.
+    """
     global xselection_wid, xselection_txt
     xselection_txt = ""
     xselection_wid = tk.Label(tk_top)
@@ -264,15 +327,24 @@ def xselection_init():
 
 
 def xselection_handler(off, xlen):
+    """
+    Callback registered with X11, which is called for retrieving selection text.
+    """
     try:
         off = int(off)
         xlen = int(xlen)
         return xselection_txt[off : (off + xlen)]
-    except:
+    except tk.TclError:
         return ""
 
 
 def xselection_export(txt, to_clipboard):
+    """
+    Stores the given text internally and notifies X11 that the X11 selection now
+    shall be owned by the application. If the user wants to paste the selection
+    somewhere, the registered handler function will be invoked by X11 to
+    retrieve the text.
+    """
     global xselection_txt
 
     # Update X selection

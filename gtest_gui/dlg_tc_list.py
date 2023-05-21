@@ -37,6 +37,7 @@ from gtest_gui.wid_text_sel import TextSelWidget
 
 
 class SortMode(Enum):
+    """ Internal enumeration for sort options selectable by the user. """
     by_name = 0
     by_exec_cnt = 1
     by_fail_cnt = 2
@@ -45,7 +46,11 @@ class SortMode(Enum):
 
 class TcListDialog:
     """
-    Test case list dialog window class (singleton)
+    This class implements a test case list dialog window as a singleton. Instances of the class are
+    created via class function create_dialog(), which only creates a new instance if none exists
+    yet. The dialog window shows a list of all test case names extraced from the configured
+    executable. The list can be sorted and filtered via a context menu. Besides the names, the list
+    shows statistics about the current test campaign's results, which are updated continuously.
     """
     __prev_dialog_wid = None
     __prev_export_filename = ""

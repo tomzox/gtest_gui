@@ -30,10 +30,21 @@ import gtest_gui.tk_utils as tk_utils
 
 
 class FontSelectionDialog:
+    """
+    This class implements a font selection dialog. Instances of the class are created via class
+    function create_dialog(): If a window created for the same value of parameter "ftype" already
+    exists it is raised, else a new window is created. The dialog presents a list of all fonts,
+    which is queried from the windowing sytem, and a demo text frame where a sample text is rendered
+    with the font selected in the listbox. When the "Apply" or "Ok" buttons are clicked, the given
+    font variable is configured to the new font and the given callback is invoked.
+    """
     __prev_dialog_wid = {}
 
     @classmethod
     def create_dialog(cls, tk_top, ftype, font, callback):
+        """
+        Static function for opening a font selection dialog window for a given font variable.
+        """
         if (cls.__prev_dialog_wid.get(ftype, None) and
                 tk_utils.wid_exists(cls.__prev_dialog_wid[ftype].wid_top)):
             cls.__prev_dialog_wid[ftype].raise_window()
@@ -47,6 +58,7 @@ class FontSelectionDialog:
 
 
     def __init__(self, tk_top, ftype, font, callback):
+        """ Creates a new font selection dialog window """
         self.tk_top = tk_top
         self.ftype = ftype
         self.font = font
@@ -172,7 +184,7 @@ class FontSelectionDialog:
                 self.callback(self.font)
                 return True
 
-            except Exception as exc:
+            except tk.TclError as exc:
                 tk.messagebox.showerror(parent=self.wid_top,
                                         message="Selected font is unavailable: " + str(exc))
         else:

@@ -167,7 +167,7 @@ class MainWindow:
             if not tk_messagebox.askokcancel(parent=self.tk_top, message=msg):
                 return False
 
-        config_db.rc_file_update_upon_exit()
+        config_db.rc_file_update_synchronously()
 
         gtest.gtest_ctrl.stop(kill=True)
         gtest.release_exe_file_copy()
@@ -190,7 +190,7 @@ class MainWindow:
     @staticmethod
     def __change_font(_font):
         tk_utils.update_derived_fonts()
-        config_db.rc_file_update()
+        config_db.update_fonts()
 
 
     @staticmethod
@@ -216,6 +216,7 @@ class MainWindow:
             prev_path_list = path_lists[idx1]
             idx2 = 0
             for path_list in path_lists[idx1:]:
+                # pylint: disable=consider-using-enumerate
                 for idx in range(0, len(path_list)):
                     if idx >= len(prev_path_list):
                         delta_sets[idx2].add(idx)

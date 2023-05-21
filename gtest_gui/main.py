@@ -37,6 +37,7 @@ import gtest_gui.tk_utils as tk_utils
 
 
 def parse_argv_error(tk_top, msg, with_usage=True):
+    """ Print usage and exit upon command line parser error. """
     if msg[-1] != "\n":
         msg += "\n"
     if with_usage:
@@ -51,6 +52,7 @@ def parse_argv_error(tk_top, msg, with_usage=True):
 
 
 def parse_argv(tk_top):
+    """ Parse command line arguments and return them in form of a list. """
     exe_name = ""
     trace_files = []
     next_is_trace = False
@@ -85,11 +87,17 @@ def parse_argv(tk_top):
 # ----------------------------------------------------------------------------
 
 def main():
+    """
+    Main entry point of the application: Initialize Tk and internal modules,
+    parse the command line arguments, import pre-existing results from files
+    and then create the GUI widgets and pass control to Tk. Upon errors,
+    application process is terminated with exit code 1.
+    """
     try:
         tk_top = tk.Tk(className="gtest_gui")
         tk_top.wm_withdraw()
         tk_top.wm_title("GtestGui")
-    except Exception as exc:
+    except tk.TclError as exc:
         print("Tk initialization failed: " + str(exc), file=sys.stderr)
         sys.exit(1)
 
@@ -119,6 +127,8 @@ def main():
             tk_messagebox.showerror(parent=tk_top, message=msg)
             sys.exit(1)
 
+    # Construct the main window. This object is used only indirectly via Tk event handling.
+    # pylint: disable=unused-variable
     wid_main = MainWindow(tk_top, exe_name)
 
     tk_top.wm_deiconify()

@@ -18,7 +18,7 @@
 # ------------------------------------------------------------------------ #
 
 """
-Library for managing test case filter patterns
+Implements class FilterExpr for manipulating test case filter patterns.
 """
 
 import re
@@ -29,7 +29,18 @@ import gtest_gui.tk_utils as tk_utils
 
 
 class FilterExpr:
+    """
+    This class supports manipulating test case filter patterns in Gtest format:
+    The constructor receives a filter expression, which it parses and then
+    internally derives the list of matching test cases.  Interface functions
+    allow retrieving this list, or querying if a given test case is currently
+    selectable or deselectable. Interface functions allow adding or removing
+    test cases; After such modifications the filter expression discribing the
+    new list can be retrieved. The class automatically uses wildcards for
+    minimizing the length of the expression.
+    """
     def __init__(self, pat_str, opt_run_disabled):
+        """ Constructs an intance with the given filter expression. """
         self.opt_run_disabled = opt_run_disabled
         self.pat_str = pat_str
         self.pat_list = split_gtest_filter(pat_str)
@@ -37,6 +48,7 @@ class FilterExpr:
 
 
     def select_test_cases(self, tc_names, enable):
+        """ Either adds or removes a list of test case names from the expression. """
         all_tc_names = get_test_list(self.opt_run_disabled)
 
         if not self.pat_list:
@@ -69,10 +81,12 @@ class FilterExpr:
 
 
     def get_expr(self):
+        """ Returns a filter expression describing the current sub-set of selected test cases. """
         return self.pat_str
 
 
     def get_selected_tests(self):
+        """ Returns the list of all currently selected test case names. """
         if self.pat_list:
             if self.matched_list is None:
                 self.matched_list = get_matches(self.pat_list, get_test_list(self.opt_run_disabled))
@@ -82,6 +96,11 @@ class FilterExpr:
 
 
     def can_select_test(self, tc_name):
+        """
+        Indicates if the given test case can be added to the expression. This
+        is equal to the test case currently not being matched by the
+        expression, or the expression bying empty.
+        """
         if not self.pat_str:
             return True
 
@@ -89,10 +108,15 @@ class FilterExpr:
 
 
     def can_deselect_test(self, tc_name):
+        """
+        Indicates if the given test case can be removed from the expression.
+        This is equal to the test case being matched by the expression.
+        """
         return self.pat_str and (tc_name in self.get_selected_tests())
 
 
     def run_disabled(self):
+        """ Returns the value of the "run disabled" option. """
         return self.opt_run_disabled
 
 
@@ -100,6 +124,13 @@ class FilterExpr:
 
 
 def split_gtest_filter(pat_str):
+    """
+    Split a Gtest test case filter expression into two lists containing
+    positive and negative expressions respectively. Normally, Gtest expressions
+    should contain at most one "-", separating positive from negative
+    expressions. However Gtest parser also allows multiple "-" and then toggles
+    between positive and negative upon each one. This is replicated here.
+    """
     pat_str = re.sub(r"\s+", "", pat_str)
     pat_str = re.sub(r"^\:+", "", pat_str)
     pat_str = re.sub(r"[\:\-]+$", "", pat_str)
@@ -121,6 +152,11 @@ def split_gtest_filter(pat_str):
 
 
 def join_gtest_filter(pat_list):
+    """
+    Produce a Gtest filter expression from a list of positive and negative
+    expressions by joining each respective list with ":" and then joining the
+    results with "-".
+    """
     pos_pat_list = []
     neg_pat_list = []
     for pat in pat_list:
@@ -137,6 +173,12 @@ def join_gtest_filter(pat_list):
 
 
 def get_matches(pat_list, all_tc_names):
+    """
+    Return a sub-set of test case names from the given set that matches the
+    given list of positive and negative expressions. Returned names have to
+    match at least one of the positive expressions and none of the negative
+    expressions.
+    """
     matched = set()
 
     for pat in pat_list:
@@ -153,19 +195,37 @@ def get_matches(pat_list, all_tc_names):
 
 
 def match_name(tc_name, pat):
+    """
+    Check if the given string matches the given pattern containing "*" and "?"
+    wildcards.
+    """
     # TODO convert glob pattern to regexp
     return tk_utils.tk_top.call("string", "match", pat, tc_name)
 
 
 def match_name_nocase(tc_name, pat):
+    """
+    Check if the given string matches the given pattern containing "*" and "?"
+    wildcards while ignoring case. Note this is not supported by Gtest and only
+    used for generating warnings.
+    """
     return tk_utils.tk_top.call("string", "match", "-nocase", pat, tc_name)
 
 
 def is_disabled_by_name(tc_name):
+    """
+    Query if the given test case is disabled via its name as per Gtest definition.
+    """
     return tc_name.startswith("DISABLED_") or (".DISABLED_" in tc_name)
 
 
 def build_expr(tc_names, all_tc_names):
+    """
+    Return a pattern list that matches exactly the names in the first set when
+    applies to the names in the second set. At worst, the result may be just a
+    list of the test case names, however the function will attempt to use
+    trailing wildcards and negative patterns to find a shorter representation.
+    """
     if tc_names:
         tc_excluded = set()
         for tc_name in all_tc_names:
@@ -178,6 +238,14 @@ def build_expr(tc_names, all_tc_names):
 
 
 def build_sub_expr(tc_names, tc_excluded, min_prefix_len, allow_neg):
+    """
+    Helper function used by build_expr to recursively find the shortest pattern
+    describing a sub-set of names. The function will use the shortest of the
+    following approaches: 1. Simple list of matching names; 2. Common prefix of
+    matching names followed by negative patterns describing suppression of
+    excluded names; 3. Same but after splitting the list of names into multiple
+    groups each having different common prefix.
+    """
     result = tc_names
 
     if len(tc_names) > 1:
@@ -211,12 +279,19 @@ def build_sub_expr(tc_names, tc_excluded, min_prefix_len, allow_neg):
 
 
 def is_shorter(pat_list_1, pat_list_2):
+    """
+    Compare approximate length of the resulting Gtest expression of two given
+    pattern lists.
+    """
     len_1 = sum([len(x) for x in pat_list_1]) + len(pat_list_1)
     len_2 = sum([len(x) for x in pat_list_2]) + len(pat_list_2)
     return len_1 < len_2
 
 
 def longest_common_prefix(tc_names):
+    """
+    Returns the longest common prefix for the given set of names.
+    """
     if not tc_names:
         return ""
     tc_names = sorted(tc_names)
@@ -234,6 +309,12 @@ def longest_common_prefix(tc_names):
 
 
 def minimize_prefix(tc_excluded, prefix, min_len):
+    """
+    Returns the shortest prefix of the given prefix that is not a prefix of any
+    of the given names.  Or in other words: Reduces the length of the given
+    prefix string until it matches one of the given names, then returns that
+    length plus one.
+    """
     if tc_excluded:
         if len(prefix) <= 1:
             return prefix
@@ -247,6 +328,10 @@ def minimize_prefix(tc_excluded, prefix, min_len):
 
 
 def split_at_prefix(tc_names, prefix_len):
+    """
+    Splits the given set of names into sub-sets of names that each start with a
+    different letter at the given index.
+    """
     result = []
     if len(tc_names) > 2:
         cur_char = None
@@ -268,6 +353,11 @@ def split_at_prefix(tc_names, prefix_len):
 
 
 def get_test_list(opt_run_disabled):
+    """
+    Returns the list of all test cases in the configured executable to be
+    considered for pattern matching. The result depends on the "run disabled"
+    option.
+    """
     if opt_run_disabled:
         return test_db.test_case_names
 
@@ -275,6 +365,11 @@ def get_test_list(opt_run_disabled):
 
 
 def get_test_suite_names(tc_list):
+    """
+    Returns the list of all test suite names found in the given list of test
+    case names. A test suite name is the part of the test case name up to and
+    including a dot.
+    """
     suites = set()
     for tc_name in tc_list:
         match = re.match(r"^([^\.]+\.)", tc_name)
@@ -286,6 +381,10 @@ def get_test_suite_names(tc_list):
 
 
 def get_tests_in_test_suite(tc_suite, all_tc_names):
+    """
+    Returns a sub-set of the given test case names that are part of a given
+    test suite.
+    """
     if not tc_suite:
         return [x for x in all_tc_names if "." not in x]
 
@@ -293,6 +392,13 @@ def get_tests_in_test_suite(tc_suite, all_tc_names):
 
 
 def check_pattern(pat_str, run_disabled, suppressions=None):
+    """
+    Checks the given Gtest test case filter expression for regular expressions
+    that do not match any test case in the current executable's set of test
+    cases. Returns a warning message for the first such pattern that is found
+    that should be displayed by the caller. If the given "suppressions" list is
+    not None, checks for expressions formerly warned about are skipped.
+    """
     tc_names = get_test_list(run_disabled)
     if not tc_names:
         return (True, "")

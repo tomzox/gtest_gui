@@ -27,15 +27,17 @@ import gtest_gui.tk_utils as tk_utils
 
 class StatusLineWidget:
     """
-    Status line widget class (singleton). Instances of this class exist
-    temporarily while a status or warning message is to be displayed. The
-    widget is placed as an overlay into the main window.
+    Status line widget class (singleton). An instance of this class is created
+    once during start-up. A reference to it can be retrieved using the getter
+    interface and then be used for displaying temporary messages. The message is
+    displayed using a temporary widget that is as an overlay into the main
+    window.
     """
     __stline = None
 
     @classmethod
     def create_widget(cls, tk_top, parent):
-        """ Initializes the class."""
+        """ Initializes the class. """
         cls.__stline = StatusLineWidget(tk_top, parent)
 
 
@@ -46,6 +48,7 @@ class StatusLineWidget:
 
 
     def __init__(self, tk_top, parent):
+        """ Creates the singleton instance. """
         self.tk_top = tk_top
         self.wid_parent = parent
         self.timer_id = None
@@ -55,7 +58,11 @@ class StatusLineWidget:
 
 
     def show_message(self, msg_type, msg_txt):
-        """ Displays the overlay widget with the given text within the main window."""
+        """
+        Displays the status overlay widget with the given text within the main
+        window. The text fades to black after a few seconds and is destroyed
+        once invisible.
+        """
 
         self.msg_type = msg_type
         self.fade_val = 0.0
@@ -80,6 +87,11 @@ class StatusLineWidget:
 
 
     def __get_color(self):
+        """
+        Calculate and return RGB color code for the text, considering the
+        initial color that depends on the status message type and the status of
+        fading.
+        """
         if self.msg_type == "error":
             color = (0xff, 0, 0)
         elif self.msg_type == "warning":
@@ -94,6 +106,8 @@ class StatusLineWidget:
 
 
     def __handle_motion(self):
+        """ Callback for mouse motion on the text: Stops and reverts fade-out.
+        """
         self.msg_type = "motion"
         self.fade_val = 0
         self.wid_message.configure(foreground=self.__get_color())
@@ -104,6 +118,8 @@ class StatusLineWidget:
 
 
     def __handle_timer(self):
+        """ Timer handler used for fading out and finally destroying the text.
+        """
         self.fade_val += 0.015
         if self.fade_val < 1:
             self.wid_message.config(foreground=self.__get_color())
@@ -115,7 +131,7 @@ class StatusLineWidget:
 
 
     def clear_message(self):
-        """ Clears the status message and hides the overlay widget."""
+        """ Clears the status message by destroying the overlay widget. """
         if self.timer_id:
             self.tk_top.after_cancel(self.timer_id)
             self.timer_id = None

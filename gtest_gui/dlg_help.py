@@ -37,7 +37,6 @@ class HelpDialog:
     """
     __prev_dialog_wid = None
 
-    __help_titles = []
     __help_fg = "black"
     __help_bg = "#FFFFA0"
     __help_font_normal = None
@@ -83,14 +82,25 @@ class HelpDialog:
 
     @staticmethod
     def add_menu_commands(tk_top, wid_men):
-        for title in help_db.HELP_INDEX:
-            HelpDialog.__help_titles.append(title)
+        """
+        Adds a menu command for each help text chapter in the database to the
+        given menu item. Each of the commands open the help dialog window if
+        not yet open, then display the respective help text.
+        """
+        for idx in range(len(help_db.HELP_INDEX)):
+            wid_men.add_command(label=help_db.HELP_INDEX[idx],
+                                command=lambda idx=idx: HelpDialog.create_dialog(tk_top, idx))
+            for sub in sorted([x[1] for x in help_db.HELP_SECTIONS if x[0] == idx]):
+                title = help_db.HELP_SECTIONS[(idx, sub)]
+                wid_men.add_command(label="- " + title,
+                                    command=lambda idx=idx, title=title:
+                                    HelpDialog.create_dialog(tk_top, idx, title))
 
-        HelpDialog.fill_menu(tk_top, wid_men)
 
     # -------------------------------------------------------------------------
 
     def __init__(self, tk_top, index, subheading, subrange):
+        """ Create a Help dialog window and initially display the given chapter's text. """
         self.tk_top = tk_top
         self.chapter_idx = -1
         self.help_stack = []
@@ -129,22 +139,10 @@ class HelpDialog:
 
         men_chpt = tk.Menu(but_cmd_chpt, tearoff=0)
         but_cmd_chpt.configure(menu=men_chpt)
-        HelpDialog.fill_menu(self.tk_top, men_chpt)
+        HelpDialog.add_menu_commands(self.tk_top, men_chpt)
 
         self.but_cmd_prev = but_cmd_prev
         self.but_cmd_next = but_cmd_next
-
-    @staticmethod
-    def fill_menu(tk_top, wid_men):
-        for idx in range(len(HelpDialog.__help_titles)):
-            wid_men.add_command(label=HelpDialog.__help_titles[idx],
-                                command=lambda idx=idx: HelpDialog.create_dialog(tk_top, idx))
-            for sub in sorted([x[1] for x in help_db.HELP_SECTIONS.keys() if x[0] == idx]):
-                title = help_db.HELP_SECTIONS[(idx, sub)]
-                wid_men.add_command(label="- " + title,
-                                    command=lambda idx=idx, title=title:
-                                    HelpDialog.create_dialog(tk_top, idx, title))
-
 
     def __create_text_widget(self):
         wid_frm = tk.Frame(self.wid_top)

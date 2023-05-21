@@ -35,7 +35,11 @@ import gtest_gui.wid_tool_tip as wid_tool_tip
 
 class ConfigDialog:
     """
-    Configuration parameter dialog window class (singleton).
+    This class implements a configuration dialog window as a singleton. Instances of the class are
+    created via class function create_dialog(), which only creates a new instance if none exists
+    yet. The dialog window allows entering values for major configuration options. When the "Apply"
+    or "Ok" buttons are clicked, the new values are checked for consistency and if they pass, they
+    are stored in the configuration file.
     """
     __prev_dialog_wid = None
 
@@ -245,7 +249,7 @@ class ConfigDialog:
                           ConfigDialog.__normalize_shell_cmd(self.var_cfg_valgrind2))
         config_db.set_opt("valgrind_exit", self.var_cfg_valgrind_exit.get())
 
-        return config_db.rc_file_update()
+        return config_db.rc_file_update_synchronously()
 
 
     def __save_and_close(self):

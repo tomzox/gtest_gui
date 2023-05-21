@@ -52,7 +52,15 @@ def __get_temp_dir_name():
     return temp_dir.name
 
 
-def show_trace_snippet(tk_top, file_name, file_off, length, is_extern_import):
+def show_trace_snippet(file_name, file_off, length, is_extern_import):
+    """
+    Display a part of the complete given trace file in the configured external
+    trace browser. If the external application can read text via STDIN, the
+    text chunk is read from the file and then passed that way. Else, the chunk
+    is stored to a temporary file and that file's name is passed on the command
+    line. Temporary files are deleted once the external application process
+    terminates.
+    """
     browser_cmd = config_db.get_opt("log_browser")
     if not browser_cmd:
         StatusLineWidget.get().show_message("error", "No trace browser app is configured")
@@ -81,7 +89,8 @@ def show_trace_snippet(tk_top, file_name, file_off, length, is_extern_import):
     ProcMonitor.create(re.split(r"\s+", browser_cmd) + [file_name], txt, shared_file)
 
 
-def show_trace(tk_top, file_name):
+def show_trace(file_name):
+    """ Display the complete given trace file in the configured external trace browser. """
     browser_cmd = config_db.get_opt("log_browser")
     if browser_cmd:
         ProcMonitor.create(re.split(r"\s+", browser_cmd) + [file_name], "", None)
@@ -90,6 +99,11 @@ def show_trace(tk_top, file_name):
 
 
 def show_stack_trace(tk_top, tc_name, exe_name, exe_ts, core_name):
+    """
+    Extract and display a stack trace from the given core file using a simple
+    window containing a read-only text frame. Stack trace extraction is done
+    using gdb.
+    """
     cmd_filename = os.path.join(__get_temp_dir_name(), "gdb_command.bat")
     if not os.path.exists(cmd_filename):
         try:
@@ -141,6 +155,13 @@ def show_stack_trace(tk_top, tc_name, exe_name, exe_ts, core_name):
 
 
 def export_traces(tk_top, log_idx_sel):
+    """
+    Export trace file chunks of test results with the given indices from the
+    database into an archive file using an external application. The chunks are
+    first read and stored in temporary files. A list of names of those files is
+    passed to the archiver on the command line. Afterward the files are
+    deleted.
+    """
     global prev_trace_export_path
 
     types = [("ZIP archive", "*.zip"), ("all", "*")]
@@ -193,7 +214,14 @@ def export_traces(tk_top, log_idx_sel):
 # Mini dialog only used for displaying text snippets
 #
 class LogBrowser:
+    """
+    This class implements a simple top-level window for displaying a read-only
+    text that is read from the given subprocess pipe. Text is appended
+    dynamically as it is read from the pipe. There is no interaction with
+    other application classes.
+    """
     def __init__(self, tk_top, title, proc):
+        """ Create an instance of the read-only text browser dialog window. """
         wid_top = tk.Toplevel(tk_top)
         wid_top.wm_group(tk_top)
         wid_top.wm_title(title)
@@ -263,17 +291,20 @@ class LogBrowser:
 
 # ----------------------------------------------------------------------------
 #
-# Helper class for monitoring external application
-# - catching error messages
-# - cleaning up temporary input file after exit
 
 class ProcMonitor:
+    """
+    Helper class for spawning a process using the given command line and then
+    monitoring its status until it exits. After exit, alert the user if exit
+    status is non-zero and clean up the given temporary file (if any).
+    """
     procs = []
     shared_files = {}
     tid = None
 
     @staticmethod
     def create(cmd, txt, file_name):
+        """ Starts a process with the given command line and then waits for it to finish. """
         try:
             proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
@@ -292,6 +323,10 @@ class ProcMonitor:
 
     @staticmethod
     def alloc_shared_file(name):
+        """
+        Internal method for registering a temporary file that may be shared
+        with other subprocesses.
+        """
         if ProcMonitor.shared_files.get(name, None):
             ProcMonitor.shared_files[name] += 1
         else:
@@ -300,6 +335,10 @@ class ProcMonitor:
 
     @staticmethod
     def release_shared_file(name):
+        """
+        Internal method for releasing a temporary file from a process. The file
+        is removed if the usage counter drops to zero.
+        """
         reg = ProcMonitor.shared_files.get(name, None)
         if reg is not None:
             if reg > 1:
@@ -314,6 +353,10 @@ class ProcMonitor:
 
     @staticmethod
     def remove(proc):
+        """
+        Internal method for removing a process from the watch list after it
+        exited.
+        """
         ProcMonitor.procs = [x for x in ProcMonitor.procs if x is not proc]
         if not ProcMonitor.procs and ProcMonitor.tid:
             tk_utils.tk_top.after_cancel(ProcMonitor.tid)
@@ -322,6 +365,11 @@ class ProcMonitor:
 
     @staticmethod
     def proc_monitor():
+        """
+        Internal method for adding a process to the watch list. If this is the
+        first watched process, a timer is started for periodically checking the
+        process' status.
+        """
         for proc in ProcMonitor.procs:
             proc.monitor()
 
@@ -348,6 +396,13 @@ class ProcMonitor:
 
 
     def monitor(self):
+        """
+        Internal method that is called by the class static monitoring timer
+        periodically on all instances for monitoring process status. If the
+        process has exited, its exit status is checked and an error popup
+        displayed for reporting errors to the user. Afterwards possible
+        temporary files are cleaned up.
+        """
         if self.done:
             if self.proc.returncode != 0:
                 msg = "External trace browser reported error code %d: %s" % \

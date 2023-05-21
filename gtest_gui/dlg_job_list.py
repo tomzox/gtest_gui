@@ -34,7 +34,11 @@ from gtest_gui.wid_text_sel import TextSelWidget
 
 class JobListDialog:
     """
-    Job list dialog window class (singleton)
+    This class implements a job list dialog window as a singleton. Instances of the class are
+    created via class function create_dialog(), which only creates a new instance if none exists
+    yet. The dialog window shows a list of all test processes started by the current test campaign.
+    For each process statistics about received trace and yet pending results are shown. Processes
+    can be aborted via a context menu.
     """
     __prev_dialog_wid = None
 
@@ -184,7 +188,8 @@ class JobListDialog:
             config_db.set_opt("job_list_geometry", new_size)
 
 
-    def __format_table_row(self, stats):
+    @staticmethod
+    def __format_table_row(stats):
         perc_done = (100 * stats[4]) // stats[5] if stats[5] else 100
         is_bg_job = "yes" if stats[2] else "no"
         msg = ("%d\t%s\t%d\t%d\t%d%%\t%s\n" %
@@ -199,7 +204,7 @@ class JobListDialog:
         self.job_stats = gtest.gtest_ctrl.get_job_stats()
         if self.job_stats:
             for stat in self.job_stats:
-                msg = self.__format_table_row(stat)
+                msg = JobListDialog.__format_table_row(stat)
                 self.wid_table.insert("end", *msg)
         else:
             self.wid_table.insert("end", "\nCurrently, no jobs are running\n")
@@ -240,20 +245,22 @@ class JobListDialog:
                 if len(sel) == 1:
                     wid_men.add_command(label="Open trace output file",
                                         command=lambda file_name=self.job_stats[sel[0]][1]:
-                                        self.__do_open_trace(file_name))
+                                        JobListDialog.__do_open_trace(file_name))
                     wid_men.add_separator()
 
                 wid_men.add_command(label="Send ABORT signal to selected processes",
                                     command=lambda pids=[self.job_stats[x][0] for x in sel]:
-                                    self.__do_abort_jobs(pids))
+                                    JobListDialog.__do_abort_jobs(pids))
 
                 tk_utils.post_context_menu(parent, xcoo, ycoo)
 
 
-    def __do_abort_jobs(self, pids):
+    @staticmethod
+    def __do_abort_jobs(pids):
         for pid in pids:
             gtest.gtest_ctrl.abort_job(pid)
 
 
-    def __do_open_trace(self, trace_file_name):
-        dlg_browser.show_trace(self.tk_top, trace_file_name)
+    @staticmethod
+    def __do_open_trace(trace_file_name):
+        dlg_browser.show_trace(trace_file_name)

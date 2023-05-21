@@ -41,6 +41,7 @@ from gtest_gui.wid_text_sel import TextSelWidget
 
 
 class SortMode(Enum):
+    """ Internal enumeration for sort options selectable by the user. """
     by_name = 0
     by_failure = 1
     by_duration = 2
@@ -48,7 +49,22 @@ class SortMode(Enum):
 
 
 class TestLogWidget:
+    """
+    This class implements the lower half of the main window, containing test
+    result log in form of a list. The list reflect the "test_results" list in
+    the test database and thus initially contains imported results and
+    subsequently is updated when test campaigns are running via registered
+    callback. The user can remove elements from the data base and list using
+    menu or key bindings.
+    """
+
     def __init__(self, tk_top, parent):
+        """
+        Constructs an instance of the TestLogWidget within the given parent
+        widget. The result log is initially empty and should be populated with
+        database contents by calling populate_log() after main window is fully
+        constructed.
+        """
         self.tk_top = tk_top
         self.test_ctrl = None # set later
         self.test_ctrl_visible = True
@@ -56,6 +72,7 @@ class TestLogWidget:
         self.opt_filter_exe_ts = 0
         self.opt_filter_tc_names = None
         self.log_idx_map = []
+        # further attributes added by sub-functions: child widgets
 
         self.wid_pane = tk.PanedWindow(parent, orient=tk.VERTICAL)
         self.__create_log_widget(self.wid_pane)
@@ -67,10 +84,15 @@ class TestLogWidget:
 
 
     def get_widget(self):
+        """ Returns the root widget used by this instance. """
         return self.wid_pane
 
 
     def set_wid_test_ctrl(self, test_ctrl):
+        """
+        Links the widget with the test control widget. This link is currently
+        only used for access to the test case filter value.
+        """
         self.test_ctrl = test_ctrl
 
 
@@ -88,9 +110,9 @@ class TestLogWidget:
         wid_txt.bindtags([wid_txt, self.tk_top, "TextSel", "all"])
         wid_txt.bind("<ButtonRelease-3>", lambda e: self.__post_context_menu(e.widget, e.x, e.y))
         wid_txt.bind("<Double-Button-1>", lambda e:
-                     tk_utils.bind_call_and_break(self.do_open_trace_browser))
-        wid_txt.bind("<Key-Return>", lambda e: self.do_open_trace_browser())
-        wid_txt.bind("<Key-Delete>", lambda e: self.do_remove_selected_results())
+                     tk_utils.bind_call_and_break(self.__do_open_trace_browser))
+        wid_txt.bind("<Key-Return>", lambda e: self.__do_open_trace_browser())
+        wid_txt.bind("<Key-Delete>", lambda e: self.__do_remove_selected_results())
 
         self.sel_obj = TextSelWidget(wid_txt, self.__handle_selection_change, self.__get_len)
 
@@ -125,6 +147,10 @@ class TestLogWidget:
 
 
     def add_menu_commands(self, wid_men):
+        """
+        Populates the given menu (which is part of the main menubar) with
+        commands operating on the result log widget.
+        """
         self.var_opt_sort_tc_name = tk.BooleanVar(self.tk_top, False)
         self.var_opt_sort_seed = tk.BooleanVar(self.tk_top, False)
         self.var_opt_sort_duration = tk.BooleanVar(self.tk_top, False)
@@ -185,6 +211,13 @@ class TestLogWidget:
 
 
     def toggle_test_ctrl_visible(self, visible):
+        """
+        Perform geometry management after the test control widget visibility
+        was toggled. Specifically, the requested size of the widget is updated
+        to the previously used size in this mode. Sizes are remembered
+        separately for the case that the test control widget is shown in the
+        main window, and not shown.
+        """
         self.test_ctrl_visible = visible
 
         if visible:
@@ -210,9 +243,9 @@ class TestLogWidget:
     def __handle_selection_change(self, sel):
         if len(sel) == 1:
             log_idx = self.log_idx_map[sel[0]]
-            self.show_trace_preview(log_idx)
+            self.__show_trace_preview(log_idx)
         else:
-            self.clear_trace_preview()
+            self.__clear_trace_preview()
 
 
     def __get_mapped_selection(self):
@@ -245,6 +278,7 @@ class TestLogWidget:
 
 
     def update_repetition_status(self, tc_name):
+        """ Updates the result log after a change of the given test case's repetiton status. """
         for idx in range(len(self.log_idx_map)):
             log_idx = self.log_idx_map[idx]
             log = test_db.test_results[log_idx]
@@ -265,7 +299,7 @@ class TestLogWidget:
         self.sel_obj.text_sel_adjust_deletion(list_idx)
 
         if not self.sel_obj.text_sel_get_selection():
-            self.clear_trace_preview()
+            self.__clear_trace_preview()
 
 
     def __update_log_line(self, list_idx, log_idx):
@@ -360,6 +394,10 @@ class TestLogWidget:
 
 
     def populate_log(self):
+        """
+        Refill the result log widget with results in the database from scratch
+        and set the view to the last item in the list.
+        """
         self.wid_log.delete("1.0", "end")
 
         logs = [idx for idx in range(len(test_db.test_results))
@@ -400,7 +438,7 @@ class TestLogWidget:
             self.sel_obj.text_sel_set_selection([new_sel])
         else:
             self.sel_obj.text_sel_set_selection([])
-            self.clear_trace_preview()
+            self.__clear_trace_preview()
 
 
     def __sort_idx_map(self, logs):
@@ -533,7 +571,7 @@ class TestLogWidget:
 
         self.sel_obj.text_sel_adjust_deletion(log_idx)
         if not self.sel_obj.text_sel_get_selection():
-            self.clear_trace_preview()
+            self.__clear_trace_preview()
 
         del test_db.test_results[idx]
 
@@ -582,15 +620,15 @@ class TestLogWidget:
                 log = test_db.test_results[sel[0]]
                 if log[4]:
                     wid_men.add_command(label="Open trace of this test case",
-                                        command=lambda: self.do_open_trace_browser(False))
+                                        command=lambda: self.__do_open_trace_browser(False))
                     wid_men.add_command(label="Open trace of complete test run",
-                                        command=lambda: self.do_open_trace_browser(True))
+                                        command=lambda: self.__do_open_trace_browser(True))
 
                 if log[7]:
                     wid_men.add_command(label="Extract stack trace from core dump file",
                                         command=lambda name=log[0], exe_name=log[1],
                                                        exe_ts=log[2], core=log[7]:
-                                        self.do_open_stack_trace(name, exe_name, exe_ts, core))
+                                        self.__do_open_stack_trace(name, exe_name, exe_ts, core))
 
                 if log[4] or log[7]:
                     wid_men.add_separator()
@@ -616,18 +654,18 @@ class TestLogWidget:
 
             if len(sel) == 1:
                 wid_men.add_command(label="Do not show result logs from this exe. version",
-                                    command=self.do_filter_exe_ts)
+                                    command=self.__do_filter_exe_ts)
                 need_sep = True
 
             if need_sep:
                 wid_men.add_separator()
 
             wid_men.add_command(label="Delete selected test result%s" % plural_s,
-                                command=self.do_remove_selected_results)
+                                command=self.__do_remove_selected_results)
 
             if any_with_trace:
                 wid_men.add_command(label="Export selected trace%s into a ZIP archive" % plural_s,
-                                    command=self.do_export_trace)
+                                    command=self.__do_export_trace)
             post_menu = True
 
         need_sep = post_menu
@@ -635,7 +673,7 @@ class TestLogWidget:
             if need_sep:
                 wid_men.add_separator()
             wid_men.add_command(label="Remove all currently filtered results",
-                                command=self.do_remove_filtered_results)
+                                command=self.__do_remove_filtered_results)
             need_sep = False
             post_menu = True
 
@@ -645,7 +683,7 @@ class TestLogWidget:
                 if need_sep:
                     wid_men.add_separator()
                 wid_men.add_command(label="Remove results of passed tests from old exe.",
-                                    command=self.do_remove_old_pass_results)
+                                    command=self.__do_remove_old_pass_results)
                 post_menu = True
                 break
 
@@ -653,7 +691,7 @@ class TestLogWidget:
             tk_utils.post_context_menu(parent, xcoo, ycoo)
 
 
-    def do_remove_selected_results(self):
+    def __do_remove_selected_results(self):
         sel = self.__get_mapped_selection()
         if sel:
             self.__remove_trace_files(sel)
@@ -662,7 +700,7 @@ class TestLogWidget:
                                                 "Selection is empty - nothing to remove.")
 
 
-    def do_remove_old_pass_results(self):
+    def __do_remove_old_pass_results(self):
         idx_list = []
         for idx in range(len(test_db.test_results)):
             log = test_db.test_results[idx]
@@ -677,7 +715,7 @@ class TestLogWidget:
             tk_messagebox.showerror(parent=self.tk_top, message=msg)
 
 
-    def do_remove_filtered_results(self):
+    def __do_remove_filtered_results(self):
         idx_list = []
         for idx in range(len(test_db.test_results)):
             log = test_db.test_results[idx]
@@ -745,7 +783,7 @@ class TestLogWidget:
             gtest.remove_trace_or_core_files(rm_files, rm_exe)
 
 
-    def check_tc_names_in_exe(self, sel):
+    def __check_tc_names_in_exe(self, sel):
         for idx in sel:
             log = test_db.test_results[idx]
             if log[1] and (log[1] != test_db.test_exe_name):
@@ -764,6 +802,11 @@ class TestLogWidget:
 
 
     def do_request_repetition(self, enable_rep):
+        """
+        Add or remove repetition request for currently selected results. This
+        request may originate from internal bindings or the "Repeat" button in
+        the test control widget.
+        """
         sel = self.__get_mapped_selection()
 
         if not sel:
@@ -778,7 +821,7 @@ class TestLogWidget:
                             (test_db.test_case_stats.get(log[0], None) is not None)):
                         sel.append(idx)
 
-        if not self.check_tc_names_in_exe(sel):
+        if not self.__check_tc_names_in_exe(sel):
             return False
 
         for log in {test_db.test_results[x] for x in sel}:
@@ -794,7 +837,7 @@ class TestLogWidget:
         return True
 
 
-    def do_filter_exe_ts(self):
+    def __do_filter_exe_ts(self):
         sel = self.__get_mapped_selection()
         if len(sel) == 1:
             log = test_db.test_results[sel[0]]
@@ -803,31 +846,30 @@ class TestLogWidget:
             self.__toggle_exe_ts_filter(log[2] + 1)
 
 
-    def do_export_trace(self):
+    def __do_export_trace(self):
         sel = self.__get_mapped_selection()
         if sel:
             dlg_browser.export_traces(self.tk_top, sel)
 
 
-    def do_open_stack_trace(self, tc_name, exe_name, exe_ts, core_name):
+    def __do_open_stack_trace(self, tc_name, exe_name, exe_ts, core_name):
         dlg_browser.show_stack_trace(self.tk_top, tc_name, exe_name, exe_ts, core_name)
 
 
-    def do_open_trace_browser(self, complete_trace=False):
+    def __do_open_trace_browser(self, complete_trace=False):
         sel = self.__get_mapped_selection()
         if len(sel) == 1:
             log = test_db.test_results[sel[0]]
             if log[4]:
                 if complete_trace:
-                    dlg_browser.show_trace(self.tk_top, log[4])
+                    dlg_browser.show_trace(log[4])
                 else:
-                    dlg_browser.show_trace_snippet(self.tk_top,
-                                                   log[4], log[5], log[6], log[13] == 2)
+                    dlg_browser.show_trace_snippet(log[4], log[5], log[6], log[13] == 2)
             else:
                 StatusLineWidget.get().show_message("warning", "No trace available for this result")
 
 
-    def show_trace_preview(self, log_idx):
+    def __show_trace_preview(self, log_idx):
         log = test_db.test_results[log_idx]
         if log[4]:
             txt = gtest.extract_trace(log[4], log[5], log[6])
@@ -842,10 +884,10 @@ class TestLogWidget:
                         self.wid_trace.tag_add("failure", line + " linestart", line + " lineend")
 
             else:
-                self.clear_trace_preview()
+                self.__clear_trace_preview()
         else:
-            self.clear_trace_preview()
+            self.__clear_trace_preview()
 
 
-    def clear_trace_preview(self):
+    def __clear_trace_preview(self):
         self.wid_trace.delete("1.0", "end")

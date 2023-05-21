@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-import gtest_gui.tk_utils as tk_utils
-
 # ------------------------------------------------------------------------ #
 # Copyright (C) 2007-2010,2019-2023 Th. Zoerner
 # ------------------------------------------------------------------------ #
@@ -20,35 +18,39 @@ import gtest_gui.tk_utils as tk_utils
 # ------------------------------------------------------------------------ #
 
 # This code is copied from Trace Browser (trowser.py)
-#
-# The following class allows using a text widget in the way of a listbox, i.e.
-# allowing to select one or more lines. The mouse bindings are similar to the
-# listbox "extended" mode. The cursor key bindings differ from the listbox, as
-# there is no "active" element (i.e. there's no separate cursor from the
-# selection.)
-#
-# Member variables:
-# - text widget whose selection is managed by the class instance
-# - callback to invoke after selection changes
-# - callback which provides the content list length
-# - ID of "after" event handler while scrolling via mouse, or None
-# - scrolling speed
-# - anchor element index OR last selection cursor pos
-# - list of indices of selected lines (starting at zero)
-#
+
+""" Implements the TextSelWidget class. """
+
+import gtest_gui.tk_utils as tk_utils
+
 class TextSelWidget:
-    #
-    # This constructor is called after a text widget is created for initializing
-    # all member variables and for adding key and mouse event bindings for
-    # handling the selection.
-    #
+    """
+    This class allows using a text widget in the way of a listbox, i.e.
+    allowing to select one or more lines. The mouse bindings are similar to the
+    Tk listbox in "extended" mode. The cursor key bindings differ from the
+    listbox, as there is no "active" element (i.e. there's no separate cursor
+    from the selection.)
+    """
+
     def __init__(self, wid, cb_proc, len_proc, mode="extended"):
+        """
+        This constructor is called after a text widget is created for
+        initializing all member variables and for adding key and mouse event
+        bindings for handling the selection.
+        """
+        # Text widget whose selection is managed by the class instance
         self.wid = wid
+        # Callback to invoke after selection changes
         self.cb_proc = cb_proc
+        # Callback which returns the content list length
         self.len_proc = len_proc
+        # ID of "after" event handler while scrolling via mouse, or None
         self.scroll_tid = None
+        # Scrolling speed while dragging the mouse above or below the text window.
         self.scroll_speed = 0
+        # Anchor element index OR last selection cursor pos
         self.anchor_idx = -1
+        # List of indices of selected lines (starting at zero)
         self.sel = []
 
         self.wid.bind("<Control-ButtonPress-1>", lambda e, self=self:
@@ -98,19 +100,19 @@ class TextSelWidget:
                       tk_utils.bind_call_and_break(lambda: self.__text_sel_key_page_up_down(1)))
 
 
-    #
-    # This is an interface function which allows outside users to retrieve a
-    # list of selected elements (i.e. a list of indices)
-    #
     def text_sel_get_selection(self):
+        """
+        This is an interface function which allows outside users to retrieve a
+        list of selected elements (i.e. a list of indices)
+        """
         return self.sel
 
 
-    #
-    # This is an interface function which allows to modify the selection
-    # externally.
-    #
     def text_sel_set_selection(self, sel, do_callback=True):
+        """
+        This is an interface function which allows to modify the selection
+        externally.
+        """
         if len(sel) > 0:
             self.anchor_idx = sel[0]
         self.sel = sel
@@ -121,12 +123,12 @@ class TextSelWidget:
             self.cb_proc(self.sel)
 
 
-    #
-    # This is an interface function which is used by context menus to check
-    # if the item under the mouse pointer is included in the selection.
-    # If not, the selection is set to consist only of the pointed item.
-    #
     def text_sel_context_selection(self, xcoo, ycoo):
+        """
+        This is an interface function which is used by context menus to check
+        if the item under the mouse pointer is included in the selection.
+        If not, the selection is set to consist only of the pointed item.
+        """
         line = self.__text_sel_coo2_line(xcoo, ycoo)
         if line != -1:
             if len(self.sel) != 0:
@@ -140,12 +142,12 @@ class TextSelWidget:
             self.text_sel_set_selection([])
 
 
-    #
-    # This function is bound to button-press events in the text widget while
-    # neither Control nor Shift keys are pressed.  A previous selection is
-    # is cleared and the entry below the mouse (if any) is selected.
-    #
     def __text_sel_button(self, xcoo, ycoo):
+        """
+        This function is bound to button-press events in the text widget while
+        neither Control nor Shift keys are pressed.  A previous selection is is
+        cleared and the entry below the mouse (if any) is selected.
+        """
         line = self.__text_sel_coo2_line(xcoo, ycoo)
         old_sel = self.sel
         if 0 <= line < self.len_proc():
@@ -170,14 +172,14 @@ class TextSelWidget:
         self.wid.focus_set()
 
 
-    #
-    # This function is bound to mouse pointer motion events in the text widget
-    # while the mouse button is pressed down. This allows changing the extent
-    # of the selection. The originally selected item ("anchor") always remains
-    # selected.  If the pointer is moved above or below the widget borders,
-    # the text is scrolled.
-    #
     def __text_sel_motion(self, xcoo, ycoo):
+        """
+        This function is bound to mouse pointer motion events in the text widget
+        while the mouse button is pressed down. This allows changing the extent
+        of the selection. The originally selected item ("anchor") always remains
+        selected.  If the pointer is moved above or below the widget borders,
+        the text is scrolled.
+        """
         # the anchor element is the one above which the mouse button was pressed
         # (the check here is for fail-safety only, should always be fulfilled)
         if self.anchor_idx >= 0:
@@ -226,14 +228,14 @@ class TextSelWidget:
                     self.scroll_delay = delay
 
 
-    #
-    # This timer event handler is activated when the mouse is moved outside of
-    # the text widget while the mouse button is pressed. The handler re-installs
-    # itself and is only stopped when the button is released or the mouse is
-    # moved back inside the widget area.  The function invariably scrolls the
-    # text by one line. Scrolling speed is varied by means of the delay time.
-    #
     def __text_sel_motion_scroll(self, delta):
+        """
+        This timer event handler is activated when the mouse is moved outside of
+        the text widget while the mouse button is pressed. The handler re-installs
+        itself and is only stopped when the button is released or the mouse is
+        moved back inside the widget area.  The function invariably scrolls the
+        text by one line. Scrolling speed is varied by means of the delay time.
+        """
         # scroll up or down by one line
         self.wid.yview_scroll(delta, "units")
 
@@ -248,24 +250,24 @@ class TextSelWidget:
                                                 lambda: self.__text_sel_motion_scroll(delta))
 
 
-    #
-    # This function is boud to mouse button release events and stops a
-    # possible on-going scrolling timer.
-    #
     def __text_sel_motion_end(self):
+        """
+        This function is boud to mouse button release events and stops a
+        possible on-going scrolling timer.
+        """
         if self.scroll_tid is not None:
             tk_utils.tk_top.after_cancel(self.scroll_tid)
             self.scroll_tid = None
 
 
-    #
-    # This function is bound to mouse button events while the Control key is
-    # pressed. The item below the mouse pointer is toggled in the selection.
-    # Otherwise the selection is left unchanged.  Note this operation always
-    # clears the "anchor" element, i.e. the selection cannot be modified
-    # using "Shift-Click" afterwards.
-    #
     def __text_sel_pick(self, xcoo, ycoo):
+        """
+        This function is bound to mouse button events while the Control key is
+        pressed. The item below the mouse pointer is toggled in the selection.
+        Otherwise the selection is left unchanged.  Note this operation always
+        clears the "anchor" element, i.e. the selection cannot be modified
+        using "Shift-Click" afterwards.
+        """
         line = self.__text_sel_coo2_line(xcoo, ycoo)
         if line != -1:
             # check if the item is already selected
@@ -284,14 +286,14 @@ class TextSelWidget:
             self.cb_proc(self.sel)
 
 
-    #
-    # This function is bound to mouse button events while the Shift key is
-    # pressed. The selection is changed to cover all items starting at the
-    # anchor item and the item under the mouse pointer.  If no anchor is
-    # defined, the selection is reset and only the item under the mouse is
-    # selected.
-    #
     def __text_sel_resize(self, xcoo, ycoo):
+        """
+        This function is bound to mouse button events while the Shift key is
+        pressed. The selection is changed to cover all items starting at the
+        anchor item and the item under the mouse pointer.  If no anchor is
+        defined, the selection is reset and only the item under the mouse is
+        selected.
+        """
         line = self.__text_sel_coo2_line(xcoo, ycoo)
         if line != -1:
             if self.anchor_idx != -1:
@@ -302,10 +304,10 @@ class TextSelWidget:
                 self.__text_sel_button(xcoo, ycoo)
 
 
-    #
-    # This function is bound to the page up/down cursor keys.
-    #
     def __text_sel_key_page_up_down(self, delta):
+        """
+        This function is bound to the page up/down cursor keys.
+        """
         content_len = self.len_proc()
         if content_len == 0:
             return
@@ -335,13 +337,13 @@ class TextSelWidget:
                 self.__text_sel_select_line(line)
 
 
-    #
-    # This function is bound to the up/down cursor keys. If no selection
-    # exists, the viewable first item in cursor direction is selected.
-    # If a selection exists, it's cleared and the item next to the
-    # previous selection in cursor direction is selected.
-    #
     def __text_sel_key_up_down(self, delta):
+        """
+        This function is bound to the up/down cursor keys. If no selection
+        exists, the viewable first item in cursor direction is selected.
+        If a selection exists, it's cleared and the item next to the
+        previous selection in cursor direction is selected.
+        """
         content_len = self.len_proc()
         if content_len > 0:
             sel = sorted(self.sel)
@@ -389,12 +391,12 @@ class TextSelWidget:
                         self.__text_sel_select_line(line)
 
 
-    #
-    # This function is bound to the up/down cursor keys while the Shift key
-    # is pressed. The selection is changed to cover all items starting at the
-    # anchor item and the next item above or below the current selection.
-    #
     def __text_sel_key_resize(self, delta):
+        """
+        This function is bound to the up/down cursor keys while the Shift key
+        is pressed. The selection is changed to cover all items starting at the
+        anchor item and the next item above or below the current selection.
+        """
         content_len = self.len_proc()
         if len(self.sel) > 0:
             sel = sorted(self.sel)
@@ -417,13 +419,13 @@ class TextSelWidget:
             self.__text_sel_key_up_down(delta)
 
 
-    #
-    # This function is bound to the "Home" and "End" keys.  While the Shift
-    # key is not pressed, the first or last element in the list are selected.
-    # If the Shift key is pressed, the selection is extended to include all
-    # items between the anchor and the first or last item.
-    #
     def __text_sel_key_home_end(self, is_end, is_resize):
+        """
+        This function is bound to the "Home" and "End" keys.  While the Shift
+        key is not pressed, the first or last element in the list are selected.
+        If the Shift key is pressed, the selection is extended to include all
+        items between the anchor and the first or last item.
+        """
         content_len = self.len_proc()
         if content_len > 0:
             if is_end:
@@ -443,11 +445,11 @@ class TextSelWidget:
             self.cb_proc(self.sel)
 
 
-    #
-    # This function is bound to the "CTRL-A" key to select all entries in
-    # the list.
-    #
     def __text_sel_select_all(self):
+        """
+        This function is bound to the "CTRL-A" key to select all entries in
+        the list.
+        """
         content_len = self.len_proc()
         if content_len > 0:
             self.sel = TextSelWidget.__idx_range(0, content_len - 1)
@@ -456,23 +458,23 @@ class TextSelWidget:
             self.cb_proc(self.sel)
 
 
-    #
-    # This helper function is used to build a list of all indices between
-    # (and including) two given values in increasing order.
-    #
     @staticmethod
     def __idx_range(start, end):
+        """
+        This helper function is used to build a list of all indices between
+        (and including) two given values in increasing order.
+        """
         if start > end:
             return list(range(end, start + 1))
         return list(range(start, end + 1))
 
 
-    #
-    # This interface function displays a selection in the text widget by adding
-    # the "sel" tag to all selected lines. (Note the view is not affected, i.e.
-    # the selection may be outside of the viewable area.)
-    #
     def text_sel_show_selection(self):
+        """
+        This interface function displays a selection in the text widget by adding
+        the "sel" tag to all selected lines. (Note the view is not affected, i.e.
+        the selection may be outside of the viewable area.)
+        """
         # first remove any existing highlight
         self.wid.tag_remove("sel", "1.0", "end")
 
@@ -486,10 +488,10 @@ class TextSelWidget:
             self.wid.mark_set("insert", "%d.0" % (self.anchor_idx + 1))
 
 
-    #
-    # This function changes the selection to the single given line.
-    #
     def __text_sel_select_line(self, line):
+        """
+        This function changes the selection to the single given line.
+        """
         self.anchor_idx = line
         self.sel = [line]
 
@@ -498,11 +500,11 @@ class TextSelWidget:
         self.cb_proc(self.sel)
 
 
-    #
-    # This function determines the line under the mouse pointer.
-    # If the pointer is not above a content line, -1 is returned.
-    #
     def __text_sel_coo2_line(self, xcoo, ycoo):
+        """
+        This function determines the line under the mouse pointer.
+        If the pointer is not above a content line, -1 is returned.
+        """
         pos = self.wid.index("@%d,%d" % (xcoo, ycoo))
         if pos != "":
             line = int(pos.split(".")[0]) - 1
@@ -511,35 +513,35 @@ class TextSelWidget:
         return -1
 
 
-    #
-    # This function has to be called when an item has been inserted into the
-    # list to adapt the selection: Indices following the insertion are
-    # incremented.  The new element is not included in the selection.
-    #
     def text_sel_adjust_insert(self, line):
+        """
+        This function has to be called when an item has been inserted into the
+        list to adapt the selection: Indices following the insertion are
+        incremented.  The new element is not included in the selection.
+        """
         self.sel = [(x if x < line else x+1) for x in self.sel]
 
         if self.anchor_idx >= line:
             self.anchor_idx += 1
 
 
-    #
-    # This function has to be called when an item has been deleted from the
-    # list (asynchronously, i.e. not via a command related to the selection)
-    # to adapt the list of selected lines: The deleted line is removed from
-    # the selection (if included) and following indices are decremented.
-    #
     def text_sel_adjust_deletion(self, line):
+        """
+        This function has to be called when an item has been deleted from the
+        list (asynchronously, i.e. not via a command related to the selection)
+        to adapt the list of selected lines: The deleted line is removed from
+        the selection (if included) and following indices are decremented.
+        """
         self.sel = [(x if x < line else x-1) for x in self.sel if x != line]
 
         if self.anchor_idx > line:
             self.anchor_idx -= 1
 
-    #
-    # This handler is bound to CTRL-C in the selection and performs <<Copy>>
-    # (i.e. copies the content of all selected lines to the clipboard.)
-    #
     def text_sel_copy_clipboard(self, to_clipboard):
+        """
+        This handler is bound to CTRL-C in the selection and performs <<Copy>>
+        (i.e. copies the content of all selected lines to the clipboard.)
+        """
         msg = "".join([self.wid.get("%d.0" % (line + 1), "%d.0" % (line + 2))
                        for line in self.sel])
         tk_utils.xselection_export(msg, to_clipboard)

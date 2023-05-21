@@ -18,7 +18,12 @@
 # ------------------------------------------------------------------------ #
 
 """
-Database and persistent storage for configuration parameters.
+Database and persistent storage for configuration parameters. Parameters are
+read from a file into memory once during start-up. Various modules access the
+database when needed using getters. Updates are done via setters and
+automatically trigger an update of the configuration file after a short delay
+timer (for combining multiple consecutive changes), or at latest upon shutdown.
+The module does not provide notifications about configuration parameter changes.
 """
 
 import errno
@@ -28,12 +33,19 @@ import os
 import re
 import sys
 import tempfile
+import tkinter as tk
 from tkinter import messagebox as tk_messagebox
 
 import gtest_gui.tk_utils as tk_utils
 
-# Options set via configuration menu
+#
+# Database of configuration options and other persistent state to be written to
+# the configuration file. Default values assigned here are overridden when
+# loading the configuration file. Therefore they are only used when a user starts
+# the application for the first time after installation.
+#
 options = {
+    # Options set via configuration menu
     "log_browser": "trowser.py",
     "browser_stdin": True,
     "seed_regexp": "",
@@ -74,20 +86,31 @@ tid_update_rc_min = None
 RCFILE_COMPAT = 0x01000000
 RCFILE_VERSION = 0x01000003
 rcfile_name_appendix = ""
-rcfile_error = 0
+rcfile_error = False
 
 
 def get_opt(name):
+    """ Return the configured value for the named option. """
     return options[name]
 
 
 def set_opt(name, value):
+    """
+    Update the configuration value for the named option in memory and RC file.
+    File update is delayed a few seconds for bundling updates after consecutive
+    configuration changes.
+    """
     if options[name] != value:
         options[name] = value
         __rc_file_update_after_idle()
 
 
 def update_prev_exe_file_list(path):
+    """
+    Add the given path to the list of previously used executable files, or move
+    it to the front of the list if already in it. Afterwards update the
+    RC file to store the new list value.
+    """
     path = os.path.abspath(path)
     prev_list = options["prev_exe_file_list"]
     if not prev_list or prev_list[-1] != path:
@@ -96,6 +119,14 @@ def update_prev_exe_file_list(path):
         options["prev_exe_file_list"] = prev_list
 
         __rc_file_update_after_idle()
+
+
+def update_fonts():
+    """
+    Trigger update of the RC file after a font configuration change. The font
+    options are retrieved dynamically during the update.
+    """
+    __rc_file_update_after_idle()
 
 
 def __load_rc_value(var, val, font_opts):
@@ -155,6 +186,7 @@ def __get_rc_file_path():
 
 
 def rc_file_load():
+    """ Parse the configuration file and load option values into memory. """
     font_opts = [None, None]
     error = False
     line_no = 0
@@ -212,13 +244,13 @@ def rc_file_load():
         if font_opts[0]:
             try:
                 tk_utils.init_font_content(font_opts[0])
-            except Exception as exc:
+            except tk.TclError as exc:
                 print("Error configuring content font:", str(exc), file=sys.stderr)
 
         if font_opts[1]:
             try:
                 tk_utils.init_font_trace(font_opts[1])
-            except Exception as exc:
+            except tk.TclError as exc:
                 print("Error configuring trace font:", str(exc), file=sys.stderr)
 
     except OSError as exc:
@@ -226,7 +258,7 @@ def rc_file_load():
             print("Failed to load config file " + rc_path + ":", str(exc), file=sys.stderr)
 
 
-def rc_file_update():
+def __rc_file_update():
     global rcfile_error
     global tid_update_rc_sec, tid_update_rc_min
 
@@ -238,10 +270,12 @@ def rc_file_update():
         tid_update_rc_min = None
 
     rc_path = __get_rc_file_path()
+    tmp_file_path = None
     try:
         with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".tmp",
                                          dir=os.path.dirname(rc_path),
                                          prefix=os.path.basename(rc_path)) as rcfile:
+            tmp_file_path = rcfile.name
             timestamp = str(datetime.now())
             print("#\n"
                   "# gtest_gui configuration file\n"
@@ -262,12 +296,15 @@ def rc_file_update():
         try:
             stt = os.stat(rc_path)
             try:
-                os.chmod(rcfile.name, stt.st_mode & 0o777)
+                os.chmod(tmp_file_path, stt.st_mode & 0o777)
                 if os.name == "posix":
-                    os.chown(rcfile.name, stt.st_uid, stt.st_gid)
+                    os.chown(tmp_file_path, stt.st_uid, stt.st_gid)
             except OSError as exc:
-                print("Warning: Failed to update mode/permissions on %s: %s" %
-                      (rc_path, exc.strerror), file=sys.stderr)
+                if not rcfile_error:
+                    rcfile_error = True
+                    msg = ("Warning: Failed to update file mode/permissions on "
+                           "configuration file %s: %s") % (rc_path, exc.strerror)
+                    tk_messagebox.showerror(parent=tk_utils.tk_top, message=msg)
         except OSError:
             pass
 
@@ -280,23 +317,32 @@ def rc_file_update():
                     os.remove(rc_path)
                 except OSError:
                     pass
-            os.rename(rcfile.name, rc_path)
+            os.rename(tmp_file_path, rc_path)
             rcfile_error = False
         except OSError as exc:
             if not rcfile_error:
-                msg = "Could not replace rc file %s with temporary %s: %s" % \
-                      (rc_path, rcfile.name, exc.strerror)
+                rcfile_error = True
+                msg = "Could not replace configuration file %s with temporary %s: %s" % \
+                      (rc_path, tmp_file_path, exc.strerror)
                 tk_messagebox.showerror(parent=tk_utils.tk_top, message=msg)
-            rcfile_error = True
-            os.remove(rcfile.name)
+            os.remove(tmp_file_path)
 
     except OSError as exc:
-        # write error - remove the file fragment, report to user
-        if not rcfile_error:
-            rcfile_error = True
-            msg = "Failed to write file %s: %s" % (rcfile.name, exc.strerror)
-            tk_messagebox.showerror(parent=tk_utils.tk_top, message=msg)
-        os.remove(rcfile.name)
+        if tmp_file_path:
+            # write error - remove the file fragment, report to user
+            if not rcfile_error:
+                rcfile_error = True
+                msg = "Failed to write temporary file %s for configuration file update: %s" % \
+                      (rc_path, exc.strerror)
+                tk_messagebox.showerror(parent=tk_utils.tk_top, message=msg)
+            os.remove(tmp_file_path)
+        else:
+            # failed to create temporary file
+            if not rcfile_error:
+                rcfile_error = True
+                msg = "Failed to create temporary file in directory of %s: %s" % \
+                      (rc_path, exc.strerror)
+                tk_messagebox.showerror(parent=tk_utils.tk_top, message=msg)
 
     return not rcfile_error
 
@@ -311,12 +357,19 @@ def __rc_file_update_after_idle():
 
     if tid_update_rc_sec:
         tk_utils.tk_top.after_cancel(tid_update_rc_sec)
-    tid_update_rc_sec = tk_utils.tk_top.after(3000, rc_file_update)
+    tid_update_rc_sec = tk_utils.tk_top.after(3000, __rc_file_update)
 
     if not tid_update_rc_min:
-        tid_update_rc_min = tk_utils.tk_top.after(60000, rc_file_update)
+        tid_update_rc_min = tk_utils.tk_top.after(60000, __rc_file_update)
 
 
-def rc_file_update_upon_exit():
-    if tid_update_rc_sec or tid_update_rc_min:
-        rc_file_update()
+def rc_file_update_synchronously():
+    """ Update the RC file immediately in case an update is pending. """
+    global rcfile_error
+    if tid_update_rc_sec or tid_update_rc_min or rcfile_error:
+        # warn again if previous update failed
+        rcfile_error = False
+
+        return __rc_file_update()
+
+    return True

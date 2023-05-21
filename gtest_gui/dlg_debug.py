@@ -27,6 +27,8 @@ import tkinter as tk
 import gtest_gui.tk_utils as tk_utils
 import gtest_gui.wid_tool_tip as wid_tool_tip
 
+# The purpose of this dialog is providing eval and exec.
+# pylint: disable=eval-used,exec-used
 
 class DebugDialog:
     """
@@ -76,11 +78,13 @@ class DebugDialog:
 
 
     def raise_window(self):
+        """ Raises the dialog window above all other windows. """
         self.wid_top.wm_deiconify()
         self.wid_top.lift()
 
 
     def get_toplevel(self):
+        """ Returns a reference to the top-level window used by the dialog. """
         return self.wid_top
 
 
@@ -159,6 +163,8 @@ class DebugDialog:
 
     def __eval_input(self, use_exec):
         cmd = self.wid_input.get("1.0", "end")
+        # Invalid code entered by user may trigger any exception
+        # pylint: disable=broad-except
         try:
             if use_exec:
                 output = str(exec(cmd, self.globals))
@@ -183,6 +189,8 @@ class DebugDialog:
     def __show_variable_value(self, auto_complete):
         var_ref = self.wid_var_name.get()
 
+        # Invalid code entered by user may trigger any exception
+        # pylint: disable=broad-except
         if auto_complete:
             match = re.match(r"^(.*)\.(.*)$", var_ref)
             if match:

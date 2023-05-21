@@ -18,7 +18,11 @@
 # ------------------------------------------------------------------------ #
 
 """
-This module stores help texts to be displayed as tool tips.
+This module stores help texts to be displayed as tool tips when hovering the
+mouse over GUI widgets. The database is a dict containing a unique key and
+assigned help texts. The keys are used to avoid including the texts directly
+within the code creating the dialogs. Note white-space in help texts is
+removed before display, as the text is formatted automatically.
 """
 
 TOOL_TIP_DB = {

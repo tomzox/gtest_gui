@@ -18,7 +18,11 @@
 # ------------------------------------------------------------------------ #
 
 """
-Database of test case names and results.
+Database of test case names, test results and test campaign status.
+
+Data may be read globally. Additions to the database go through the functions
+in this module, so that registered callbacks can be invoked to notify various
+GUI modules about the change.
 """
 
 # Plain list of test case names, in order returned by test executable
@@ -68,6 +72,7 @@ test_exe_name = ""
 
 
 class TestDbSlots:
+    """ Container for event signal registration. """
     result_appended = None
     repeat_req_update = None
     campaign_stats_update = None
@@ -78,6 +83,7 @@ class TestDbSlots:
 
 
 def update_executable(filename, exe_ts, tc_names):
+    """ Update executable file path and timestamp and store its list of test case names. """
     global test_exe_name, test_exe_ts, test_case_names, test_case_stats, repeat_requests
 
     tc_names_update = (test_case_names != tc_names)
@@ -101,11 +107,13 @@ def update_executable(filename, exe_ts, tc_names):
 
 
 def import_result(log):
+    """ Append the given result log item without triggering callbacks. Used for bulk update. """
     global test_results
     test_results.append(log)
 
 
 def add_result(log, from_bg_job):
+    """ Append the given result log item and update campaign statistics accordingly. """
     global test_results
     tc_name = log[0]
     verdict = log[3]
@@ -152,6 +160,7 @@ def add_result(log, from_bg_job):
 
 
 def reset_run_stats(exp_result_cnt, is_resume):
+    """ Reset campaign statistics upon start of a test campaign. """
     global campaign_stats, test_case_stats
 
     if not is_resume:
@@ -171,6 +180,7 @@ def reset_run_stats(exp_result_cnt, is_resume):
 
 
 def set_job_status(job_count, start_time=0):
+    """ Update the number of jobs working for the current test campaign. """
     campaign_stats[3] = job_count
     if start_time:
         campaign_stats[7] = start_time

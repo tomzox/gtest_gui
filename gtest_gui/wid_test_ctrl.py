@@ -40,7 +40,13 @@ import gtest_gui.wid_tool_tip as wid_tool_tip
 
 
 class TestControlWidget:
+    """
+    This class implements the upper half of the main window, containing
+    options, control buttons and status display for test campaigns.
+    """
+
     def __init__(self, tk_top, parent):
+        """ Constructs an instance of the TestControlWidget within the given parent widget. """
         self.tk_top = tk_top
 
         self.var_men_chkb = {}
@@ -53,6 +59,7 @@ class TestControlWidget:
         self.filter_redo_history = []
         self.filter_undo_lock = False
         self.filter_expr_error = []
+        # further attributes added by sub-functions: child widgets
 
         self.__create_widgets(parent)
 
@@ -61,10 +68,16 @@ class TestControlWidget:
 
 
     def get_widget(self):
+        """ Returns the root widget used by this instance. """
         return self.wid_top
 
 
     def set_wid_test_log(self, test_log):
+        """
+        Links the widget with the test result log widget. This link is
+        currently only used for updating repetition status. The link cannot be
+        set in the constructor due to circular dependency.
+        """
         self.wid_test_log = test_log
 
 
@@ -164,7 +177,7 @@ class TestControlWidget:
 
 
     def __create_spinbox_widgets(self, parent, grid_row, grid_col):
-        validate_int_cmd = self.tk_top.register(self.__validate_int)
+        validate_int_cmd = self.tk_top.register(TestControlWidget.__validate_int)
 
         wid_lab = tk.Label(parent, text="Repetitions:")
         wid_lab.grid(row=grid_row, column=grid_col+0, sticky="e", padx=10)
@@ -309,7 +322,8 @@ class TestControlWidget:
 
         wid_noshrink = tk.Frame(wid_frm)
         wid_noshrink.grid(row=4, column=1, sticky="we")
-        wid_noshrink.bind("<Configure>", lambda e: self.__status_widget_resized(e.widget, e.width))
+        wid_noshrink.bind("<Configure>", lambda e:
+                          TestControlWidget.__status_widget_resized(e.widget, e.width))
         wid_frm.grid(row=grid_row, column=grid_col, sticky="ns", padx=5)
 
 
@@ -435,13 +449,15 @@ class TestControlWidget:
         self.prev_exec_status = tests_active
 
 
-    def __status_widget_resized(self, wid, new_width):
+    @staticmethod
+    def __status_widget_resized(wid, new_width):
         cur_width = wid.cget("width")
         if new_width > cur_width:
             wid.configure(width=new_width)
 
 
-    def __validate_int(self, val):
+    @staticmethod
+    def __validate_int(val):
         return bool(re.match(r"^\d*$", val))
 
 
@@ -554,6 +570,7 @@ class TestControlWidget:
 
 
     def select_tcs(self, tc_names, enable):
+        """ Add or remove the given test case names from the test case filter expression. """
         expr = filter_expr.FilterExpr(self.var_opt_filter.get(), self.var_opt_run_disabled.get())
         expr.select_test_cases(tc_names, enable)
         self.var_opt_filter.set(expr.get_expr())
@@ -562,6 +579,10 @@ class TestControlWidget:
 
 
     def get_test_filter_expr(self):
+        """
+        Create and return a test case filter expression object reflecting the
+        current content of the filter entry field.
+        """
         filter_str = self.var_opt_filter.get()
         return filter_expr.FilterExpr(filter_str, self.var_opt_run_disabled.get())
 
@@ -573,10 +594,15 @@ class TestControlWidget:
 
 
     def register_filter_change_slot(self, func):
+        """
+        Register a callback that is invoked upon changes to the test case
+        filter expression. At most one other widget can register the callback.
+        """
         self.slot_filter_change = func
 
 
     def start_campaign(self):
+        """ Start a test campaign with the current option values in the widget. """
         if gtest.gtest_ctrl.is_active(): # block call via key binding
             return
 
@@ -593,11 +619,13 @@ class TestControlWidget:
 
 
     def stop_campaign(self):
+        """ Stop the currently ongoing test campaign. """
         self.wid_cmd_stop.configure(cursor="watch")
         gtest.gtest_ctrl.stop()
 
 
     def resume_campaign(self):
+        """ Resume a previously stopped test campaign with current options. """
         if gtest.gtest_ctrl.is_active(): # block call via key binding
             return
 
@@ -623,7 +651,7 @@ class TestControlWidget:
         if remaining_rep_cnt <= 0:
             tk_messagebox.showerror(
                 parent=self.tk_top,
-                message="Configured number of repetitions were already completed.")
+                message="The configured number of repetitions was already completed.")
             return
 
         self.__start_campaign_sub(self.prev_campaign_options["filter_str"],
@@ -631,6 +659,13 @@ class TestControlWidget:
 
 
     def start_repetition(self):
+        """
+        Start a test campaign the only runs test cases marked for repetition.
+        If none were marked, all failed tests are marked automatically. A
+        warning is issued if the executable is still the same as in the
+        original run (because for many kinds of tests this will mean result
+        will be the same.)
+        """
         if gtest.gtest_ctrl.is_active(): # block call via key binding
             return
 
@@ -658,7 +693,7 @@ class TestControlWidget:
             if not tk_messagebox.askokcancel(parent=self.tk_top, message=msg):
                 return
 
-            for tc_name in test_db.repeat_requests.keys():
+            for tc_name in test_db.repeat_requests:
                 if test_db.repeat_requests[tc_name] == test_db.test_exe_ts:
                     test_db.repeat_requests[tc_name] -= 1
                     self.wid_test_log.update_repetition_status(tc_name)
@@ -710,6 +745,11 @@ class TestControlWidget:
 
 
     def check_filter_expression(self, reset_suppressions=True):
+        """
+        Check if the current content of the test case filter entry field is a
+        valid expression and each sub-expression matches at least one test
+        case and inform the user in case of such errors.
+        """
         if reset_suppressions:
             self.filter_expr_error.clear()
         is_ok, msg = filter_expr.check_pattern(self.var_opt_filter.get(),
