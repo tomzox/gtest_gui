@@ -32,7 +32,7 @@ from gtest_gui.dlg_main import MainWindow
 from gtest_gui.dlg_config import ConfigDialog
 
 import gtest_gui.config_db as config_db
-import gtest_gui.gtest as gtest
+import gtest_gui.gtest_ctrl as gtest_ctrl
 import gtest_gui.tk_utils as tk_utils
 
 
@@ -104,7 +104,7 @@ def main():
     exe_name, trace_files = parse_argv(tk_top)
 
     tk_utils.initialize(tk_top)
-    gtest.initialize()
+    gtest_ctrl.initialize()
 
     config_db.rc_file_load()
 
@@ -117,11 +117,11 @@ def main():
             if answer == "ok":
                 ConfigDialog.create_dialog(tk_top)
         else:
-            gtest.gtest_automatic_import()
+            gtest_ctrl.gtest_automatic_import()
 
     for file_name in trace_files:
         try:
-            gtest.gtest_import_result_file(file_name, False)
+            gtest_ctrl.gtest_import_result_file(file_name, False)
         except OSError as exc:
             msg = "Failed to import %s: %s" % (file_name, str(exc))
             tk_messagebox.showerror(parent=tk_top, message=msg)

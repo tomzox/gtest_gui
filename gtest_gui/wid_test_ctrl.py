@@ -33,8 +33,10 @@ from gtest_gui.dlg_config import ConfigDialog
 from gtest_gui.wid_status_line import StatusLineWidget
 import gtest_gui.config_db as config_db
 import gtest_gui.filter_expr as filter_expr
-import gtest_gui.gtest as gtest
+import gtest_gui.gtest_ctrl as gtest_ctrl
+import gtest_gui.gtest_list_tests as gtest_list_tests
 import gtest_gui.test_db as test_db
+import gtest_gui.trace_db as trace_db
 import gtest_gui.tk_utils as tk_utils
 import gtest_gui.wid_tool_tip as wid_tool_tip
 
@@ -365,7 +367,7 @@ class TestControlWidget:
             txt = "%d of %d test case runs" % (totals[5], totals[4])
 
         # get stats, but ignore background jobs
-        job_stats = [x for x in gtest.gtest_ctrl.get_job_stats() if not x[2]]
+        job_stats = [x for x in gtest_ctrl.gtest_ctrl.get_job_stats() if not x[2]]
         if job_stats:
             min_job_done = min([x[4] / x[5] if x[5] else 100 for x in job_stats])
             if min_job_done:
@@ -603,7 +605,7 @@ class TestControlWidget:
 
     def start_campaign(self):
         """ Start a test campaign with the current option values in the widget. """
-        if gtest.gtest_ctrl.is_active(): # block call via key binding
+        if gtest_ctrl.gtest_ctrl.is_active(): # block call via key binding
             return
 
         if not self.__check_executable_update():
@@ -621,12 +623,12 @@ class TestControlWidget:
     def stop_campaign(self):
         """ Stop the currently ongoing test campaign. """
         self.wid_cmd_stop.configure(cursor="watch")
-        gtest.gtest_ctrl.stop()
+        gtest_ctrl.gtest_ctrl.stop()
 
 
     def resume_campaign(self):
         """ Resume a previously stopped test campaign with current options. """
-        if gtest.gtest_ctrl.is_active(): # block call via key binding
+        if gtest_ctrl.gtest_ctrl.is_active(): # block call via key binding
             return
 
         if self.prev_campaign_options is None:
@@ -666,7 +668,7 @@ class TestControlWidget:
         original run (because for many kinds of tests this will mean result
         will be the same.)
         """
-        if gtest.gtest_ctrl.is_active(): # block call via key binding
+        if gtest_ctrl.gtest_ctrl.is_active(): # block call via key binding
             return
 
         # Mark selected tests for repetiton, if none marked yet
@@ -733,12 +735,12 @@ class TestControlWidget:
                 StatusLineWidget.get().show_message("info", "Executable compiled " + msg)
 
         else:
-            tc_names = gtest.gtest_list_tests()
+            tc_names = gtest_list_tests.gtest_list_tests()
             if tc_names is None:
                 return False
 
             self.prev_campaign_options = None
-            gtest.release_exe_file_copy()
+            trace_db.release_exe_file_copy()
             test_db.update_executable(test_db.test_exe_name, latest_exe_ts, tc_names)
 
         return True
@@ -844,7 +846,7 @@ class TestControlWidget:
 
         self.wid_cmd_run.configure(cursor="watch")
 
-        gtest.gtest_ctrl.start(
+        gtest_ctrl.gtest_ctrl.start(
             self.var_opt_job_count.get(),
             self.var_opt_job_runall.get() if not is_repeat else 0,
             rep_cnt,
@@ -862,5 +864,5 @@ class TestControlWidget:
 
 
     def __handle_option_change(self):
-        gtest.gtest_ctrl.update_options(self.var_opt_clean_trace.get(),
-                                        self.var_opt_clean_core.get())
+        gtest_ctrl.gtest_ctrl.update_options(self.var_opt_clean_trace.get(),
+                                             self.var_opt_clean_core.get())

@@ -30,7 +30,7 @@ from tkinter import filedialog as tk_filedialog
 import gtest_gui.bisect as bisect
 import gtest_gui.config_db as config_db
 import gtest_gui.filter_expr as filter_expr
-import gtest_gui.gtest as gtest
+import gtest_gui.gtest_ctrl as gtest_ctrl
 import gtest_gui.test_db as test_db
 import gtest_gui.tk_utils as tk_utils
 from gtest_gui.wid_text_sel import TextSelWidget
@@ -424,7 +424,7 @@ class TcListDialog:
     def __post_context_menu(self, parent, xcoo, ycoo):
         wid_men = tk_utils.get_context_menu_widget()
 
-        if (parent == self.wid_table) and not gtest.gtest_ctrl.is_active():
+        if (parent == self.wid_table) and not gtest_ctrl.gtest_ctrl.is_active():
             self.sel_obj.text_sel_context_selection(xcoo, ycoo)
             expr = self.test_ctrl.get_test_filter_expr()
 

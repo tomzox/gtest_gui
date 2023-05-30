@@ -26,7 +26,7 @@ from tkinter import messagebox as tk_messagebox
 
 import gtest_gui.config_db as config_db
 import gtest_gui.dlg_browser as dlg_browser
-import gtest_gui.gtest as gtest
+import gtest_gui.gtest_ctrl as gtest_ctrl
 import gtest_gui.test_db as test_db
 import gtest_gui.tk_utils as tk_utils
 from gtest_gui.wid_text_sel import TextSelWidget
@@ -201,7 +201,7 @@ class JobListDialog:
         self.sel_obj.text_sel_set_selection([])
         self.wid_table.delete("1.0", "end")
 
-        self.job_stats = gtest.gtest_ctrl.get_job_stats()
+        self.job_stats = gtest_ctrl.gtest_ctrl.get_job_stats()
         if self.job_stats:
             for stat in self.job_stats:
                 msg = JobListDialog.__format_table_row(stat)
@@ -238,7 +238,7 @@ class JobListDialog:
     def __post_context_menu(self, parent, xcoo, ycoo):
         wid_men = tk_utils.get_context_menu_widget()
 
-        if (parent == self.wid_table) and gtest.gtest_ctrl.is_active():
+        if (parent == self.wid_table) and gtest_ctrl.gtest_ctrl.is_active():
             self.sel_obj.text_sel_context_selection(xcoo, ycoo)
             sel = self.sel_obj.text_sel_get_selection()
             if sel:
@@ -258,7 +258,7 @@ class JobListDialog:
     @staticmethod
     def __do_abort_jobs(pids):
         for pid in pids:
-            gtest.gtest_ctrl.abort_job(pid)
+            gtest_ctrl.gtest_ctrl.abort_job(pid)
 
 
     @staticmethod

@@ -28,8 +28,9 @@ from tkinter import messagebox as tk_messagebox
 from tkinter import filedialog as tk_filedialog
 
 import gtest_gui.config_db as config_db
-import gtest_gui.gtest as gtest
+import gtest_gui.gtest_ctrl as gtest_ctrl
 import gtest_gui.tk_utils as tk_utils
+import gtest_gui.trace_db as trace_db
 import gtest_gui.wid_tool_tip as wid_tool_tip
 
 
@@ -225,14 +226,14 @@ class ConfigDialog:
 
         if ((trace_dir != config_db.get_opt("trace_dir")) or
                 (self.var_cfg_copy_executable.get() != config_db.get_opt("copy_executable"))):
-            if gtest.gtest_ctrl.is_active():
+            if gtest_ctrl.gtest_ctrl.is_active():
                 msg = "Need to stop running tests for changing the trace directory " \
                       "or copy-executable options."
                 if not tk_messagebox.askokcancel(parent=self.wid_top, message=msg):
                     return False
-                gtest.gtest_ctrl.stop(kill=True)
+                gtest_ctrl.gtest_ctrl.stop(kill=True)
 
-            gtest.release_exe_file_copy()
+            trace_db.release_exe_file_copy()
 
         config_db.set_opt("log_browser", ConfigDialog.__normalize_shell_cmd(self.var_cfg_browser))
         config_db.set_opt("browser_stdin", self.var_cfg_browser_stdin.get())

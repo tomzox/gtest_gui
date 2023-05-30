@@ -33,8 +33,8 @@ from tkinter import messagebox as tk_messagebox
 from tkinter import filedialog as tk_filedialog
 
 import gtest_gui.config_db as config_db
-import gtest_gui.gtest as gtest
 import gtest_gui.test_db as test_db
+import gtest_gui.trace_db as trace_db
 import gtest_gui.tk_utils as tk_utils
 from gtest_gui.wid_status_line import StatusLineWidget
 
@@ -67,7 +67,7 @@ def show_trace_snippet(file_name, file_off, length, is_extern_import):
         return
 
     if config_db.get_opt("browser_stdin"):
-        txt = gtest.extract_trace(file_name, file_off, length)
+        txt = trace_db.extract_trace(file_name, file_off, length)
         if txt is None:
             StatusLineWidget.get().show_message("error", "Failed to read trace file")
             return
@@ -79,8 +79,9 @@ def show_trace_snippet(file_name, file_off, length, is_extern_import):
         shared_file = None
 
     else:
-        file_name = gtest.extract_trace_to_temp_file(__get_temp_dir_name(),
-                                                     file_name, file_off, length, is_extern_import)
+        file_name = trace_db.extract_trace_to_temp_file(__get_temp_dir_name(),
+                                                        file_name, file_off, length,
+                                                        is_extern_import)
         if not file_name:
             return
         shared_file = file_name
@@ -136,7 +137,7 @@ def show_stack_trace(tk_top, tc_name, exe_name, exe_ts, core_name):
         else:
             exe_file = test_db.test_exe_name
     else:
-        exe_file = gtest.gtest_control_get_exe_file_link_name(exe_name, exe_ts)
+        exe_file = trace_db.get_exe_file_link_name(exe_name, exe_ts)
 
     try:
         cmd = ["gdb", "-batch", "-x", cmd_filename, exe_file, core_name]
@@ -182,7 +183,7 @@ def export_traces(tk_top, log_idx_sel):
         for log_idx in log_idx_sel:
             log = test_db.test_results[log_idx]
             if log[4]:
-                txt = gtest.extract_trace(log[4], log[5], log[6])
+                txt = trace_db.extract_trace(log[4], log[5], log[6])
                 if txt:
                     filename = "trace.%d.%s" % (file_idx, log[0])
                     abs_filename = os.path.join(tempdir, filename)

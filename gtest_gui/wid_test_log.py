@@ -33,8 +33,9 @@ from tkinter import messagebox as tk_messagebox
 import gtest_gui.bisect
 import gtest_gui.config_db as config_db
 import gtest_gui.dlg_browser as dlg_browser
-import gtest_gui.gtest as gtest
+import gtest_gui.gtest_ctrl as gtest_ctrl
 import gtest_gui.test_db as test_db
+import gtest_gui.trace_db as trace_db
 import gtest_gui.tk_utils as tk_utils
 from gtest_gui.wid_status_line import StatusLineWidget
 from gtest_gui.wid_text_sel import TextSelWidget
@@ -756,7 +757,7 @@ class TestLogWidget:
                         used_exe.add((log[1], log[2]))
 
         rm_files -= used_files
-        rm_files -= gtest.gtest_ctrl.get_out_file_names()
+        rm_files -= gtest_ctrl.gtest_ctrl.get_out_file_names()
 
         rm_exe -= used_exe
         rm_exe.discard((test_db.test_exe_name, test_db.test_exe_ts))
@@ -780,7 +781,7 @@ class TestLogWidget:
             else:
                 self.__delete_multiple_results(idx_list)
 
-            gtest.remove_trace_or_core_files(rm_files, rm_exe)
+            trace_db.remove_trace_or_core_files(rm_files, rm_exe)
 
 
     def __check_tc_names_in_exe(self, sel):
@@ -872,7 +873,7 @@ class TestLogWidget:
     def __show_trace_preview(self, log_idx):
         log = test_db.test_results[log_idx]
         if log[4]:
-            txt = gtest.extract_trace(log[4], log[5], log[6])
+            txt = trace_db.extract_trace(log[4], log[5], log[6])
             if txt:
                 self.wid_trace.replace("1.0", "end", txt)
                 self.wid_trace.see("end - 1 lines")

@@ -39,9 +39,11 @@ from gtest_gui.wid_test_ctrl import TestControlWidget
 from gtest_gui.wid_test_log import TestLogWidget
 from gtest_gui.wid_status_line import StatusLineWidget
 
-import gtest_gui.gtest as gtest
+import gtest_gui.gtest_ctrl as gtest_ctrl
+import gtest_gui.gtest_list_tests as gtest_list_tests
 import gtest_gui.config_db as config_db
 import gtest_gui.test_db as test_db
+import gtest_gui.trace_db as trace_db
 import gtest_gui.tk_utils as tk_utils
 import gtest_gui.wid_tool_tip as wid_tool_tip
 
@@ -162,28 +164,28 @@ class MainWindow:
 
 
     def __quit(self):
-        if gtest.gtest_ctrl.is_active():
+        if gtest_ctrl.gtest_ctrl.is_active():
             msg = "Really stop tests and quit?"
             if not tk_messagebox.askokcancel(parent=self.tk_top, message=msg):
                 return False
 
         config_db.rc_file_update_synchronously()
 
-        gtest.gtest_ctrl.stop(kill=True)
-        gtest.release_exe_file_copy()
+        gtest_ctrl.gtest_ctrl.stop(kill=True)
+        trace_db.release_exe_file_copy()
         if config_db.get_opt("exit_clean_trace"):
-            gtest.clean_all_trace_files()
+            trace_db.clean_all_trace_files()
 
         tk_utils.safe_destroy(self.tk_top)
         return True
 
 
     def __check_tests_active(self):
-        if gtest.gtest_ctrl.is_active():
+        if gtest_ctrl.gtest_ctrl.is_active():
             msg = "This operation requires stopping ongoing tests."
             if not tk_messagebox.askokcancel(parent=self.tk_top, message=msg):
                 return False
-            gtest.gtest_ctrl.stop(kill=True)
+            gtest_ctrl.gtest_ctrl.stop(kill=True)
         return True
 
 
@@ -355,13 +357,13 @@ class MainWindow:
         prev_exe = test_db.test_exe_name
         prev_names = test_db.test_case_names
 
-        tc_names = gtest.gtest_list_tests(exe_file=filename)
+        tc_names = gtest_list_tests.gtest_list_tests(exe_file=filename)
         if tc_names is None:
             return
 
         if filename != test_db.test_exe_name:
             self.tk_top.wm_title("GtestGui: " + os.path.basename(filename))
-            gtest.release_exe_file_copy()
+            trace_db.release_exe_file_copy()
             config_db.update_prev_exe_file_list(filename)
 
         test_db.update_executable(filename, exe_ts, tc_names)
