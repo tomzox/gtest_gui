@@ -66,7 +66,8 @@ class TestControlWidget:
 
         self.__create_widgets(parent)
 
-        test_db.TestDbSlots.campaign_stats_update = self.__update_campaign_status
+        test_db.register_slot(test_db.SlotTypes.campaign_stats_update,
+                              self.__update_campaign_status)
         self.slot_filter_change = None
 
 

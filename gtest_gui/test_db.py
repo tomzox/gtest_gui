@@ -21,9 +21,11 @@
 Database of test case names, test results and test campaign status.
 
 Data may be read globally. Additions to the database go through the functions
-in this module, so that registered callbacks can be invoked to notify various
-GUI modules about the change.
+in this module, so that registered callbacks can be invoked for notifying
+various GUI modules about the change.
 """
+
+from enum import IntEnum
 
 # Plain list of test case names, in order returned by test executable
 test_case_names = []
@@ -71,15 +73,30 @@ test_exe_ts = 0
 test_exe_name = ""
 
 
-class TestDbSlots:
-    """ Container for event signal registration. """
-    result_appended = None
-    repeat_req_update = None
-    campaign_stats_update = None
-    campaign_stats_reset = None
-    tc_stats_update = None
-    tc_names_update = None
-    executable_update = None
+class SlotTypes(IntEnum):
+    """ Enumeration of callback types provided for database change events. """
+    result_appended = 0
+    repeat_req_update = 1
+    campaign_stats_update = 2
+    campaign_stats_reset = 3
+    tc_stats_update = 4
+    tc_names_update = 5
+    executable_update = 6
+    slot_count = 7
+
+
+# Container for event signal registration.
+test_db_slots = [None] * SlotTypes.slot_count
+
+
+def register_slot(slot_type, cb):
+    """ Register the given callback for the given event. """
+    test_db_slots[slot_type] = cb
+
+
+def deregister_slot(slot_type):
+    """ De-register a possibly registered callback for the given event. """
+    test_db_slots[slot_type] = None
 
 
 def update_executable(filename, exe_ts, tc_names):
@@ -99,10 +116,10 @@ def update_executable(filename, exe_ts, tc_names):
     if tc_exe_update:
         repeat_requests = {}
 
-    if TestDbSlots.executable_update:
-        TestDbSlots.executable_update()
-    if tc_names_update and TestDbSlots.tc_names_update:
-        TestDbSlots.tc_names_update()
+    if test_db_slots[SlotTypes.executable_update]:
+        test_db_slots[SlotTypes.executable_update]()
+    if tc_names_update and test_db_slots[SlotTypes.tc_names_update]:
+        test_db_slots[SlotTypes.tc_names_update]()
     reset_run_stats(0, False)
 
 
@@ -119,20 +136,20 @@ def add_result(log, from_bg_job):
     verdict = log[3]
 
     test_results.append(log)
-    if TestDbSlots.result_appended:
-        TestDbSlots.result_appended()
+    if test_db_slots[SlotTypes.result_appended]:
+        test_db_slots[SlotTypes.result_appended]()
 
     rep_req = repeat_requests.get(tc_name)
     if rep_req is not None and rep_req < test_exe_ts:
         repeat_requests.pop(tc_name)
-        if TestDbSlots.repeat_req_update:
-            TestDbSlots.repeat_req_update(tc_name)
+        if test_db_slots[SlotTypes.repeat_req_update]:
+            test_db_slots[SlotTypes.repeat_req_update](tc_name)
 
     if verdict == 0: # pass
         campaign_stats[0] += 1
     elif verdict == 1: # skip
         campaign_stats[2] += 1
-    elif (verdict == 2) or (verdict == 3): # fail or crash
+    elif verdict in (2, 3): # fail or crash
         campaign_stats[1] += 1
     else:
         campaign_stats[6] += 1
@@ -140,8 +157,8 @@ def add_result(log, from_bg_job):
     if not from_bg_job and (verdict <= 3):
         campaign_stats[5] += 1
 
-    if TestDbSlots.campaign_stats_update:
-        TestDbSlots.campaign_stats_update()
+    if test_db_slots[SlotTypes.campaign_stats_update]:
+        test_db_slots[SlotTypes.campaign_stats_update]()
 
     stat = test_case_stats.get(tc_name)
     if stat is None:
@@ -155,8 +172,40 @@ def add_result(log, from_bg_job):
         stat[0] += 1
     stat[3] += log[10]
     stat[4] = log[2]
-    if TestDbSlots.tc_stats_update:
-        TestDbSlots.tc_stats_update(tc_name)
+    if test_db_slots[SlotTypes.tc_stats_update]:
+        test_db_slots[SlotTypes.tc_stats_update](tc_name)
+
+
+def delete_results(idx_list):
+    """
+    Remove the given results at the given indices from the log. It is possible
+    to delete results of an ongoing campaign. Campaign pass/fail statistics are
+    however not updated by this.
+    """
+    # No callback is triggered by this change! Works as this originates from GUI only.
+    global test_results
+
+    if len(idx_list) > 1:
+        idx_list = sorted(idx_list)
+        # Copy items to a new list, except for those at selected indices. As the result list
+        # can be rather large, this is significantly faster than deleting items in place.
+        new_list = []
+        rm_idx = 0
+        # pylint: disable=consider-using-enumerate
+        for idx in range(len(test_results)):
+            if idx == idx_list[rm_idx]:
+                if rm_idx + 1 < len(idx_list):
+                    rm_idx += 1
+            else:
+                new_list.append(test_results[idx])
+
+        test_results = new_list
+
+    elif idx_list:
+        del test_results[idx_list[0]]
+
+    else:
+        pass
 
 
 def reset_run_stats(exp_result_cnt, is_resume):
@@ -173,10 +222,10 @@ def reset_run_stats(exp_result_cnt, is_resume):
     else:
         campaign_stats[4] = exp_result_cnt + campaign_stats[5]
 
-    if TestDbSlots.campaign_stats_update:
-        TestDbSlots.campaign_stats_update()
-    if TestDbSlots.campaign_stats_reset:
-        TestDbSlots.campaign_stats_reset()
+    if test_db_slots[SlotTypes.campaign_stats_update]:
+        test_db_slots[SlotTypes.campaign_stats_update]()
+    if test_db_slots[SlotTypes.campaign_stats_reset]:
+        test_db_slots[SlotTypes.campaign_stats_reset]()
 
 
 def set_job_status(job_count, start_time=0):
@@ -185,5 +234,18 @@ def set_job_status(job_count, start_time=0):
     if start_time:
         campaign_stats[7] = start_time
 
-    if TestDbSlots.campaign_stats_update:
-        TestDbSlots.campaign_stats_update()
+    if test_db_slots[SlotTypes.campaign_stats_update]:
+        test_db_slots[SlotTypes.campaign_stats_update]()
+
+
+def set_repetition_request(tc_name, enable_rep):
+    """ Adds or removes a repetition request for the given test case. """
+    global repeat_requests
+
+    if enable_rep:
+        repeat_requests[tc_name] = test_case_stats[tc_name][4]
+    else:
+        repeat_requests.pop(tc_name, None)
+
+    if test_db_slots[SlotTypes.repeat_req_update]:
+        test_db_slots[SlotTypes.repeat_req_update](tc_name)

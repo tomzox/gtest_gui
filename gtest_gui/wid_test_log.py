@@ -88,9 +88,9 @@ class TestLogWidget:
         self.__create_log_widget(self.wid_pane)
         self.__create_trace_widget(self.wid_pane)
 
-        test_db.TestDbSlots.result_appended = self.__append_new_result
-        test_db.TestDbSlots.repeat_req_update = self.update_repetition_status
-        test_db.TestDbSlots.executable_update = self.__refill_log
+        test_db.register_slot(test_db.SlotTypes.result_appended, self.__append_new_result)
+        test_db.register_slot(test_db.SlotTypes.repeat_req_update, self.update_repetition_status)
+        test_db.register_slot(test_db.SlotTypes.executable_update, self.__refill_log)
 
 
     def get_widget(self):
@@ -544,19 +544,7 @@ class TestLogWidget:
 
 
     def __delete_multiple_results(self, idx_list):
-        idx_list = sorted(idx_list)
-        # Copy items to a new list, except for those at selected indices. As the result list
-        # can be rather large, this is significantly faster than deleting items in place.
-        new_list = []
-        rm_idx = 0
-        for idx in range(len(test_db.test_results)):
-            if idx == idx_list[rm_idx]:
-                if rm_idx + 1 < len(idx_list):
-                    rm_idx += 1
-            else:
-                new_list.append(test_db.test_results[idx])
-
-        test_db.test_results = new_list
+        test_db.delete_results(idx_list)
         self.__refill_log()
 
 
@@ -573,7 +561,7 @@ class TestLogWidget:
         if not self.sel_obj.text_sel_get_selection():
             self.__clear_trace_preview()
 
-        del test_db.test_results[idx]
+        test_db.delete_results([idx])
 
         new_list = self.log_idx_map[:log_idx]
         if log_idx + 1 < len(self.log_idx_map):
@@ -827,12 +815,7 @@ class TestLogWidget:
         for log in {test_db.test_results[x] for x in sel}:
             if log[3] <= 3: # exclude valgrind summary error
                 tc_name = log[0]
-                if enable_rep:
-                    test_db.repeat_requests[tc_name] = test_db.test_case_stats[tc_name][4]
-                else:
-                    test_db.repeat_requests.pop(tc_name, None)
-
-                self.update_repetition_status(tc_name)
+                test_db.set_repetition_request(tc_name, enable_rep)
 
         return True
 

@@ -89,16 +89,17 @@ class TcListDialog:
         self.__create_dialog_window()
         self.__handle_filter_change()
 
-        test_db.TestDbSlots.tc_stats_update = self.__handle_tc_stats_update
-        test_db.TestDbSlots.tc_names_update = self.__handle_tc_names_update
-        test_db.TestDbSlots.campaign_stats_reset = self.__handle_campaign_status_change
+        test_db.register_slot(test_db.SlotTypes.tc_stats_update, self.__handle_tc_stats_update)
+        test_db.register_slot(test_db.SlotTypes.tc_names_update, self.__handle_tc_names_update)
+        test_db.register_slot(test_db.SlotTypes.campaign_stats_reset,
+                              self.__handle_campaign_status_change)
         self.test_ctrl.register_filter_change_slot(self.__handle_main_tc_filter_expr_change)
 
 
     def __destroy_window(self):
-        test_db.TestDbSlots.tc_stats_update = None
-        test_db.TestDbSlots.tc_names_update = None
-        test_db.TestDbSlots.campaign_stats_reset = None
+        test_db.deregister_slot(test_db.SlotTypes.tc_stats_update)
+        test_db.deregister_slot(test_db.SlotTypes.tc_names_update)
+        test_db.deregister_slot(test_db.SlotTypes.campaign_stats_reset)
 
         self.test_ctrl.register_filter_change_slot(None)
 
