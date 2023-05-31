@@ -339,6 +339,7 @@ class GtestJob:
         self.__expected_result_cnt = expexted_result_cnt
         self.__result_cnt = 0
         self.__terminated = False
+        self.__io_error = None
         self.log = ""
 
         cmd = []
@@ -485,51 +486,20 @@ class GtestJob:
         if not self.__proc:
             return False
 
-        data = gtest_gui.fcntl.read_nonblocking(self.__proc.stdout, 256*1024)
+        try:
+            # read input from the pipe to the test process
+            data = gtest_gui.fcntl.read_nonblocking(self.__proc.stdout, 256*1024)
+        except OSError as exc:
+            self.__io_error = "Error reading pipe from test process: " + str(exc)
+            self.__proc.terminate()
+            self.__terminated = True
+            data = None
 
         if data:
-            self.__sum_input_trace += len(data)
-            self.__buf_data += data
-            done_off = 0
-            for match in re.finditer(
-                    rb"^\[( +RUN +| +OK +| +FAILED +| +SKIPPED +|----------|==========)\] +"
-                    rb"(\S+)(?:\s+\((\d+)\s*ms\))?[^\n\r]*[\r\n]",
-                    self.__buf_data, re.MULTILINE):
-
-                if b"RUN" in match.group(1):
-                    self.__trace_to_file(self.__snippet_data)
-                    self.__trace_to_file(self.__buf_data[done_off : match.start()])
-                    self.__snippet_name = match.group(2)
-                    self.__snippet_data = self.__buf_data[match.start() : match.end()]
-                    self.__trailer = False
-
-                elif b" " in match.group(1) and not self.__trailer:
-                    if b"OK" in match.group(1):
-                        is_failed = 0
-                    elif b"SKIPPED" in match.group(1):
-                        is_failed = 1
-                    else:
-                        is_failed = 2
-                    self.__snippet_data += self.__buf_data[done_off : match.end()]
-                    self.__process_trace(match.group(2), is_failed, match.group(3), None)
-                    self.__snippet_data = b""
-                    self.__snippet_name = b""
-
-                else:
-                    self.__trace_to_file(self.__snippet_data)
-                    self.__trace_to_file(self.__buf_data[done_off : match.end()])
-                    self.__snippet_data = b""
-                    self.__snippet_name = b""
-                    self.__trailer = True
-
-                done_off = match.end()
-
-            last_line_off = _find_last_line_start(self.__buf_data, done_off)
-            if self.__snippet_data:
-                self.__snippet_data += self.__buf_data[done_off : last_line_off]
-            else:
-                self.__trace_to_file(self.__buf_data[done_off : last_line_off])
-            self.__buf_data = self.__buf_data[last_line_off:]
+            self.__process_pipe(data)
+            if self.__io_error:
+                self.__proc.terminate()
+                self.__terminated = True
             return True
 
         # no data read: check if process is still alive
@@ -595,6 +565,10 @@ class GtestJob:
                 self.__snippet_data += (b"\n[----------] Exit code: %d\n" % retval)
                 self.__process_trace(b"", 5, 0, None)
 
+        elif self.__io_error:
+            self.__snippet_data += (b"\n[----------] %s\n" % bytes(self.__io_error, "ascii"))
+            self.__process_trace(b"", 5, 0, None)
+
         else:
             self.__trace_to_file(self.__buf_data)
 
@@ -602,6 +576,51 @@ class GtestJob:
 
         # report exit to parent
         self.__result_queue.put((None, self))
+
+
+    def __process_pipe(self, data):
+        self.__sum_input_trace += len(data)
+        self.__buf_data += data
+        done_off = 0
+        for match in re.finditer(
+                rb"^\[( +RUN +| +OK +| +FAILED +| +SKIPPED +|----------|==========)\] +"
+                rb"(\S+)(?:\s+\((\d+)\s*ms\))?[^\n\r]*[\r\n]",
+                self.__buf_data, re.MULTILINE):
+
+            if b"RUN" in match.group(1):
+                self.__trace_to_file(self.__snippet_data)
+                self.__trace_to_file(self.__buf_data[done_off : match.start()])
+                self.__snippet_name = match.group(2)
+                self.__snippet_data = self.__buf_data[match.start() : match.end()]
+                self.__trailer = False
+
+            elif b" " in match.group(1) and not self.__trailer:
+                if b"OK" in match.group(1):
+                    is_failed = 0
+                elif b"SKIPPED" in match.group(1):
+                    is_failed = 1
+                else:
+                    is_failed = 2
+                self.__snippet_data += self.__buf_data[done_off : match.end()]
+                self.__process_trace(match.group(2), is_failed, match.group(3), None)
+                self.__snippet_data = b""
+                self.__snippet_name = b""
+
+            else:
+                self.__trace_to_file(self.__snippet_data)
+                self.__trace_to_file(self.__buf_data[done_off : match.end()])
+                self.__snippet_data = b""
+                self.__snippet_name = b""
+                self.__trailer = True
+
+            done_off = match.end()
+
+        last_line_off = _find_last_line_start(self.__buf_data, done_off)
+        if self.__snippet_data:
+            self.__snippet_data += self.__buf_data[done_off : last_line_off]
+        else:
+            self.__trace_to_file(self.__buf_data[done_off : last_line_off])
+        self.__buf_data = self.__buf_data[last_line_off:]
 
 
     def __process_trace(self, tc_name, is_failed, duration, core_file):
@@ -647,12 +666,18 @@ class GtestJob:
 
 
     def __trace_to_file(self, data):
-        # TODO catch error -> abort process
-        self.__out_file.write(data)
+        try:
+            self.__out_file.write(data)
+        except OSError as exc:
+            self.__io_error = "Error writing trace output to file: " + str(exc)
 
 
     def __close_trace_file(self):
-        self.__out_file.close()
+        try:
+            self.__out_file.close()
+        except OSError:
+            pass
+
         # delete output if "clean" option, or no result log entry (i.e. file would be invisible)
         if self.__clean_trace_file or (self.__result_cnt == 0):
             os.remove(self.__out_file_name)

@@ -214,7 +214,10 @@ def export_traces(tk_top, log_idx_sel):
 #
 # Mini dialog only used for displaying text snippets
 #
+
 class LogBrowser:
+    # This class has no public interfaces as it only interacts via event handlers.
+    # pylint: disable=too-few-public-methods
     """
     This class implements a simple top-level window for displaying a read-only
     text that is read from the given subprocess pipe. Text is appended

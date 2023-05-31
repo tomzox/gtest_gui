@@ -1,0 +1,18 @@
+[MESSAGES CONTROL]
+# C0103 invalid-name
+# R0902 too-many-instance-attributes
+# R0912 too-many-branches
+# R0913 too-many-arguments
+# R0914 too-many-locals
+# R0915 too-many-statements
+# W0603 global-statement
+# R0801 Similar lines in 2 files
+disable=C0103,R0902,R0912,R0913,R0914,R0915,W0603,R0801
+
+[DESIGN]
+#max-locals: 15
+#max-returns: 6
+#max-branches: 12
+#max-statements: 50
+#max-attributes: 7
+#max-public-methods: 20

@@ -84,6 +84,7 @@ class TcListDialog:
         self.test_ctrl = test_ctrl
         self.table_header_txt = ("Run", "Name", "Passed", "Failed", "Exec time")
         self.opt_sort_modes = []
+        self.tc_enabled = []
 
         self.__create_dialog_window()
         self.__handle_filter_change()
@@ -125,7 +126,7 @@ class TcListDialog:
         self.var_sort_fail_cnt = tk.BooleanVar(self.tk_top, False)
         self.var_sort_duration = tk.BooleanVar(self.tk_top, False)
 
-        self.__create_table_widget()
+        self.wid_table, self.wid_header = self.__create_table_widget()
 
         self.wid_table.bind("<Key-Return>", lambda e: self.__do_filter_selected_tests(True))
         self.wid_table.bind("<Key-Delete>", lambda e: self.__do_filter_selected_tests(False))
@@ -175,8 +176,7 @@ class TcListDialog:
         wid_header.bindtags([wid_header, self.wid_top, "all"])
         wid_table.bindtags([wid_table, self.wid_top, "TextSel", "all"])
 
-        self.wid_table = wid_table
-        self.wid_header = wid_header
+        return (wid_table, wid_header)
 
 
     def __update_column_widths(self):
@@ -217,10 +217,9 @@ class TcListDialog:
 
     def __format_table_row(self, tc_name):
         tc_stats = test_db.test_case_stats[tc_name]
-        txt = []
 
         ena = "yes\t" if tc_name in self.tc_enabled else "no\t"
-        txt.extend([ena + tc_name, "body"])
+        txt = [ena + tc_name, "body"]
 
         nof_pass = tc_stats[0]
         if nof_pass > 0:
@@ -413,6 +412,8 @@ class TcListDialog:
 
 
     def __handle_selection_change(self, sel):
+        # abstract interface: unused parameter needed by other classes
+        # pylint: disable=unused-argument
         self.sel_obj.text_sel_copy_clipboard(False)
 
 

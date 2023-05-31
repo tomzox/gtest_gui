@@ -56,6 +56,7 @@ class TestControlWidget:
         self.wid_men = None
         self.prev_campaign_options = None
         self.prev_exec_status = None
+        self.wid_test_log = None  # set later due to circular dependency
 
         self.filter_undo_history = []
         self.filter_redo_history = []
@@ -120,6 +121,7 @@ class TestControlWidget:
         self.var_opt_break_on_except = tk.BooleanVar(self.tk_top, False)
 
         self.wid_top = tk.Frame(parent, name="test_ctrl") # name needed for "option add"
+        self.state_dep_wids = []
 
         wid_frm_opt = tk.Frame(self.wid_top)
         wid_frm_opt.columnconfigure(1, weight=0)
@@ -127,7 +129,9 @@ class TestControlWidget:
         wid_frm_opt.columnconfigure(3, weight=0)
         wid_frm_opt.columnconfigure(4, weight=1)
 
-        self.__create_filter_entry_widget(wid_frm_opt, 1, 1, 1 + 4 + 2) # span spinbox & option cols
+        self.wid_tc_filter = \
+            self.__create_filter_entry_widget(wid_frm_opt, 1, 1,
+                                              1 + 4 + 2) # span spinbox & option cols
         self.__create_spinbox_widgets(wid_frm_opt, 2, 1) # occupies 4 columns
         self.__create_option_widgets(wid_frm_opt, 2, 1 + 4) # occupies 2 columns
         wid_frm_opt.pack(side=tk.TOP, fill=tk.X, expand=1)
@@ -174,8 +178,7 @@ class TestControlWidget:
         wid_ent.bind("<Return>", lambda e: self.check_filter_expression())
         wid_ent.bind("<Key-Down>", lambda e: self.__popup_test_case_menu())
 
-        self.wid_tc_filter = wid_ent
-        self.wid_filter_men_but = wid_but
+        return wid_ent
 
 
     def __create_spinbox_widgets(self, parent, grid_row, grid_col):
@@ -184,39 +187,42 @@ class TestControlWidget:
         wid_lab = tk.Label(parent, text="Repetitions:")
         wid_lab.grid(row=grid_row, column=grid_col+0, sticky="e", padx=10)
         wid_tool_tip.tool_tip_add(wid_lab, 'test_ctrl.repetitions')
-        self.wid_run_count = tk.Spinbox(
+        wid_run_count = tk.Spinbox(
             parent, from_=1, to=99999, increment=1, width=6,
             textvariable=self.var_opt_repetitions,
             validate="key", validatecommand=(validate_int_cmd, "%P"))
-        self.wid_run_count.grid(row=grid_row, column=grid_col+1, sticky="w", padx=10)
+        wid_run_count.grid(row=grid_row, column=grid_col+1, sticky="w", padx=10)
 
         wid_lab = tk.Label(parent, text="CPUs:")
         wid_lab.grid(row=grid_row, column=grid_col+2, sticky="e", padx=10)
         wid_tool_tip.tool_tip_add(wid_lab, 'test_ctrl.job_count')
-        self.wid_job_count = tk.Spinbox(
+        wid_job_count = tk.Spinbox(
             parent, from_=1, to=1024, increment=1, width=6,
             textvariable=self.var_opt_job_count,
             validate="key", validatecommand=(validate_int_cmd, "%P"))
-        self.wid_job_count.grid(row=grid_row, column=grid_col+3, sticky="w", padx=10)
+        wid_job_count.grid(row=grid_row, column=grid_col+3, sticky="w", padx=10)
         grid_row += 1
 
         wid_lab = tk.Label(parent, text="Fail limit:")
         wid_lab.grid(row=grid_row, column=grid_col+0, sticky="e", padx=10)
         wid_tool_tip.tool_tip_add(wid_lab, 'test_ctrl.max_fail')
-        self.wid_fail_limit = tk.Spinbox(
+        wid_fail_limit = tk.Spinbox(
             parent, from_=0, to=99999, increment=1, width=6,
             textvariable=self.var_opt_fail_max,
             validate="key", validatecommand=(validate_int_cmd, "%P"))
-        self.wid_fail_limit.grid(row=grid_row, column=grid_col+1, sticky="w", padx=10)
+        wid_fail_limit.grid(row=grid_row, column=grid_col+1, sticky="w", padx=10)
 
         wid_lab = tk.Label(parent, text="Ignore filter:")
         wid_lab.grid(row=grid_row, column=grid_col+2, sticky="e", padx=10)
         wid_tool_tip.tool_tip_add(wid_lab, 'test_ctrl.job_runall')
-        self.wid_job_runall = tk.Spinbox(
+        wid_job_runall = tk.Spinbox(
             parent, from_=0, to=1024, increment=1, width=6,
             textvariable=self.var_opt_job_runall,
             validate="key", validatecommand=(validate_int_cmd, "%P"))
-        self.wid_job_runall.grid(row=grid_row, column=grid_col+3, sticky="w", padx=10)
+        wid_job_runall.grid(row=grid_row, column=grid_col+3, sticky="w", padx=10)
+
+        # widgets that need to be disabled during running test campaign
+        self.state_dep_wids.extend([wid_run_count, wid_job_count, wid_fail_limit, wid_job_runall])
 
 
     def __create_option_widgets(self, parent, grid_row, grid_col):
@@ -224,64 +230,70 @@ class TestControlWidget:
         wid_lab.grid(row=grid_row, column=grid_col, sticky="e", padx=10)
 
         wid_frm = tk.Frame(parent)
-        self.wid_opt_clean_trace = tk.Checkbutton(
+        wid_opt_clean_trace = tk.Checkbutton(
             wid_frm, text="Clean traces of passed tests",
             variable=self.var_opt_clean_trace, command=self.__handle_option_change)
-        self.wid_opt_clean_trace.pack(side=tk.LEFT)
-        wid_tool_tip.tool_tip_add(self.wid_opt_clean_trace, 'test_ctrl.clean_trace')
+        wid_opt_clean_trace.pack(side=tk.LEFT)
+        wid_tool_tip.tool_tip_add(wid_opt_clean_trace, 'test_ctrl.clean_trace')
 
-        self.wid_opt_clean_core = tk.Checkbutton(
+        wid_opt_clean_core = tk.Checkbutton(
             wid_frm, text="Clean core files", variable=self.var_opt_clean_core,
             command=self.__handle_option_change)
-        self.wid_opt_clean_core.pack(side=tk.LEFT)
+        wid_opt_clean_core.pack(side=tk.LEFT)
         wid_frm.grid(row=grid_row, column=grid_col+1, sticky="w", padx=10)
-        wid_tool_tip.tool_tip_add(self.wid_opt_clean_core, 'test_ctrl.clean_core')
+        wid_tool_tip.tool_tip_add(wid_opt_clean_core, 'test_ctrl.clean_core')
         grid_row += 1
 
         wid_frm = tk.Frame(parent)
-        self.wid_opt_shuffle = tk.Checkbutton(
+        wid_opt_shuffle = tk.Checkbutton(
             wid_frm, text="Shuffle execution order", variable=self.var_opt_shuffle)
-        self.wid_opt_shuffle.pack(side=tk.LEFT)
-        wid_tool_tip.tool_tip_add(self.wid_opt_shuffle, 'test_ctrl.shuffle')
+        wid_opt_shuffle.pack(side=tk.LEFT)
+        wid_tool_tip.tool_tip_add(wid_opt_shuffle, 'test_ctrl.shuffle')
 
-        self.wid_opt_run_disabled = tk.Checkbutton(
+        wid_opt_run_disabled = tk.Checkbutton(
             wid_frm, text="Run disabled tests", variable=self.var_opt_run_disabled,
             command=self.__handle_run_disabled_change)
-        self.wid_opt_run_disabled.pack(side=tk.LEFT, padx=10)
+        wid_opt_run_disabled.pack(side=tk.LEFT, padx=10)
         wid_frm.grid(row=grid_row, column=grid_col+1, sticky="w", padx=10)
-        wid_tool_tip.tool_tip_add(self.wid_opt_run_disabled, 'test_ctrl.run_disabled')
+        wid_tool_tip.tool_tip_add(wid_opt_run_disabled, 'test_ctrl.run_disabled')
         grid_row += 1
 
         wid_frm = tk.Frame(parent)
-        self.wid_opt_break_on_fail = tk.Checkbutton(
+        wid_opt_break_on_fail = tk.Checkbutton(
             wid_frm, text="Break on failure", variable=self.var_opt_break_on_fail)
-        self.wid_opt_break_on_fail.pack(side=tk.LEFT)
-        wid_tool_tip.tool_tip_add(self.wid_opt_break_on_fail, 'test_ctrl.break_on_fail')
+        wid_opt_break_on_fail.pack(side=tk.LEFT)
+        wid_tool_tip.tool_tip_add(wid_opt_break_on_fail, 'test_ctrl.break_on_fail')
 
-        self.wid_opt_break_on_except = tk.Checkbutton(
+        wid_opt_break_on_except = tk.Checkbutton(
             wid_frm, text="Break on exception", variable=self.var_opt_break_on_except)
-        self.wid_opt_break_on_except.pack(side=tk.LEFT, padx=10)
+        wid_opt_break_on_except.pack(side=tk.LEFT, padx=10)
         wid_frm.grid(row=grid_row, column=grid_col+1, sticky="w", padx=10)
-        wid_tool_tip.tool_tip_add(self.wid_opt_break_on_except, 'test_ctrl.break_on_except')
+        wid_tool_tip.tool_tip_add(wid_opt_break_on_except, 'test_ctrl.break_on_except')
         grid_row += 1
 
         wid_frm = tk.Frame(parent)
-        self.wid_opt_valgrind1 = tk.Checkbutton(
+        wid_opt_valgrind1 = tk.Checkbutton(
             wid_frm, text="Valgrind",
             variable=self.var_opt_valgrind, offvalue=0, onvalue=1)
-        self.wid_opt_valgrind1.pack(side=tk.LEFT)
-        wid_tool_tip.tool_tip_add(self.wid_opt_valgrind1, 'test_ctrl.valgrind1')
+        wid_opt_valgrind1.pack(side=tk.LEFT)
+        wid_tool_tip.tool_tip_add(wid_opt_valgrind1, 'test_ctrl.valgrind1')
 
-        self.wid_opt_valgrind2 = tk.Checkbutton(
+        wid_opt_valgrind2 = tk.Checkbutton(
             wid_frm, text="Valgrind - 2nd option set",
             variable=self.var_opt_valgrind, offvalue=0, onvalue=2)
-        self.wid_opt_valgrind2.pack(side=tk.LEFT)
+        wid_opt_valgrind2.pack(side=tk.LEFT)
         wid_frm.grid(row=grid_row, column=grid_col+1, sticky="w", padx=10)
-        wid_tool_tip.tool_tip_add(self.wid_opt_valgrind2, 'test_ctrl.valgrind2')
+        wid_tool_tip.tool_tip_add(wid_opt_valgrind2, 'test_ctrl.valgrind2')
         grid_row += 1
+
+        # widgets that need to be disabled during running test campaign
+        self.state_dep_wids.extend([wid_opt_shuffle, wid_opt_run_disabled, wid_opt_break_on_fail,
+                                    wid_opt_break_on_except, wid_opt_valgrind1, wid_opt_valgrind2])
 
 
     def __create_control_buttons(self, parent, grid_row, grid_col):
+        # This method is only called within __init__
+        # pylint: disable=attribute-defined-outside-init
         width = max([tk_utils.font_normal.measure(x)
                      for x in ("Run", "Stop", "Resume", "Repeat")]) + 20
         wid_frm = tk.Frame(parent)
@@ -305,6 +317,8 @@ class TestControlWidget:
 
 
     def __create_status_widget(self, parent, grid_row, grid_col):
+        # This method is only called within __init__
+        # pylint: disable=attribute-defined-outside-init
         wid_frm = tk.LabelFrame(parent, text="Status", borderwidth=2, relief=tk.GROOVE)
 
         wid_lab = tk.Label(wid_frm, text="Running:")
@@ -330,6 +344,8 @@ class TestControlWidget:
 
 
     def __create_progress_widget(self, parent, grid_row, grid_col):
+        # This method is only called within __init__
+        # pylint: disable=attribute-defined-outside-init
         wid_frm = tk.LabelFrame(parent, text="Progress", borderwidth=2, relief=tk.GROOVE)
         self.wid_progress_frm = tk.Frame(wid_frm)
         self.wid_progress_bar = tk.Frame(self.wid_progress_frm, width=20,
@@ -340,6 +356,8 @@ class TestControlWidget:
 
 
     def __get_progress_tool_tip(self, xcoo, ycoo):
+        # abstract interface: unused parameter needed by other classes
+        # pylint: disable=unused-argument
         totals = test_db.campaign_stats
         if not totals[4]:
             return ""
@@ -426,20 +444,9 @@ class TestControlWidget:
                 self.wid_cmd_stop.configure(state=tk.DISABLED, cursor="top_left_arrow")
                 cmd_state = tk.NORMAL
 
-            for wid in (self.wid_cmd_run,
+            for wid in [self.wid_cmd_run,
                         self.wid_cmd_repeat,
-                        self.wid_tc_filter,
-                        self.wid_filter_men_but,
-                        self.wid_run_count,
-                        self.wid_fail_limit,
-                        self.wid_job_count,
-                        self.wid_job_runall,
-                        self.wid_opt_shuffle,
-                        self.wid_opt_run_disabled,
-                        self.wid_opt_break_on_fail,
-                        self.wid_opt_break_on_except,
-                        self.wid_opt_valgrind1,
-                        self.wid_opt_valgrind2):
+                        self.wid_tc_filter] + self.state_dep_wids:
                 wid.configure(state=cmd_state)
 
             if tests_active or (self.prev_campaign_options is None):
@@ -564,20 +571,31 @@ class TestControlWidget:
 
 
     def __toggle_tc(self, tc_name):
-        expr = filter_expr.FilterExpr(self.var_opt_filter.get(), self.var_opt_run_disabled.get())
-        expr.select_test_cases([tc_name], self.var_men_chkb[tc_name].get())
-        self.var_opt_filter.set(expr.get_expr())
-        if self.slot_filter_change:
-            self.slot_filter_change(expr)
+        """ Add or remove a single given test case name from the test case filter expression. """
+        if not gtest_ctrl.gtest_ctrl.is_active():
+            expr = filter_expr.FilterExpr(self.var_opt_filter.get(),
+                                          self.var_opt_run_disabled.get())
+            expr.select_test_cases([tc_name], self.var_men_chkb[tc_name].get())
+            self.var_opt_filter.set(expr.get_expr())
+            if self.slot_filter_change:
+                self.slot_filter_change(expr)
+        else:
+            tk_messagebox.showerror(parent=self.tk_top,
+                                    message="Cannot modify filter during running campaign.")
 
 
     def select_tcs(self, tc_names, enable):
-        """ Add or remove the given test case names from the test case filter expression. """
-        expr = filter_expr.FilterExpr(self.var_opt_filter.get(), self.var_opt_run_disabled.get())
-        expr.select_test_cases(tc_names, enable)
-        self.var_opt_filter.set(expr.get_expr())
-        if self.slot_filter_change:
-            self.slot_filter_change(expr)
+        """ Add or remove all given test case names from the test case filter expression. """
+        if not gtest_ctrl.gtest_ctrl.is_active():
+            expr = filter_expr.FilterExpr(self.var_opt_filter.get(),
+                                          self.var_opt_run_disabled.get())
+            expr.select_test_cases(tc_names, enable)
+            self.var_opt_filter.set(expr.get_expr())
+            if self.slot_filter_change:
+                self.slot_filter_change(expr)
+        else:
+            tk_messagebox.showerror(parent=self.tk_top,
+                                    message="Cannot modify filter during running campaign.")
 
 
     def get_test_filter_expr(self):

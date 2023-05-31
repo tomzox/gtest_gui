@@ -9,7 +9,6 @@ gtest:
 - import of trace: executable file & timestamp is unknown:
   Add "info" file to directory, or encode name in sub-directory path (hash);
   prerequisite: allow only one exe per directory even if timestamp equal
-- handle I/O error in trace writing
 - after crash: check if core dump is enabled, add warning to trace file
 - if /proc/sys/kernel/core_pattern pipes to apport: copy core from /var/lib/apport/coredump/
 - unit-test on many CPUs: GUI is overloaded => throttle updates of result log

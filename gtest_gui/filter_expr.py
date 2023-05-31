@@ -199,7 +199,8 @@ def match_name(tc_name, pat):
     Check if the given string matches the given pattern containing "*" and "?"
     wildcards.
     """
-    # TODO convert glob pattern to regexp
+    # Use Tcl for matching on pattern with "*" and "?" wildcards
+    # (Converting to reg-exp would require escaping possible other special chars)
     return tk_utils.tk_top.call("string", "match", pat, tc_name)
 
 

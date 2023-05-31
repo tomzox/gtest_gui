@@ -90,7 +90,7 @@ class JobListDialog:
         self.wid_top.wm_title("GtestGui: Test job list")
         self.wid_top.wm_group(self.tk_top)
 
-        self.__create_table_widget()
+        self.wid_table, self.wid_header = self.__create_table_widget()
 
         self.wid_top.bind("<ButtonRelease-3>", lambda e: self.__post_context_menu(e.widget,
                                                                                   e.x, e.y))
@@ -135,8 +135,7 @@ class JobListDialog:
         wid_header.bindtags([wid_header, self.wid_top, "all"])
         wid_table.bindtags([wid_table, self.wid_top, "TextSel", "all"])
 
-        self.wid_table = wid_table
-        self.wid_header = wid_header
+        return (wid_table, wid_header)
 
 
     def __update_column_widths(self):
@@ -228,6 +227,8 @@ class JobListDialog:
 
 
     def __handle_selection_change(self, sel):
+        # abstract interface: unused parameter needed by other classes
+        # pylint: disable=unused-argument
         self.sel_obj.text_sel_copy_clipboard(False)
 
 

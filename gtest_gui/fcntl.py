@@ -34,13 +34,13 @@ if sys.platform == "win32":
         Configure the given pipe handle to be non-blocking when reading from
         it, equivalently to O_NONBLOCK on POSIX platform.
         """
-        SetNamedPipeHandleState = windll.kernel32.SetNamedPipeHandleState
-        SetNamedPipeHandleState.argtypes = [HANDLE, LPDWORD, LPDWORD, LPDWORD]
-        SetNamedPipeHandleState.restype = BOOL
+        set_named_pipe_handle_state = windll.kernel32.set_named_pipe_handle_state
+        set_named_pipe_handle_state.argtypes = [HANDLE, LPDWORD, LPDWORD, LPDWORD]
+        set_named_pipe_handle_state.restype = BOOL
 
         handle = msvcrt.get_osfhandle(pipe.fileno())
 
-        res = windll.kernel32.SetNamedPipeHandleState(handle, byref(PIPE_NOWAIT), None, None)
+        res = windll.kernel32.set_named_pipe_handle_state(handle, byref(PIPE_NOWAIT), None, None)
         if res == 0:
             raise OSError(GetLastError(), WinError())
 

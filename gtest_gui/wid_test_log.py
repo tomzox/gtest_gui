@@ -73,7 +73,16 @@ class TestLogWidget:
         self.opt_filter_exe_ts = 0
         self.opt_filter_tc_names = None
         self.log_idx_map = []
-        # further attributes added by sub-functions: child widgets
+
+        self.var_opt_sort_tc_name = tk.BooleanVar(self.tk_top, False)
+        self.var_opt_sort_seed = tk.BooleanVar(self.tk_top, False)
+        self.var_opt_sort_duration = tk.BooleanVar(self.tk_top, False)
+        self.var_opt_sort_exception = tk.BooleanVar(self.tk_top, False)
+
+        self.var_opt_filter_pass = tk.BooleanVar(self.tk_top, False)
+        self.var_opt_filter_exe_name = tk.BooleanVar(self.tk_top, False)
+        self.var_opt_filter_exe_ts = tk.BooleanVar(self.tk_top, False)
+        self.var_opt_filter_tc_name = tk.BooleanVar(self.tk_top, False)
 
         self.wid_pane = tk.PanedWindow(parent, orient=tk.VERTICAL)
         self.__create_log_widget(self.wid_pane)
@@ -152,16 +161,6 @@ class TestLogWidget:
         Populates the given menu (which is part of the main menubar) with
         commands operating on the result log widget.
         """
-        self.var_opt_sort_tc_name = tk.BooleanVar(self.tk_top, False)
-        self.var_opt_sort_seed = tk.BooleanVar(self.tk_top, False)
-        self.var_opt_sort_duration = tk.BooleanVar(self.tk_top, False)
-        self.var_opt_sort_exception = tk.BooleanVar(self.tk_top, False)
-
-        self.var_opt_filter_pass = tk.BooleanVar(self.tk_top, False)
-        self.var_opt_filter_exe_name = tk.BooleanVar(self.tk_top, False)
-        self.var_opt_filter_exe_ts = tk.BooleanVar(self.tk_top, False)
-        self.var_opt_filter_tc_name = tk.BooleanVar(self.tk_top, False)
-
         wid_men.add_checkbutton(label="Show only failed results",
                                 command=self.__toggle_verdict_filter,
                                 variable=self.var_opt_filter_pass)
