@@ -1,7 +1,7 @@
 General:
-- pylint
-- code comments
-- test suite at least for filter_expr & gtest parser
+- extend code comments
+- refactor according to remaining pylint warnings
+- test suite at least for filter_expr & gtest sharding & gtest parser
 
 gtest:
 - clean-up at shutdown: delete traces from file that were deleted from result log
@@ -32,6 +32,7 @@ wid_test_ctrl:
 wid_test_log:
 - menu for result mgmt: remove selected, all old passed, all filtered;
 - when removing traces: rewrite trace files to actually remove text?
+  problem: cannot be done while test campaign is running for that file
   OR: new command for "compressing" trace files
 - add key binding for toggling repetition mark on selected test cases
 - allow adding bookmark / attaching note to result log entries

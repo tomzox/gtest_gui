@@ -162,36 +162,44 @@ class TestLogWidget:
         commands operating on the result log widget.
         """
         wid_men.add_checkbutton(label="Show only failed results",
+                                tooltip="result_log.filter_failed",
                                 command=self.__toggle_verdict_filter,
                                 variable=self.var_opt_filter_pass)
         wid_men.add_checkbutton(label="Show only results from current exe. file",
+                                tooltip="result_log.filter_exe_file",
                                 command=self.__toggle_exe_name_filter,
                                 variable=self.var_opt_filter_exe_name)
-        wid_men.add_checkbutton(label="Show only results from current exe. version",
+        wid_men.add_checkbutton(label="Show only results from selected exe. version",
+                                tooltip="result_log.filter_exe_version",
                                 command=self.__toggle_exe_ts_filter,
                                 variable=self.var_opt_filter_exe_ts)
         wid_men.add_checkbutton(label="Show only selected test cases",
+                                tooltip="result_log.filter_tc_name",
                                 command=self.__toggle_tc_name_filter,
                                 variable=self.var_opt_filter_tc_name)
         wid_men.add_separator()
 
         wid_men.add_checkbutton(
             label="Sort by test case name",
+            tooltip="result_log.sort_tc_name",
             command=lambda: self.__toggle_sort_mode(self.var_opt_sort_tc_name.get(),
                                                     SortMode.by_name),
             variable=self.var_opt_sort_tc_name)
         wid_men.add_checkbutton(
             label="Sort by seed",
+            tooltip="result_log.sort_seed",
             command=lambda: self.__toggle_sort_mode(self.var_opt_sort_seed.get(),
                                                     SortMode.by_seed),
             variable=self.var_opt_sort_seed)
         wid_men.add_checkbutton(
             label="Sort by duration",
+            tooltip="result_log.sort_duration",
             command=lambda: self.__toggle_sort_mode(self.var_opt_sort_duration.get(),
                                                     SortMode.by_duration),
             variable=self.var_opt_sort_duration)
         wid_men.add_checkbutton(
             label="Sort by failure type",
+            tooltip="result_log.sort_failure",
             command=lambda: self.__toggle_sort_mode(self.var_opt_sort_exception.get(),
                                                     SortMode.by_failure),
             variable=self.var_opt_sort_exception)

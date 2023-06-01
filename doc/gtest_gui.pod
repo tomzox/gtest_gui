@@ -34,18 +34,19 @@ B<gtest_gui> [[-trace] trace_file | executable] ...
 
 =head1 DESCRIPTION
 
-B<Module-tester's GtestGui> is a full-featured graphical user-interface to C++
-test applications using the GoogleTest framework.
+B<Module-tester's GtestGui> is a test-runner with graphical user-interface
+for C++ test applications using the GoogleTest framework.
 
-The tool will work with any application with Gtest command line interface,
-however it is designed especially for C++ developers using test-driven design based on
-module testing and integration testing. These differ from unit-testing by longer
-execution times and usually not fully predictable results, which in turn
-require multiple repetitions of each test case. To support this well, GtestGui
-offers firstly easily accessible ways for test case filtering and concurrent
-scheduling across multiple CPUs; Secondly, there are multiple features for
-tracking progress and managing results via sorting and filtering, which are
-fully usable already while a test campaign still is in progress.
+GtestGui will work with any application that implements the Gtest command line
+interface, however it is designed especially for C++ developers using
+test-driven design based on module testing and integration testing. These
+differ from unit-testing by longer execution times and usually not fully
+predictable results (i.e. "flakiness"), which in turn require multiple
+repetitions of each test case. To support this well, GtestGui offers firstly
+easily accessible ways for test case filtering and concurrent scheduling across
+multiple CPUs; Secondly, there are multiple features for tracking progress and
+managing results via sorting and filtering, which are fully usable already
+while a test campaign still is in progress.
 
 GtestGui typically is started with the path of an executable on the command
 line which is built using the gtest library. Using the "Run" button in the GUI,
@@ -426,26 +427,55 @@ shown in the trace preview frame below the result log. In case of a test case
 failure, the view is centered on the first line containing "Failure" and the
 text is marked by light red background.
 
-When clicking on an entry with the right mouse button, a context menu opens that
-allow opening the trace file, adding or removing the selected test case from the
-filter option, scheduling a test for repetition, excluding a result from the log
-display, or removing results.
+Double-clicking on an entry opens the trace of that entry in an external
+application, which can be selected via the Configuration dialog. Default
+application is "trace browser", a text browser with syntax highlighting and
+search and filtering capabilities especially tailored for trace analysis.
+As GTest writes trace output of all test cases into a single file, only the
+portion between "C<[ RUN ]>" and "C<[ OK ]>" or "C<[ FAILED ]>" respectively of
+the selected test case is extracted and passed to the application.
+
+When clicking on an entry with the right mouse button, a context menu opens
+that allow opening the trace file, adding or removing the selected test case
+from the filter option, scheduling a test for repetition, excluding a result
+from the log display, or removing results. The context menu also has an entry
+for sending the complete trace file to the external trace browser application;
+This may be needed in rare cases when behavior of a test case depends on the
+sequence of preceding tests.
 
 Additional commands are offered in the "Result log" drop-down of the main window
 menu. The commands allow sorting and filtering the result log by various
-criteria.
+criteria. By default, log entries are sorted by the time they were created at.
+When running a test campaign, it's recommended to enabled the I<Show only failed>
+filter, so that it's easy to track which test cases failed.
 
-On UNIX platform, the context menu additionally supports extracting a thread
-overview and stack-trace (backtrace) of each thread from a core dump in case of
-a crash during execution of a test case. To allow this,
-F</proc/sys/kernel/core_pattern> needs to be configured as "C<core.%p>", or
-alternatively as "C<core>", when additionally F</proc/sys/kernel/core_uses_pid>
-is set to "1". If GtestGui thus finds a file named "core.PID" with PID matching
-that of the test executable process after a process crashed, it will
-automatically preserve that core file for analysis by renaming it and moving it
-into the directory where trace text output files are stored. It will also
-preserve the executable file version by keeping a hard link to the same
-executable.
+While a test campaign is running, new result entries are added at the bottom
+(when in default sort order) and the view is scrolled automatically to keep the
+added entry visible. This auto-scrolling can be stopped by selecting any entry
+in the list. To return to auto-scrolling, deselect the last entry either by
+clicking on it while holding the I<Control> key, or by clicking in the empty
+line at the end of the list.
+
+Result entries can be deleted using the context menu or by pressing the
+I<Delete> key. To delete all entries, press I<Control-A> (i.e. select complete
+list) and then I<Delete>. Note actual trace files are removed from disk only if
+all test case results stored in it have been deleted from the log.
+
+=head2 Core dump analysis (POSIX platforms)
+
+On UNIX platform, when selecting the result of a test case that caused a crash
+of the test process, the context menu has an entry that allows analyzing the
+generated core dump file. The Analysis consists of a thread overview and
+stack-trace (backtrace) of each thread.
+
+To allow this, F</proc/sys/kernel/core_pattern> needs to be configured as
+"C<core.%p>", or alternatively as "C<core>", when additionally
+F</proc/sys/kernel/core_uses_pid> is set to "1". If GtestGui thus finds a file
+named "core.PID" with PID matching that of the test executable process after a
+process crashed, it will automatically preserve that core file for analysis by
+renaming it and moving it into the directory where trace text output files are
+stored. It will also preserve the executable file version by keeping a hard link
+to the same executable.
 
 =head1 TEST CASE LIST DIALOG
 
@@ -573,6 +603,9 @@ sufficiently familiar with the tool.
 =back
 
 =head2 Test management options
+
+The following configuration options are available in the I<Options> dialog
+window that can be opened via the I<Configure> menu:
 
 =over 4
 
