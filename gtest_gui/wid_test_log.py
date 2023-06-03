@@ -287,11 +287,12 @@ class TestLogWidget:
 
     def update_repetition_status(self, tc_name):
         """ Updates the result log after a change of the given test case's repetiton status. """
+        match_fn = self.__get_filter_match_fn()
         for idx in range(len(self.log_idx_map)):
             log_idx = self.log_idx_map[idx]
             log = test_db.test_results[log_idx]
             if log[0] == tc_name:
-                if self.__matches_filter(log):
+                if match_fn(log):
                     self.__update_log_line(idx, log_idx)
                 else:
                     self.__remove_log_line(idx)
@@ -408,8 +409,9 @@ class TestLogWidget:
         """
         self.wid_log.delete("1.0", "end")
 
+        match_fn = self.__get_filter_match_fn()
         logs = [idx for idx in range(len(test_db.test_results))
-                if self.__matches_filter(test_db.test_results[idx])]
+                if match_fn(test_db.test_results[idx])]
 
         self.log_idx_map = self.__sort_idx_map(logs)
 
@@ -500,6 +502,9 @@ class TestLogWidget:
 
 
     def __matches_filter(self, log):
+        """
+        Check if the given resultlog entry matches current result log filter configuration.
+        """
         return (((not self.var_opt_filter_pass.get()) or
                  (log[3] >= 2)) and
                 ((not self.var_opt_filter_exe_name.get()) or
@@ -510,20 +515,74 @@ class TestLogWidget:
                  (log[0] in self.opt_filter_tc_names)))
 
 
+    def __get_filter_match_fn(self):
+        """
+        Returns a lambda function that when invoked, performs an equivalent
+        check as function __matches_filter(). This should be used when
+        filtering is done on many log items in a loop. Using the returned
+        lambda is faster than calling the generic filter function directly, as
+        it performs fewer comparisons.
+        """
+        filter_pass = self.var_opt_filter_pass.get()
+        filter_exe_name = self.var_opt_filter_exe_name.get()
+        filter_exe_ts = self.var_opt_filter_exe_ts.get()
+        filter_tc_name = self.var_opt_filter_tc_name.get()
+
+        nof_filters = sum((filter_pass, filter_exe_name, filter_exe_ts, filter_tc_name))
+
+        if nof_filters == 0:
+            return lambda log: True
+
+        if nof_filters == 1:
+            if filter_pass:
+                return lambda log: (log[3] >= 2)
+            if filter_exe_name:
+                return lambda log, exe_name=test_db.test_exe_name: (log[1] == exe_name)
+            if filter_exe_ts:
+                return lambda log, \
+                              exe_ts=self.opt_filter_exe_ts, \
+                              exe_name=test_db.test_exe_name: \
+                                ((log[2] >= exe_ts) and (log[1] == exe_name))
+            # else: filter_tc_name
+            return lambda log, names=self.opt_filter_tc_names: (log[0] in names)
+
+        # else: nof_filters > 1
+        return lambda log, \
+                      exe_ts=self.opt_filter_exe_ts, \
+                      exe_name=test_db.test_exe_name, \
+                      names=self.opt_filter_tc_names: \
+                ((not filter_pass or (log[3] >= 2)) and
+                 (not filter_exe_name or (log[1] == exe_name)) and
+                 (not filter_exe_ts or ((log[2] >= exe_ts) and (log[1] == exe_name))) and
+                 (not filter_tc_name or (log[0] in names)))
+
+
     def __toggle_verdict_filter(self):
         self.__refill_log(restore_selection=True)
 
 
     def __toggle_exe_name_filter(self):
-        self.__refill_log(restore_selection=True)
+        if test_db.test_exe_name:
+            self.__refill_log(restore_selection=True)
+
+        else:
+            self.var_opt_filter_exe_name.set(False)
+            msg = "No executable selected yet. Please select one via the Control menu."
+            tk_messagebox.showerror(parent=self.tk_top, message=msg)
 
 
     def __toggle_exe_ts_filter(self, exe_ts=None):
-        if not exe_ts:
-            exe_ts = test_db.test_exe_ts
+        if exe_ts or test_db.test_exe_name:
+            if not exe_ts:
+                exe_ts = test_db.test_exe_ts
 
-        self.opt_filter_exe_ts = exe_ts
-        self.__refill_log(restore_selection=True)
+            self.opt_filter_exe_ts = exe_ts
+            self.__refill_log(restore_selection=True)
+
+        elif self.var_opt_filter_exe_ts.get():
+            self.var_opt_filter_exe_ts.set(False)
+            msg = "No executable selected yet. Please select one via the Control menu."
+            tk_messagebox.showerror(parent=self.tk_top, message=msg)
 
 
     def __toggle_tc_name_filter(self, tc_names=None):
@@ -712,12 +771,7 @@ class TestLogWidget:
 
 
     def __do_remove_filtered_results(self):
-        idx_list = []
-        for idx in range(len(test_db.test_results)):
-            log = test_db.test_results[idx]
-            if not self.__matches_filter(log):
-                idx_list.append(idx)
-
+        idx_list = set(range(len(test_db.test_results))) - set(self.log_idx_map)
         if idx_list:
             self.__remove_trace_files(idx_list)
         else:
