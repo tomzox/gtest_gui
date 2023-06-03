@@ -271,8 +271,8 @@ class TestLogWidget:
                                                         self.__get_sort_key_fn())
                 self.log_idx_map.insert(list_idx, log_idx)
             else:
+                list_idx = len(self.log_idx_map)
                 self.log_idx_map.append(log_idx)
-                list_idx = len(test_db.test_results) - 1
 
             txt = self.__format_log_line(log_idx)
 
@@ -281,7 +281,7 @@ class TestLogWidget:
 
             if self.sel_obj.text_sel_get_selection():
                 self.sel_obj.text_sel_adjust_insert(list_idx)
-            else:
+            elif not self.opt_sort_modes:
                 self.wid_log.see(line)
 
 
@@ -415,9 +415,12 @@ class TestLogWidget:
 
         self.log_idx_map = self.__sort_idx_map(logs)
 
+        content = []
         for log_idx in self.log_idx_map:
-            txt = self.__format_log_line(log_idx)
-            self.wid_log.insert("end", *txt)
+            content.extend(self.__format_log_line(log_idx))
+        if content:
+            # pylint: disable=no-value-for-parameter # false positive b/c content never empty
+            self.wid_log.insert("end", *content)
 
 
     def __refill_log(self, restore_view=False, restore_selection=False):
@@ -781,48 +784,61 @@ class TestLogWidget:
 
     def __remove_trace_files(self, idx_list):
         idx_list = sorted(idx_list)
-        rm_files = set()
+        rm_trace_files = set()
+        rm_core_files = set()
         rm_exe = set()
         rm_idx = 0
-        used_files = set()
+        used_trace_files = set()
         used_exe = set()
         for idx in range(len(test_db.test_results)):
             log = test_db.test_results[idx]
             if idx == idx_list[rm_idx]:
                 if log[4] and log[13] != 2:  # never remove traces imported via cmd line
-                    rm_files.add(log[4])
+                    rm_trace_files.add(log[4])
                 if log[7]:
-                    rm_files.add(log[7])
+                    rm_core_files.add(log[7])
                     if log[1]:
                         rm_exe.add((log[1], log[2]))
                 if rm_idx + 1 < len(idx_list):
                     rm_idx += 1
             else:
                 if log[4]:
-                    used_files.add(log[4])
-                if log[7]:
-                    used_files.add(log[7])
-                    if log[1]:
-                        used_exe.add((log[1], log[2]))
+                    used_trace_files.add(log[4])
+                if log[7] and log[1]:
+                    used_exe.add((log[1], log[2]))
 
-        rm_files -= used_files
-        rm_files -= gtest_ctrl.gtest_ctrl.get_out_file_names()
+        rm_trace_files -= used_trace_files
+        rm_trace_files -= gtest_ctrl.gtest_ctrl.get_out_file_names()
 
         rm_exe -= used_exe
         rm_exe.discard((test_db.test_exe_name, test_db.test_exe_ts))
 
         count = len(idx_list)
         if count == 1:
-            msg = "Really remove this result log entry"
+            msg = "Really remove this result log entry?"
         else:
-            msg = "Really remove %d result log entries" % count
+            msg = "Really remove %d result log entries?" % count
 
-        if len(rm_files) == 1:
-            msg += " and their trace output file"
-        elif rm_files:
-            msg += " and %d trace output and core dump files" % len(rm_files)
+        if rm_trace_files or rm_core_files:
+            msg += " This will also remove "
 
-        msg += "? (This cannot be undone.)"
+            if len(rm_trace_files) == 1:
+                msg += "one trace output file"
+            elif rm_trace_files:
+                msg += "%d trace files" % len(rm_trace_files)
+
+            if rm_core_files and rm_trace_files:
+                msg += " and "
+
+            if len(rm_core_files) == 1:
+                msg += "one core dump file"
+            elif rm_core_files:
+                msg += "%d core dump files" % len(rm_core_files)
+
+            msg += "."
+
+        msg += " (This cannot be undone.)"
+
         answer = tk_messagebox.askokcancel(parent=self.tk_top, message=msg)
         if answer:
             if len(idx_list) == 1:
@@ -830,7 +846,7 @@ class TestLogWidget:
             else:
                 self.__delete_multiple_results(idx_list)
 
-            trace_db.remove_trace_or_core_files(rm_files, rm_exe)
+            trace_db.remove_trace_or_core_files(rm_trace_files, rm_exe)
 
 
     def __check_tc_names_in_exe(self, sel):
