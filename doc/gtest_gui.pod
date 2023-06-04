@@ -461,21 +461,26 @@ I<Delete> key. To delete all entries, press I<Control-A> (i.e. select complete
 list) and then I<Delete>. Note actual trace files are removed from disk only if
 all test case results stored in it have been deleted from the log.
 
-=head2 Core dump analysis (POSIX platforms)
+=head2 Post-mortem core dump analysis
 
-On UNIX platform, when selecting the result of a test case that caused a crash
-of the test process, the context menu has an entry that allows analyzing the
-generated core dump file. The Analysis consists of a thread overview and
-stack-trace (backtrace) of each thread.
+POSIX platforms only: When selecting the result of a test case that caused a
+crash of the test process, the context menu has an entry that allows analyzing
+the generated core dump file. The Analysis consists of a thread overview and
+stack-trace (backtrace) of each thread. This allows finding quickly at which
+test step the crash occurred.
 
 To allow this, F</proc/sys/kernel/core_pattern> needs to be configured as
 "C<core.%p>", or alternatively as "C<core>", when additionally
-F</proc/sys/kernel/core_uses_pid> is set to "1". If GtestGui thus finds a file
-named "core.PID" with PID matching that of the test executable process after a
-process crashed, it will automatically preserve that core file for analysis by
-renaming it and moving it into the directory where trace text output files are
-stored. It will also preserve the executable file version by keeping a hard link
-to the same executable.
+F</proc/sys/kernel/core_uses_pid> is set to "1". This way, a file named
+"C<core.PID>" will be created by the operating system in the directory where
+GtestGui was started.
+
+If GtestGui thus finds a core file with a matching process ID after a process
+crashed, it will automatically preserve that core file for analysis by moving
+it into the directory where trace text output files are stored and renaming it
+to the same name of the corresponding trace file with prefix "core". It will
+also preserve the executable file version by keeping a hard link to the same
+executable in the trace directory for as long as the core file exists.
 
 =head1 TEST CASE LIST DIALOG
 

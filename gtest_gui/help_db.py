@@ -20,7 +20,7 @@ HELP_SECTIONS = {
     (1, 3): '''Test case filter''',
     (1, 4): '''Test control options''',
     (1, 5): '''Status and progress monitoring''',
-    (2, 1): '''Core dump analysis (POSIX platforms)''',
+    (2, 1): '''Post-mortem core dump analysis''',
     (5, 1): '''User-interface options''',
     (5, 2): '''Test management options''',
 }
@@ -120,9 +120,10 @@ HELP_TEXTS = [
 ''', ''), ('''Additional commands are offered in the "Result log" drop-down of the main window menu. The commands allow sorting and filtering the result log by various criteria. By default, log entries are sorted by the time they were created at. When running a test campaign, it's recommended to enabled the ''', ''), ('''Show only failed''', 'underlined'), (''' filter, so that it's easy to track which test cases failed.
 ''', ''), ('''While a test campaign is running, new result entries are added at the bottom (when in default sort order) and the view is scrolled automatically to keep the added entry visible. This auto-scrolling can be stopped by selecting any entry in the list. To return to auto-scrolling, deselect the last entry either by clicking on it while holding the ''', ''), ('''Control''', 'underlined'), (''' key, or by clicking in the empty line at the end of the list.
 ''', ''), ('''Result entries can be deleted using the context menu or by pressing the ''', ''), ('''Delete''', 'underlined'), (''' key. To delete all entries, press ''', ''), ('''Control-A''', 'underlined'), (''' (i.e. select complete list) and then ''', ''), ('''Delete''', 'underlined'), ('''. Note actual trace files are removed from disk only if all test case results stored in it have been deleted from the log.
-''', ''), ('''Core dump analysis (POSIX platforms)''', 'title2'), ('''
-''', ''), ('''On UNIX platform, when selecting the result of a test case that caused a crash of the test process, the context menu has an entry that allows analyzing the generated core dump file. The Analysis consists of a thread overview and stack-trace (backtrace) of each thread.
-''', ''), ('''To allow this, ''', ''), ('''/proc/sys/kernel/core_pattern''', 'underlined'), (''' needs to be configured as "''', ''), ('''core.%p''', 'fixed'), ('''", or alternatively as "''', ''), ('''core''', 'fixed'), ('''", when additionally ''', ''), ('''/proc/sys/kernel/core_uses_pid''', 'underlined'), (''' is set to "1". If GtestGui thus finds a file named "core.PID" with PID matching that of the test executable process after a process crashed, it will automatically preserve that core file for analysis by renaming it and moving it into the directory where trace text output files are stored. It will also preserve the executable file version by keeping a hard link to the same executable.
+''', ''), ('''Post-mortem core dump analysis''', 'title2'), ('''
+''', ''), ('''POSIX platforms only: When selecting the result of a test case that caused a crash of the test process, the context menu has an entry that allows analyzing the generated core dump file. The Analysis consists of a thread overview and stack-trace (backtrace) of each thread.
+''', ''), ('''To allow this, ''', ''), ('''/proc/sys/kernel/core_pattern''', 'underlined'), (''' needs to be configured as "''', ''), ('''core.%p''', 'fixed'), ('''", or alternatively as "''', ''), ('''core''', 'fixed'), ('''", when additionally ''', ''), ('''/proc/sys/kernel/core_uses_pid''', 'underlined'), (''' is set to "1". This way, a file named "''', ''), ('''core.PID''', 'fixed'), ('''" will be created by the operating system in the directory where GtestGui was started.
+''', ''), ('''If GtestGui thus finds a core file with a matching process ID after a process crashed, it will automatically preserve that core file for analysis by moving it into the directory where trace text output files are stored and renaming it to the same name of the corresponding trace file with prefix "core". It will also preserve the executable file version by keeping a hard link to the same executable in the trace directory for as long as the core file exists.
 ''', ''), ),
     (('''Test case list dialog''', 'title1'), ('''
 ''', ''), ('''A dialog showing the list of test cases read from the selected executable file can be opened via the control menu.

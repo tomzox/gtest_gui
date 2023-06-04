@@ -25,6 +25,7 @@ from datetime import datetime
 import os
 import re
 import time
+import sys
 
 import tkinter as tk
 from tkinter import messagebox as tk_messagebox
@@ -234,7 +235,8 @@ class TestControlWidget:
         wid_opt_clean_trace = tk.Checkbutton(
             wid_frm, text="Clean traces of passed tests",
             variable=self.var_opt_clean_trace, command=self.__handle_option_change)
-        wid_opt_clean_trace.pack(side=tk.LEFT)
+        if sys.platform != "win32":
+            wid_opt_clean_trace.pack(side=tk.LEFT)
         wid_tool_tip.tool_tip_add(wid_opt_clean_trace, 'test_ctrl.clean_trace')
 
         wid_opt_clean_core = tk.Checkbutton(
@@ -283,7 +285,8 @@ class TestControlWidget:
             wid_frm, text="Valgrind - 2nd option set",
             variable=self.var_opt_valgrind, offvalue=0, onvalue=2)
         wid_opt_valgrind2.pack(side=tk.LEFT)
-        wid_frm.grid(row=grid_row, column=grid_col+1, sticky="w", padx=10)
+        if sys.platform != "win32":
+            wid_frm.grid(row=grid_row, column=grid_col+1, sticky="w", padx=10)
         wid_tool_tip.tool_tip_add(wid_opt_valgrind2, 'test_ctrl.valgrind2')
         grid_row += 1
 

@@ -27,7 +27,6 @@ wid_test_ctrl:
 - enhance popup_test_list for case that there's single test suite
 - option to make tc filter-string case-independent? (problem: gtest compatibility)
 - remote control for campaign start/stop for use in IDE build
-- win32: hide core & valgrind options
 
 wid_test_log:
 - menu for result mgmt: remove selected, all old passed, all filtered;
@@ -41,6 +40,7 @@ dlg_browser:
 - trowser command argv: use shell if cmd contains space or special chars; check if escape needed
   or add config option
 - export trace files in other archive formats, or uncompressed to directory
+- make gdb command used for core dump analysis configurable
 
 dlg_config:
 - extend option for cleaning trace upon exit: Radiobutton all/failed-only/ask
@@ -48,7 +48,6 @@ dlg_config:
 - add option: Reg.exp. for extracting failure line
   requires to parse all traces after changing expression to update file/line of exception
 - upon window close: ask for saving pending changes
-- win32: move configuration file to proper config tree (instead of using working directory)
 
 filter_expr:
 - use wildcard at front or middle to minimize name length

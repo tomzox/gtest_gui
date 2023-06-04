@@ -38,6 +38,13 @@ from tkinter import messagebox as tk_messagebox
 
 import gtest_gui.tk_utils as tk_utils
 
+# Module "appdirs" is required on Windows to learn the directory where to store
+# application configuration files. Install the module via "pip3 install appdirs"
+# if the import fails. (Alternatively, you could replace the one function call
+# into the module with a hard-coded path.)
+if sys.platform == "win32":
+    import appdirs
+
 #
 # Database of configuration options and other persistent state to be written to
 # the configuration file. Default values assigned here are overridden when
@@ -179,8 +186,12 @@ def __get_rc_file_path():
         os.makedirs(os.path.dirname(rc_file), exist_ok=True)
 
     else:
-        # TODO where to store config on MS Windows platform
-        rc_file = "gtest_gui.ini"
+        # Query system library for the common path for application configuration.
+        # e.g. on Win10: C:\Users\USERNAME\AppData\Local\GtestGui (hidden directory)
+        config_dir = appdirs.user_config_dir(appname="GtestGui", appauthor=False)
+        os.makedirs(config_dir, exist_ok=True)
+
+        rc_file = os.path.join(config_dir, "gtest_gui.rc")
 
     return rc_file
 

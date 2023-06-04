@@ -19,7 +19,8 @@ setup(
     packages=['gtest_gui'],
     scripts=['bin/gtest_gui'],
 
-    install_requires=['trowser'],
+    install_requires=['trowser',
+                      'appdirs ; platform_system=="Windows"'],
 
     author='T. Zoerner',
     author_email='tomzox@gmail.com',
