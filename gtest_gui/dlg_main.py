@@ -389,7 +389,7 @@ class MainWindow:
                             font=tk_utils.font_bold)
         wid_lab1.pack(side=tk.TOP, pady=5)
 
-        wid_lab2 = tk.Label(wid_about, text="Version 0.8.1\n"
+        wid_lab2 = tk.Label(wid_about, text="Version 0.9.0\n"
                                             "Copyright (C) 2023 T. Zoerner")
         wid_lab2.pack(side=tk.TOP)
 
