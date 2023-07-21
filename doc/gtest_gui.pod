@@ -102,7 +102,7 @@ log entries are updated to include the executable name. Repeating test cases of
 other executables via the I<Repeat> button is not possible; You have to manually
 switch back to the respective executable to allow that.
 
-The executable cannot be "refreshed" or switched while a test campaign is
+An executable file cannot be selected or "refreshed" while a test campaign is
 running.
 
 =head2 Test campaign control buttons
@@ -193,9 +193,8 @@ patterns.
 
 Yet another alternative for modifying test case filters is the test case list
 dialog, either via its context menu or the "Return" and "Delete" key bindings.
-Finally note any modification to the test case filter can be undone using
-"Control-Z" key binding in the entry field, or redone using "Control-Y" key
-binding.
+Any modification to the test case filter can be undone using the "Control-Z"
+(while keyboard focus is in the entry field), or be redone using "Control-Y".
 
 After renaming a test case or adding a new test case, use the
 I<Refresh test case list> command in the I<Control> menu to read the test case
@@ -556,7 +555,9 @@ The dialog is useful in case you suspect that a test campaign may be hung (for
 example when a test case ran into a deadlock or busy loop.) You could notice
 that firstly by the number of results not increasing and if that's the case, by
 the number of received bytes received as trace output not increasing. (The
-latter will however not if your test cases generate few or no trace output.)
+latter will not help as indicator if your test cases generate few or no trace
+output.) The context menu offers opening the file containing complete trace
+output read from the process, so you can check where the test case is stuck.
 
 The context menu allows sending an I<ABORT> signal to the process, which will
 terminate it and cause a core image to be dumped on UNIX. The test case will be
@@ -752,6 +753,15 @@ millisecond, Gtest will still schedule all runs of A in the first process and
 all runs of B in the second process. Thus, the second process will sit idle for
 99.9% of the total test execution time.
 
+In principle GtestGui could work around this Gtest limitation by doing the
+partitioning itself, but this would require passing lists of all test cases per
+process down via the command line, which would result in a very long filter
+string. On some platforms that string might exceed OS limitation for length of
+command line parameter. Therefore this is not considered by GtestGui.
+(Preferred solution would be enhancing Gtest framework to allow using an
+external test case scheduler, connected via socket, that can dynamically pass
+down sets of test cases to execute.)
+
 =item Test case crashes
 
 In a well-behaved test application, failures are normally reported via Gtest
@@ -762,10 +772,12 @@ repetitions are no longer executed.
 
 Currently GtestGui will not attempt to restart tests after a crash, because it
 expects that the same test case will crash again and thus keep blocking
-following tests. It is not possible to disable the instable test, as this would
-interfere with partitioning by Gtest "sharding", i.e. the set of test cases run
-by that test case would be altered. The only way around is for the use to
-manually disable the instable test case and then restart the test campaign.
+following tests. It is not possible to disable the instable test automatically
+and restart the test process after a crash as this would interfere with
+partitioning by Gtest "sharding", i.e. the set of test cases run by that test
+case would be altered. The only way around is for the user to stop the
+campaign, manually disable the instable test case and then restart the test
+campaign.
 
 =item Overload of GUI by concurrent unit-testing
 
@@ -788,9 +800,18 @@ which is part of the package.
 
 =item B<$HOME/.config/gtest_gui/gtest_gui.rc>
 
+POSIX platforms:
 This file stores parameters that are configured via the L<"CONFIGURATION">
 dialog. Additional it contains persistent state such as the list of previously
 loaded executable files and the size and position of resizable dialog windows.
+
+On the MS Windows platform, the configuration file is stored in sub-directory
+named "GtestGui" below the platform-specific "Application Data" directory. (In
+recent versions of Windows, this will be a hidden directory within the user
+home directory.)
+
+Note the configuration file is not removed when uninstalling the application
+via pip. (The file is small though.)
 
 =item B<trace.NNNN/trace.NNNN>
 
@@ -805,11 +826,12 @@ By default, the sub-directories are created in the current working directory
 where GtestGui is started. Another base directory may be specified in
 L<"CONFIGURATION">.
 
-If multiple instances of the GUI are started, they will use the same directory
-for storage. For single-user systems this works well enough, as conflicts may
-occur only when pressing "Run" button concurrently in different instances. For
-multi-user setup it is not recommended to share the directory. (Seeing other
-user's test results would be confusing anyway.)
+If multiple instances of the GUI are started in the same working directory,
+they will use the same directory for storage. For single-user systems this
+works well enough, as conflicts may occur only when pressing "Run" button
+concurrently in different instances. For multi-user setup it is not recommended
+to share the trace directory. (Seeing other user's test results would be
+confusing anyway.)
 
 =item B<TEMP/gtest_gui_tmpXXX>
 

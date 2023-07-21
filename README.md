@@ -69,26 +69,28 @@ pip3:
    pip3 install mote-gtest-gui
 ```
 
-Python3 and the Python "tkinter" module are required. (The latter usually is
-part of default Python installation.)
+Make sure that the path where pip3 installs scripts is in your search path
+(e.g. on UNIX `$HOME/.local/bin`). Then you can run GtestGui simply by
+executing `gtest_gui`.
 
-## Usage
+Alternatively, you can run GtestGui without installation by cloning the
+repository and then running `gtest_gui.py` in the top-level directory. For
+integration with the [Trowser](https://github.com/tomzox/trowser) trace browser
+either place `trowser.py` somewhere in the path, or create a symbolic link to
+the path where it is located as `gtest_gui/trowser`, or specify the full path
+to the executable in configuration.
 
-Packages are not yet provided. To use the software, clone the repository and
-then run `gtest_gui.py`, located in the top-level directory. For integration
-with the [Trowser](https://github.com/tomzox/trowser) trace browser either
-place `trowser.py` somewhere in the path, or create a symbolic link to the path
-where it is located as `gtest_gui/trowser`.
+# Usage
 
 You can either specify the path of your test application executable file
-directly on the command line of `gtest_gui.py`, or select one via a file
+directly on the command line, or select one via a file
 browser afterward (see the Control menu).  Alternatively, or additionally, you
 can specify one or more trace output files on the command line, which will be
 parsed for test case results and loaded into the result list in the GUI.
 
 In summary, most common usage is as follows:
 ```console
-    gtest_gui/gtest_gui.py my_test_application.exe
+    gtest_gui my_test_application.exe
 ```
 
 On the MS-Windows platform, start GtestGui via pythonw.exe to avoid getting a

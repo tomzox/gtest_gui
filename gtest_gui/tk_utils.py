@@ -270,7 +270,7 @@ def define_fonts():
 
 def update_derived_fonts():
     """
-    When the user reconfigures fints, the caller applies the new configuration
+    When the user reconfigures fonts, the caller applies the new configuration
     directly to the respective font objects. This function needs to be called
     afterward for additionally updating derived fonts, namely the bold variants.
     """
